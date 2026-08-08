@@ -51,11 +51,17 @@ class CanvasController extends BaseController {
                 throw new \Exception("필수 파렛트/지게차 정보가 누락되었습니다.");
             }
 
-            // 포크 진입 방향에 따른 랙 깊이 & 빔 길이 결정
-            $rackDepth  = ($forkDir === 'W') ? $palletD : $palletW;
-            $beamLength = ($forkDir === 'W') ? $palletW : $palletD;
+            // 포크 진입 방향에 따른 랙 규격 연산 공식 (깊이 = 미진입방향 파렛트 크기 - 100, 빔길이 = 진입폭 * 2 + 385)
+            $nonEntryWidth = ($forkDir === 'W') ? $palletD : $palletW;
+            $rackDepth  = $nonEntryWidth - 100;
+            $entryWidth = ($forkDir === 'W') ? $palletW : $palletD;
+            $beamLength = ($entryWidth * 2) + 385;
 
-            // 층수 계산 (클리어런스 150mm 자동 적용)
+            // 로드빔 두께 바(var) 결정 (단당 중량 = 파렛트 무게 * 2)
+            $totalLevelWeight = $palletWeight * 2;
+            $beamThicknessBar = ($totalLevelWeight >= 2800) ? 150 : 125;
+
+            // 단 높이 및 층수 계산 (클리어런스 150mm 적용)
             $clearance     = 150;
             $pitchPerLevel = $palletH + $clearance;
             $maxLevels     = max(1, floor($liftHeight / $pitchPerLevel));
@@ -117,9 +123,15 @@ class CanvasController extends BaseController {
                 . "   - 한 줄의 레이아웃(Row)은 반드시 1개의 독립형(Starter) 랙과 (전체 칸수 - 1)개의 연결형(Add-on) 랙으로 구성됩니다.\n"
                 . "   - 예: 총 59칸을 한 라인에 연속 배치할 경우, 독립형 is 1대, 연결형은 58대가 됩니다. (단, 기둥이나 입구로 인해 라인이 나뉘면 독립형이 추가됩니다.)\n"
                 . "4. 작업 통로폭(Aisle Width)은 지게차의 직각교차 통로폭(AST)에 작업 안전 마진 100~200mm를 더해 제안하십시오. (예: AST 2800mm일 때 통로폭은 2900~3000mm 권장)\n"
-                . "5. 의뢰자가 '전체 공간'에 설치해달라고 하거나 넓은 배치를 원할 경우, 창고의 가용한 벽면(edgeIndex)들을 최대한 활용하여 여러 라인에 걸쳐 파렛트랙을 다수 배치하는 계획(layout_racks)을 설계하십시오. 단, 출입문(door, shutter)이나 장애물이 설치된 벽면은 안전 이격을 고려하여 배치를 피하거나 bays 수를 대폭 줄여 장애물과 간섭되지 않도록 정교하게 배치해야 합니다.\n\n"
+                . "5. 의뢰자가 '전체 공간'에 설치해달라고 하거나 넓은 배치를 원할 경우, 창고의 가용한 **모든 벽면(edgeIndex 0부터 벽면 수-1까지)**을 최대한 활용하여 여러 라인에 걸쳐 파렛트랙을 다수 배치하는 계획(layout_racks)을 설계하십시오. layout_racks 배열에는 반드시 설치 가능한 모든 벽면의 edgeIndex를 포함해야 합니다(단일 벽면만 응답하는 것은 금지). 단, 출입문(door, shutter)이나 장애물이 설치된 벽면은 안전 이격을 고려하여 배치를 피하거나 bays 수를 대폭 줄여 장애물과 간섭되지 않도록 정교하게 배치해야 합니다.\n"
+                . "6. 복렬(복수) 랙 및 고정 홀더(Spacer) 계산 공식:\n"
+                . "   - 복렬(Double row)은 2개의 랙 라인이 등을 맞대어 설치되며, 프레임 기둥끼리 상하 2개씩 홀더(Row Spacer)로 체결 고정합니다.\n"
+                . "   - 복렬 1라인(N칸)의 자재 산출: 독립형 2대, 연결형 (N - 1) * 2대, 고정 홀더 (N + 1) * 2개 (예: 3칸 복렬=홀더 8개, 4칸 복렬=홀더 10개, 5칸 복렬=홀더 12개).\n"
+                . "   - 의뢰자가 '가운데 복수/복렬 설치'를 요청하거나 중앙 공간이 넓은 경우, 중앙 영역에 통로폭(AST)을 확보하고 복렬 랙을 배치하도록 제안하십시오.\n\n"
                 . "아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이 순수 JSON):\n"
-                . '{"summary":"전체 설계 요약 2~3문장(한국어)","recommended_levels":단수숫자,"rack_depth_mm":숫자,"beam_length_mm":숫자,"aisle_width_mm":숫자,"notes":["주의사항1","주의사항2"],"estimated_independent":숫자,"estimated_connected":숫자,"layout_racks":[{"edgeIndex":벽면인덱스(0부터시작),"bays":설치할칸수(숫자),"isDouble":복렬여부(true/false)}]}';
+                . '{"summary":"전체 설계 요약 2~3문장(한국어)","recommended_levels":단수숫자,"rack_depth_mm":숫자,"beam_length_mm":숫자,"aisle_width_mm":숫자,"beam_thickness_bar":로드빔두께(125또는150),"notes":["주의사항1","주의사항2"],"estimated_independent":숫자,"estimated_connected":숫자,"estimated_holders":홀더총수량,"layout_racks":[{"edgeIndex":벽면인덱스(0부터시작),"bays":설치할칸수(숫자,0이면자동),"isDouble":복렬여부(true/false)}],"center_double_racks":[{"direction":"horiz 또는 vert","bays":칸수,"rows":열수}]}';
+
+
 
 
 
@@ -138,7 +150,7 @@ class CanvasController extends BaseController {
                 ],
                 'generationConfig' => [
                     'temperature'     => 0.3,
-                    'maxOutputTokens' => 1024,
+                    'maxOutputTokens' => 2048,
                 ]
             ]);
 
@@ -178,16 +190,30 @@ class CanvasController extends BaseController {
 
             $result = json_decode($jsonStr, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
+                // summary 값만 정규식으로 안전하게 추출 시도
+                $summaryOnly = '';
+                if (preg_match('/"summary"\s*:\s*"([^"]+)/u', $rawResponse, $sMatch)) {
+                    $summaryOnly = $sMatch[1];
+                } else {
+                    $summaryOnly = trim(strip_tags($rawResponse));
+                }
+
                 $result = [
-                    'summary'              => $rawResponse,
+                    'summary'              => $summaryOnly ?: "설치 계획이 정상적으로 수립되었습니다.",
                     'recommended_levels'   => $maxLevels,
                     'rack_depth_mm'        => $rackDepth,
                     'beam_length_mm'       => $beamLength,
                     'aisle_width_mm'       => $ast,
+                    'beam_thickness_bar'   => $beamThicknessBar,
                     'notes'                => [],
                     'estimated_independent'=> 0,
                     'estimated_connected'  => 0,
                 ];
+            }
+
+
+            if (!isset($result['beam_thickness_bar'])) {
+                $result['beam_thickness_bar'] = $beamThicknessBar;
             }
 
             // 독립형/연결형 수량 계산 보정 (AI가 0을 반환했을 경우 자동 계산)

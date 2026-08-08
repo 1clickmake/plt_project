@@ -319,7 +319,7 @@
                         📋 랙 설치 희망 제원
                         <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-rack-specs')">❓</button>
                     </h6>
-                    <div class="row g-2">
+                    <div class="row g-2 mb-3">
                         <div class="col-4">
                             <label class="form-label text-muted small mb-1">설치 단수 <span class="text-danger">*</span></label>
                             <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-levels" value="3" placeholder="예: 3단">
@@ -331,6 +331,54 @@
                         <div class="col-4">
                             <label class="form-label text-muted small mb-1">설치 높이(mm)</label>
                             <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
+                        </div>
+                    </div>
+
+                    <!-- 실시간 자재 산출 현황 카드 -->
+                    <div class="p-3 rounded-3 mb-2" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-info fw-bold small">📐 실시간 랙 자재 산출</span>
+                            <span class="badge bg-info text-dark" id="rack-total-bays-badge">총 0칸</span>
+                        </div>
+                        <div class="row g-1 text-center">
+                            <div class="col" style="flex: 1 0 18%;">
+                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
+                                    <div class="text-muted" style="font-size: 0.68rem;">독립형</div>
+                                    <div class="fw-bold text-white fs-6" id="display-indep">0<span class="small text-muted fs-7">대</span></div>
+                                    <input type="hidden" id="rack-independent" value="">
+                                </div>
+                            </div>
+                            <div class="col" style="flex: 1 0 18%;">
+                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
+                                    <div class="text-muted" style="font-size: 0.68rem;">연결형</div>
+                                    <div class="fw-bold text-white fs-6" id="display-conn">0<span class="small text-muted fs-7">대</span></div>
+                                    <input type="hidden" id="rack-connected" value="">
+                                </div>
+                            </div>
+                            <div class="col" style="flex: 1 0 20%;">
+                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
+                                    <div class="text-info" style="font-size: 0.68rem;">작은연결</div>
+                                    <div class="fw-bold text-info fs-6" id="display-small-conn">0<span class="small text-muted fs-7">대</span></div>
+                                    <input type="hidden" id="rack-small-connected" value="">
+                                </div>
+                            </div>
+                            <div class="col" style="flex: 1 0 18%;">
+                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
+                                    <div class="text-warning" style="font-size: 0.68rem;">🔗 홀더</div>
+                                    <div class="fw-bold text-warning fs-6" id="display-holders">0<span class="small text-muted fs-7">개</span></div>
+                                    <input type="hidden" id="rack-tie-holders" value="">
+                                </div>
+                            </div>
+                            <div class="col" style="flex: 1 0 22%;">
+                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
+                                    <div class="text-success" style="font-size: 0.68rem;">📦 파랫트</div>
+                                    <div class="fw-bold text-success fs-6" id="display-pallets">0<span class="small text-muted fs-7">PLT</span></div>
+                                    <input type="hidden" id="rack-total-pallets" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-2" style="font-size: 0.73rem;">
+                            * 2585→1385, 2785→1485, 2985→1585 작은연결이 남는 공간에 자동 적용됩니다.
                         </div>
                     </div>
                 </div>
@@ -355,7 +403,7 @@
                     <div>
                         <label class="form-label text-muted small mb-1">💬 AI에게 남길 요청사항</label>
                         <textarea class="form-control bg-transparent text-white border-secondary" id="ai-request" rows="4"
-                            placeholder="예) '입구 5m 좌측부터 3열로 배치해주세요', '기둥 주변 1m는 설치 제외해주세요' 등 자유롭게 작성하세요."></textarea>
+                            placeholder="예) '가운데 공간에는 랙을 복수로 설치해줘', '전체공간에 랙을 설치해줘' 등 자유롭게 작성하세요."></textarea>
                     </div>
                 </div>
 
@@ -375,7 +423,21 @@
         <div class="col-xl-9 col-lg-8 h-100">
             <div class="glass-panel p-4 h-100 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-semibold text-info m-0">실시간 2D 배치 도면</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <h5 class="fw-semibold text-info m-0">실시간 2D 배치 도면</h5>
+                        <!-- 상단 종합 실시간 자재 배지 바 -->
+                        <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
+                            <span class="text-white">독립 <strong id="top-badge-indep" class="text-info">0</strong>대</span>
+                            <span class="text-secondary">|</span>
+                            <span class="text-white">연결 <strong id="top-badge-conn" class="text-info">0</strong>대</span>
+                            <span id="top-badge-small-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-info">작은연결 <strong id="top-badge-small-conn" class="text-info">0</strong>대</span></span>
+                            <span class="text-secondary">|</span>
+                            <span class="text-warning">🔗 홀더 <strong id="top-badge-holders" class="text-warning">0</strong>개</span>
+                            <span class="text-secondary">|</span>
+                            <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">0</strong> PLT</span>
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2 align-items-center flex-wrap">
                         <button class="btn btn-sm btn-outline-info" onclick="zoomIn()">➕ 줌인</button>
                         <button class="btn btn-sm btn-outline-info" onclick="zoomOut()">➖ 줌아웃</button>
@@ -386,6 +448,7 @@
                         </button>
                     </div>
                 </div>
+
 
                 <!-- 캔버스 영역 -->
                 <div class="canvas-container flex-grow-1" id="canvas-wrapper">
@@ -645,7 +708,13 @@ function runAutoLayout() {
             layoutRacks: d.layout_racks || []
         };
 
-        // 다중 배치 정보가 없으면 기본 벽면 배치(fallback)로 세팅
+        // 전체 공간 배치 요청 여부 판단
+        const userReqText = (payload.user_request || '').toLowerCase();
+        const isFullLayout = userReqText.includes('전체') || userReqText.includes('전부') || 
+                             userReqText.includes('모든') || userReqText.includes('다') ||
+                             payload.rack_bays === 0;
+
+        // 다중 배치 정보가 없거나, 전체 공간 요청인데 1개 벽면만 온 경우
         if (!window.rackSpecs.layoutRacks || window.rackSpecs.layoutRacks.length === 0) {
             const userReq = payload.user_request;
             let targetLine = 1;
@@ -664,10 +733,39 @@ function runAutoLayout() {
             }];
         }
 
+        // 전체 공간 배치인데 AI가 1개 벽면만 응답한 경우 → JS가 직접 나머지 모든 벽면 추가
+        if (isFullLayout && window.rackSpecs.layoutRacks.length < edgeLengths.length) {
+            const coveredEdges = new Set(window.rackSpecs.layoutRacks.map(r => r.edgeIndex));
+            const beamLen = window.rackSpecs.beamLength || 2585;
+            for (let ei = 0; ei < edgeLengths.length; ei++) {
+                if (coveredEdges.has(ei)) continue;
+                const wallMm = edgeLengths[ei] || 0;
+                if (wallMm < beamLen + 300) continue; // 너무 짧은 벽면 제외
+                window.rackSpecs.layoutRacks.push({
+                    edgeIndex: ei,
+                    bays: 0, // 0 = 최대한 많이
+                    isDouble: false
+                });
+            }
+        }
+
+        // 중앙 공간 복수(복렬) 랙 배치 요청 여부 판단
+        const isCenterDouble = userReqText.includes('가운데') || userReqText.includes('중앙') || 
+                               userReqText.includes('복수') || userReqText.includes('복렬') ||
+                               userReqText.includes('center') || userReqText.includes('double') ||
+                               (d.center_double_racks && d.center_double_racks.length > 0);
+
+        window.rackSpecs.isCenterDouble = isCenterDouble;
+        window.rackSpecs.ast = d.aisle_width_mm || payload.ast || 2800;
+        window.rackSpecs.beamThicknessBar = d.beam_thickness_bar || 125;
+        window.rackSpecs.levels = payload.rack_levels || 3;
+
+
         // 캔버스 다시 그리기
         if (typeof draw === 'function') {
             draw();
         }
+
 
         // 배치 완료 후 견적요청 버튼 표시
         const reqBtn = document.getElementById('request-quote-btn');
@@ -680,7 +778,7 @@ function runAutoLayout() {
     });
 }
 
-// --- AI 분석 결과 캔버스 우측 하단에 표시 (요청에 따라 summary 위주로 간소화) ---
+// --- AI 분석 결과 캔버스 우측 하단에 표시 (순수 안내 텍스트만 깔끔하게 출력) ---
 function showAiResult(d) {
     const wrapper = document.getElementById('canvas-wrapper');
     const old = document.getElementById('ai-result-panel');
@@ -690,21 +788,32 @@ function showAiResult(d) {
     panel.id = 'ai-result-panel';
     panel.style.cssText = 'position:absolute;bottom:12px;right:12px;width:380px;max-height:220px;overflow-y:auto;background:rgba(15,23,42,0.95);border:1px solid rgba(56,189,248,0.4);border-radius:0.75rem;padding:16px;font-size:0.88rem;z-index:100;color:#e2e8f0;line-height:1.5;box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
     
-    let summaryText = d.summary || '분석 결과를 불러올 수 없습니다.';
+    let text = d.summary || '설치 계획이 정상적으로 수립되었습니다.';
     
-    // 마크다운 JSON 블록 정제
-    summaryText = summaryText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    if (summaryText.trim().startsWith('{') && summaryText.includes('"summary"')) {
-        try {
-            const parsed = JSON.parse(summaryText.substring(summaryText.indexOf('{')));
-            summaryText = parsed.summary || summaryText;
-        } catch(e) {}
+    // 1. 마크다운 JSON 블록 및 따옴표/괄호 정제
+    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    
+    // 2. 만약 '{ "summary": "..." }' 형태의 JSON 문자열이 그대로 넘어온 경우
+    if (text.includes('"summary"')) {
+        const match = text.match(/"summary"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"?/);
+        if (match && match[1]) {
+            text = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        } else {
+            // 잘린 JSON 형태 대응: {"summary": "내용...
+            text = text.replace(/^\s*\{?\s*"summary"\s*:\s*"?/i, '');
+            text = text.replace(/"\s*,\s*".*$/s, ''); // 뒤에 이어지는 다른 키-값 쌍 제거
+            text = text.replace(/"\s*\}?\s*$/s, '');  // 닫는 따옴표와 중괄호 제거
+        }
     }
+    
+    // 3. 앞뒤 남은 중괄호, 따옴표, 공백 완전 제거
+    text = text.replace(/^[\{\s"'\\]+/, '').replace(/[\}\s"'\\]+$/, '').trim();
 
     panel.innerHTML = `
         <div style="color:#e2e8f0;word-break:break-all;position:relative;padding-right:20px;">
             <button onclick="this.closest('#ai-result-panel').remove()" style="position:absolute;top:0;right:0;background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;">✕</button>
-            ${summaryText}
+            <div class="text-info fw-bold mb-1">💡 AI 설계 요약</div>
+            ${text}
         </div>
     `;
     wrapper.appendChild(panel);
