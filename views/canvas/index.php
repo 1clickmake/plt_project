@@ -638,26 +638,31 @@ function runAutoLayout() {
         showAiResult(d);
 
         // --- 캔버스에 2D 파랫트랙 배치 시각화 트리거 ---
-        const userReq = payload.user_request;
-        let targetLine = 1; // 기본값 1번 라인
-        const match = userReq.match(/(\d+)\s*번\s*(라인|벽면|벽)/);
-        if (match) {
-            targetLine = parseInt(match[1]);
-        }
-        
-        // 엣지 인덱스 바운드 체크
-        let edgeIndex = targetLine - 1;
-        if (edgeIndex < 0 || edgeIndex >= edgeLengths.length) {
-            edgeIndex = 0; // 범위를 벗어나면 기본 1번 벽면(index 0)에 배치
-        }
-
         window.rackSpecs = {
-            edgeIndex: edgeIndex,
             levels: payload.rack_levels,
-            bays: payload.rack_bays,
             beamLength: d.beam_length_mm || payload.pallet_w,
-            rackDepth: d.rack_depth_mm || payload.pallet_d
+            rackDepth: d.rack_depth_mm || payload.pallet_d,
+            layoutRacks: d.layout_racks || []
         };
+
+        // 다중 배치 정보가 없으면 기본 벽면 배치(fallback)로 세팅
+        if (!window.rackSpecs.layoutRacks || window.rackSpecs.layoutRacks.length === 0) {
+            const userReq = payload.user_request;
+            let targetLine = 1;
+            const match = userReq.match(/(\d+)\s*번\s*(라인|벽면|벽)/);
+            if (match) {
+                targetLine = parseInt(match[1]);
+            }
+            let edgeIndex = targetLine - 1;
+            if (edgeIndex < 0 || edgeIndex >= edgeLengths.length) {
+                edgeIndex = 0;
+            }
+            window.rackSpecs.layoutRacks = [{
+                edgeIndex: edgeIndex,
+                bays: payload.rack_bays || 0,
+                isDouble: false
+            }];
+        }
 
         // 캔버스 다시 그리기
         if (typeof draw === 'function') {
@@ -681,23 +686,26 @@ function showAiResult(d) {
     const old = document.getElementById('ai-result-panel');
     if (old) old.remove();
 
-    const notes = (d.notes || []).map(n => `<li>${n}</li>`).join('');
     const panel = document.createElement('div');
     panel.id = 'ai-result-panel';
-    panel.style.cssText = 'position:absolute;bottom:12px;right:12px;width:320px;background:rgba(15,23,42,0.95);border:1px solid rgba(56,189,248,0.4);border-radius:0.75rem;padding:16px;font-size:0.85rem;z-index:100;color:#e2e8f0;line-height:1.4;box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
+    panel.style.cssText = 'position:absolute;bottom:12px;right:12px;width:380px;max-height:220px;overflow-y:auto;background:rgba(15,23,42,0.95);border:1px solid rgba(56,189,248,0.4);border-radius:0.75rem;padding:16px;font-size:0.88rem;z-index:100;color:#e2e8f0;line-height:1.5;box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
+    
+    let summaryText = d.summary || '분석 결과를 불러올 수 없습니다.';
+    
+    // 마크다운 JSON 블록 정제
+    summaryText = summaryText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    if (summaryText.trim().startsWith('{') && summaryText.includes('"summary"')) {
+        try {
+            const parsed = JSON.parse(summaryText.substring(summaryText.indexOf('{')));
+            summaryText = parsed.summary || summaryText;
+        } catch(e) {}
+    }
+
     panel.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong class="text-info" style="font-size:0.9rem;">✨ Gemini AI 설계 분석 요약</strong>
-            <button onclick="this.closest('#ai-result-panel').remove()" style="background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;padding:0;line-height:1;">✕</button>
+        <div style="color:#e2e8f0;word-break:break-all;position:relative;padding-right:20px;">
+            <button onclick="this.closest('#ai-result-panel').remove()" style="position:absolute;top:0;right:0;background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;">✕</button>
+            ${summaryText}
         </div>
-        <div style="color:#e2e8f0;margin-bottom:8px;word-break:break-all;">
-            ${d.summary || '분석 결과를 불러올 수 없습니다.'}
-        </div>
-        ${notes ? `
-        <div class="border-top border-secondary pt-2 mt-2">
-            <small class="text-warning d-block mb-1">💡 설계 주의사항:</small>
-            <ul style="padding-left:14px;margin:0;color:#94a3b8;font-size:0.78rem;">${notes}</ul>
-        </div>` : ''}
     `;
     wrapper.appendChild(panel);
 }
@@ -730,27 +738,18 @@ window.generateCustomInputs = function(numEdges) {
     if (typeof clearEdgeLengths === 'function') clearEdgeLengths();
 
     let html = '';
-    const initialRatio = 25; // 1px = 25mm 임시 스케일 매핑
     
     for (let i = 1; i <= numEdges; i++) {
-        let calculatedVal = 0;
-        if (typeof points !== 'undefined' && points[i-1] && points[i]) {
-            const p1 = points[i-1];
-            const p2 = points[i];
-            const pxDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            calculatedVal = Math.round(pxDist * initialRatio);
-            
-            // canvas2d.js 내부 edgeLengths 배열 동기화
-            if (typeof edgeLengths !== 'undefined') {
-                edgeLengths[i-1] = calculatedVal;
-            }
+        // 내부 edgeLengths 배열을 초기 비움(0) 상태로 동기화
+        if (typeof edgeLengths !== 'undefined') {
+            edgeLengths[i-1] = 0;
         }
 
         html += `
         <div class="col-6">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-transparent text-info border-secondary">${i}번 선분</span>
-                <input type="number" class="form-control bg-transparent text-white border-secondary" value="${calculatedVal > 0 ? calculatedVal : ''}" placeholder="길이(mm)" oninput="updateEdgeLength(${i-1}, this.value)">
+                <input type="number" id="edge-input-${i-1}" class="form-control bg-transparent text-white border-secondary" value="" placeholder="길이(mm)" oninput="updateEdgeLength(${i-1}, this.value)">
             </div>
         </div>`;
     }

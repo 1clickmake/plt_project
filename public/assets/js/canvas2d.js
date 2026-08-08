@@ -7,6 +7,8 @@ let points = [];
 let obstacles = []; // 기둥과 문을 저장하는 배열
 let edgeLengths = []; // 사용자가 입력한 실제 선분 길이 (mm) 배열
 let originalAngles = []; // 처음에 그려진 스냅된 각도 보관
+let originalVisualLengths = []; // 처음에 그려진 비주얼 픽셀 길이 보관
+let userEnteredEdges = []; // 사용자가 키보드로 수동 입력한 엣지 인덱스 보관 (Array 큐 형식)
 let mousePos = null;
 
 let draggedItemType = null; // 외부에서 드래그 (HTML -> Canvas)
@@ -136,18 +138,75 @@ window.resetCanvas = function() {
 // 엣지(선분) 길이 저장
 window.clearEdgeLengths = function() {
     edgeLengths = [];
+    userEnteredEdges = [];
 };
 
 window.updateEdgeLength = function(index, value) {
-    edgeLengths[index] = parseInt(value) || 0;
+    const valInt = parseInt(value) || 0;
+    
+    // 수동 입력 이력 배열에서 기존 인덱스 제거
+    const idx = userEnteredEdges.indexOf(index);
+    if (idx > -1) {
+        userEnteredEdges.splice(idx, 1);
+    }
+    
+    if (value !== '' && valInt > 0) {
+        userEnteredEdges.push(index);
+        edgeLengths[index] = valInt;
+    } else {
+        edgeLengths[index] = 0;
+    }
+    
+    // 만약 모든 변이 수동 입력되었다면, 가장 예전에 입력한 변 1개를 자동 계산 변으로 실시간 양보
+    const numEdges = points.length - 1;
+    if (userEnteredEdges.length >= numEdges) {
+        const oldestIndex = userEnteredEdges.shift();
+        edgeLengths[oldestIndex] = 0;
+        
+        // 고유 ID 기반으로 폼 입력창 값 실시간 초기화
+        const inputEl = document.getElementById(`edge-input-${oldestIndex}`);
+        if (inputEl) {
+            inputEl.value = '';
+        }
+    }
+    
     alignAndScalePolygon(); 
     draw();
 };
 
 // --- 도면 자동 정렬 (Parametric Alignment) ---
 function alignAndScalePolygon() {
-    if (points.length < 4 || originalAngles.length === 0) return;
+    if (points.length < 4 || originalAngles.length === 0 || originalVisualLengths.length === 0) return;
     const numEdges = points.length - 1;
+
+    // 사용자가 직접 키보드로 입력하지 않은 남은 엣지가 딱 1개 있을 때 실시간 기하학적 폐합 계산
+    let emptyIndices = [];
+    for (let i = 0; i < numEdges; i++) {
+        if (!userEnteredEdges.includes(i)) {
+            emptyIndices.push(i);
+        }
+    }
+    if (emptyIndices.length === 1) {
+        const m = emptyIndices[0];
+        let sumX = 0;
+        let sumY = 0;
+        for (let i = 0; i < numEdges; i++) {
+            if (i !== m && edgeLengths[i] > 0) {
+                let len = edgeLengths[i];
+                let angle = originalAngles[i];
+                sumX += len * Math.cos(angle);
+                sumY += len * Math.sin(angle);
+            }
+        }
+        let targetLen = Math.round(Math.hypot(sumX, sumY));
+        if (targetLen > 0) {
+            edgeLengths[m] = targetLen;
+            const inputEl = document.getElementById(`edge-input-${m}`);
+            if (inputEl) {
+                inputEl.value = targetLen;
+            }
+        }
+    }
 
     let hasEnteredLength = edgeLengths.some(l => l > 0);
     if (!hasEnteredLength) return;
@@ -155,7 +214,7 @@ function alignAndScalePolygon() {
     let ratio = 100; 
     for(let i = 0; i < numEdges; i++) {
         if(edgeLengths[i] > 0) {
-            const visualLen = Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y);
+            const visualLen = originalVisualLengths[i];
             ratio = edgeLengths[i] / (visualLen || 1);
             break;
         }
@@ -163,7 +222,7 @@ function alignAndScalePolygon() {
 
     let mathPoints = [{x: 0, y: 0}];
     for (let i = 0; i < numEdges; i++) {
-        let len = edgeLengths[i] > 0 ? edgeLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) * ratio);
+        let len = edgeLengths[i] > 0 ? edgeLengths[i] : (originalVisualLengths[i] * ratio);
         let angle = originalAngles[i];
         
         let nx = mathPoints[i].x + len * Math.cos(angle);
@@ -176,15 +235,15 @@ function alignAndScalePolygon() {
             const calculatedLen = Math.round(Math.hypot(mathPoints[i].x, mathPoints[i].y));
             if (!edgeLengths[i] || edgeLengths[i] <= 0) {
                 edgeLengths[i] = calculatedLen;
-                const inputs = document.querySelectorAll('#inputs-container input[type="number"]');
-                if (inputs[i]) inputs[i].value = calculatedLen;
+                const inputEl = document.getElementById(`edge-input-${i}`);
+                if (inputEl) inputEl.value = calculatedLen;
             }
         } else {
             if (!edgeLengths[i] || edgeLengths[i] <= 0) {
                 const estimatedLen = Math.round(len);
                 edgeLengths[i] = estimatedLen;
-                const inputs = document.querySelectorAll('#inputs-container input[type="number"]');
-                if (inputs[i]) inputs[i].value = estimatedLen;
+                const inputEl = document.getElementById(`edge-input-${i}`);
+                if (inputEl) inputEl.value = estimatedLen;
             }
         }
         
@@ -742,11 +801,17 @@ function finishDrawing() {
     const numEdges = points.length - 1;
     
     originalAngles = [];
-    const snapRadian = Math.PI / 4; 
+    originalVisualLengths = [];
+    userEnteredEdges = [];
+    // 90도(직각) 단위 스냅을 기본으로 하여 치수 왜곡 및 찌그러짐 방지
+    const snapRadian = Math.PI / 2; 
     for (let i = 0; i < numEdges; i++) {
         let angle = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x);
-        angle = Math.round(angle / snapRadian) * snapRadian;
-        originalAngles.push(angle);
+        let snappedAngle = Math.round(angle / snapRadian) * snapRadian;
+        originalAngles.push(snappedAngle);
+        
+        let dist = Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y);
+        originalVisualLengths.push(dist);
     }
     
     if (typeof window.generateCustomInputs === 'function') {
@@ -1410,6 +1475,7 @@ function drawRackGroup(r, isPreview = false) {
 
 // 전체 화면 그리기 루프
 function draw() {
+    applyAiRackSpecs();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(cameraZoom, cameraZoom);
@@ -1892,3 +1958,116 @@ window.deleteObstacle = function(index) {
 };
 
 resizeCanvas();
+
+// AI가 전달한 rackSpecs를 바탕으로 racks 배열 자동 생성 (다중 배치 지원)
+function applyAiRackSpecs() {
+    if (!window.rackSpecs || currentScale <= 0 || points.length < 3) return;
+    
+    const spec = window.rackSpecs;
+    window.rackSpecs = null; // 중복 실행 방지
+    
+    const layoutRacks = spec.layoutRacks || [];
+    if (layoutRacks.length === 0) return;
+    
+    // 기존 랙 비우기
+    racks = [];
+    
+    layoutRacks.forEach(layout => {
+        const edgeIndex = layout.edgeIndex;
+        if (edgeIndex < 0 || edgeIndex >= points.length - 1) return;
+        
+        const p1 = points[edgeIndex];
+        const p2 = points[edgeIndex + 1];
+        
+        // 벽면의 길이 및 각도 계산
+        const wallLenPx = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        const wallLenMm = wallLenPx / currentScale;
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        
+        // 이 벽면이 수평에 가까운지 수직에 가까운지 판단
+        const isHoriz = Math.abs(Math.cos(angle)) > 0.5;
+        
+        // 랙 방향 판단
+        let dir = 1;
+        if (isHoriz) {
+            dir = p2.x > p1.x ? 1 : -1;
+        } else {
+            dir = p2.y > p1.y ? 1 : -1;
+        }
+        
+        // 랙 스펙 설정
+        const beamLength = spec.beamLength || 2585;
+        const rackDepth = spec.rackDepth || 1000;
+        
+        // 설치 가능한 최대 bays(칸수) 계산 또는 지정된 bays 사용
+        let bays = layout.bays || 0;
+        if (bays <= 0) {
+            bays = Math.floor((wallLenMm - 85) / beamLength);
+        }
+        
+        if (bays <= 0) return; // 배치할 공간 부족
+        
+        // 랙 시작 위치: 벽면 시작점 p1에서 약간 띄우기
+        const clearance = getEdgeClearance(p1, p2);
+        
+        let startX = p1.x;
+        let startY = p1.y;
+        
+        if (isHoriz) {
+            const testY1 = p1.y + clearance;
+            const testY2 = p1.y - clearance;
+            const testPoint1 = [(p1.x + p2.x) / 2, testY1];
+            const testPoint2 = [(p1.x + p2.x) / 2, testY2];
+            
+            if (isPointInPolygon(testPoint1, points)) {
+                startY = p1.y + clearance;
+            } else if (isPointInPolygon(testPoint2, points)) {
+                startY = p1.y - clearance;
+            } else {
+                startY = p1.y + (testY1 > p1.y ? clearance : -clearance);
+            }
+            startX = p1.x + (dir * 100 * currentScale);
+        } else {
+            const testX1 = p1.x + clearance;
+            const testX2 = p1.x - clearance;
+            const testPoint1 = [testX1, (p1.y + p2.y) / 2];
+            const testPoint2 = [testX2, (p1.y + p2.y) / 2];
+            
+            if (isPointInPolygon(testPoint1, points)) {
+                startX = p1.x + clearance;
+            } else if (isPointInPolygon(testPoint2, points)) {
+                startX = p1.x - clearance;
+            } else {
+                startX = p1.x + (testX1 > p1.x ? clearance : -clearance);
+            }
+            startY = p1.y + (dir * 100 * currentScale);
+        }
+        
+        const totalLengthMm = (bays * beamLength) + 85;
+        const totalLengthPx = totalLengthMm * currentScale;
+        
+        // 랙 그룹 생성
+        const newRack = {
+            x: startX,
+            y: startY,
+            isHoriz: isHoriz,
+            dir: dir,
+            independent: 1,
+            connected: bays - 1,
+            smallConnected: 0,
+            beamLength: beamLength,
+            smallBeamLength: beamLength - 1200,
+            totalLengthPx: totalLengthPx,
+            rackDepth: rackDepth,
+            isDouble: layout.isDouble || isDoubleRow(),
+            isValid: true
+        };
+        
+        newRack.isValid = checkRackValidPlacement(newRack);
+        racks.push(newRack);
+    });
+    
+    if (typeof updateRackFormCounts === 'function') {
+        updateRackFormCounts();
+    }
+}
