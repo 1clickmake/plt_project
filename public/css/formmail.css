@@ -1,0 +1,114 @@
+/* Formmail Section Styles */
+
+.contact-section {
+    padding: 5rem 0;
+}
+
+.contact-section .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    padding: 3rem;
+    border-radius: 24px;
+}
+
+.contact-section .form-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.contact-section .form-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.contact-section .form-header p {
+    color: #666;
+}
+
+.contact-section .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.contact-section .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.contact-section .form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 0.5rem;
+}
+
+.contact-section .form-group input,
+.contact-section .form-group textarea {
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.6);
+    outline: none;
+    transition: all 0.3s;
+    font-size: 1rem;
+}
+
+.contact-section .form-group textarea {
+    resize: none;
+}
+
+.contact-section #contact-form input:focus,
+.contact-section #contact-form textarea:focus {
+    border-color: #6366f1 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.contact-section .form-footer {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+#btn-submit-contact {
+    padding: 1.1rem 3.5rem;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#btn-submit-contact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 25px rgba(99, 102, 241, 0.3);
+    background: #4f46e5;
+}
+
+#btn-submit-contact:active {
+    transform: translateY(0);
+}
+
+#btn-submit-contact:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.message-group {
+    margin-bottom: 2.5rem;
+}

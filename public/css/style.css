@@ -1,0 +1,30 @@
+/* FAQ Page Styles */
+.faq-accordion .accordion-button:not(.collapsed) {
+    background-color: transparent;
+    color: var(--bs-primary);
+    box-shadow: none;
+}
+.faq-accordion .accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+.faq-accordion .accordion-item {
+    border: 1px solid rgba(0,0,0,.08) !important;
+}
+.faq-accordion .accordion-button::after {
+    background-size: 1rem;
+}
+.focus-ring:focus-within {
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+.btn-dark {
+    background-color: #1a1a1a;
+}
+.search-trigger .badge {
+    animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

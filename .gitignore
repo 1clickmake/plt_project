@@ -1,0 +1,66 @@
+# Antigravity AI Assistant
+.antigravity/
+
+# Environment Configuration
+.env
+.env.local
+.env.*.local
+
+# Composer Dependencies (Tracked as requested)
+# /vendor/ (Removed to allow push)
+
+# User Uploaded Files
+/public/data/*
+!/public/data/.htaccess
+!/public/data/page/.htaccess
+!/public/data/logo/.htaccess
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Logs and Temporary Files
+*.log
+*.tmp
+*.temp
+*.cache
+/logs/
+/tmp/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*~
+
+# Database Dumps (optional - uncomment if needed)
+# *.sql
+# /backups/
+
+# Node modules (if using frontend build tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Session Files
+/sessions/
+
+# PHPStorm
+.phpunit.result.cache
+
+# Development and Temporary Files (Root Level Only)
+/.env.example
+/PROJECT_HISTORY.md
