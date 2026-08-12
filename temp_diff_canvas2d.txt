@@ -1,0 +1,2226 @@
+﻿diff --git a/public/js/canvas2d.js b/public/js/canvas2d.js
+index 0620f11..1809a7f 100644
+--- a/public/js/canvas2d.js
++++ b/public/js/canvas2d.js
+@@ -10,6 +10,7 @@ let originalAngles = []; // 泥섏쓬??洹몃젮吏??ㅻ깄??媛곷룄 蹂닿?
+ let originalVisualLengths = []; // 泥섏쓬??洹몃젮吏?鍮꾩＜???쎌? 湲몄씠 蹂닿?
+ let userEnteredEdges = []; // ?ъ슜?먭? ?ㅻ낫?쒕줈 ?섎룞 ?낅젰???ｌ? ?몃뜳??蹂닿? (Array ???뺤떇)
+ let mousePos = null;
++let snapGuideEnabled = true; // global flag for snap guide visibility
+ 
+ let draggedItemType = null; // ?몃??먯꽌 ?쒕옒洹?(HTML -> Canvas)
+ 
+@@ -30,6 +31,10 @@ let isMovingRack = false;
+ let rackDragOffsetX = 0;
+ let rackDragOffsetY = 0;
+ 
++// ?덇툑??Ruler) 諛??듬줈(Corridor) ?꾩뿭 ?곹깭 ?뺤쓽
++window.ruler = { x1: 150, y1: 150, x2: 350, y2: 150, visible: false, activePoint: null };
++window.corridorGuide = { x: 400, y: 300, width: 2800, height: 1200, visible: false };
++
+ let baseWidth = 0;
+ let baseHeight = 0;
+ let cameraZoom = 1;
+@@ -54,6 +59,12 @@ function getLogicalPos(e) {
+     };
+ }
+ 
++// ?ㅻ깄 媛?대뱶 ?좉? ?⑥닔
++function toggleSnapGuide() {
++    snapGuideEnabled = !snapGuideEnabled;
++    draw();
++}
++
+ // ?덊떚???붿뒪?뚮젅??諛??ъ씠利?留욎땄 ?ㅼ젙
+ function resizeCanvas() {
+     const parent = canvas.parentElement;
+@@ -78,6 +89,15 @@ window.resetZoom = function() {
+     applyZoom();
+ };
+ 
++// 由щえ而?諛⑺뼢 ?대룞: panCanvas(dx, dy) - ?ㅽ겕濡??⑥쐞(px)
++window.panCanvas = function(dx, dy) {
++    const parent = canvas.parentElement;
++    if (parent) {
++        parent.scrollLeft = Math.max(0, parent.scrollLeft + dx);
++        parent.scrollTop  = Math.max(0, parent.scrollTop  + dy);
++    }
++};
++
+ function applyZoom() {
+     if (baseWidth === 0) return;
+     canvas.width = baseWidth * cameraZoom;
+@@ -298,6 +318,28 @@ canvas.addEventListener('contextmenu', (e) => {
+     e.preventDefault();
+     const {x: clickX, y: clickY} = getLogicalPos(e);
+ 
++    // 留뚯빟 ?뚯쟾 ?몃뱾(Rotate Handle) ?꾩뿉???고겢由?븳 寃껋씠?쇰㈃ 諛섏떆怨꾨갑??10???뚯쟾
++    if (!isDrawingMode && currentScale > 0) {
++        for (let i = racks.length - 1; i >= 0; i--) {
++            const r = racks[i];
++            if (typeof getRackHandlesPos === 'function') {
++                const handles = getRackHandlesPos(r);
++                if (handles && handles.rotate && Math.hypot(handles.rotate.x - clickX, handles.rotate.y - clickY) <= 15) {
++                    // ?고겢由????꾩옱 紐⑤뱶??諛섎? 諛⑺뼢?쇰줈 ?뚯쟾
++                    const step = (window.activeInteractMode === 'rotate-ccw') ? 10 : -10;
++                    r.angle = (getRackAngle(r) + (step * Math.PI / 180)) % (Math.PI * 2);
++                    r.isHoriz = Math.abs(Math.cos(r.angle)) > Math.abs(Math.sin(r.angle));
++                    r.dir = (Math.cos(r.angle) > 0 || Math.sin(r.angle) > 0) ? 1 : -1;
++                    
++                    r.isValid = checkRackValidPlacement(r);
++                    updateRackFormCounts();
++                    draw();
++                    return; // 遺꾪븷/??젣 ???ㅻⅨ ?고겢由?濡쒖쭅 諛⑹?!
++                }
++            }
++        }
++    }
++
+     if (!isDrawingMode && currentScale > 0) {
+         for (let i = racks.length - 1; i >= 0; i--) {
+             const r = racks[i];
+@@ -418,20 +460,130 @@ function splitRackGroup(rackIndex, spanIndex) {
+     draw();
+ }
+ 
++let isExtendingRack = false;
++let extendingRackIndex = -1;
++let extendInitialBays = 0;
++let extendStartPos = { x: 0, y: 0 };
++
++function getRackAngle(r) {
++    if (r.angle !== undefined) return r.angle;
++    if (r.isHoriz) {
++        return r.dir < 0 ? Math.PI : 0;
++    } else {
++        return r.dir < 0 ? -Math.PI / 2 : Math.PI / 2;
++    }
++}
++
++function getRackRotatedCorners(r) {
++    const depthPx = getRackTotalDepthPx(r);
++    const lenPx = r.totalLengthPx;
++    const angle = getRackAngle(r);
++    const cos = Math.cos(angle);
++    const sin = Math.sin(angle);
++    
++    const localCorners = [
++        { x: 0, y: -depthPx / 2 },
++        { x: lenPx, y: -depthPx / 2 },
++        { x: lenPx, y: depthPx / 2 },
++        { x: 0, y: depthPx / 2 }
++    ];
++    
++    return localCorners.map(pt => ({
++        x: pt.x * cos - pt.y * sin + r.x,
++        y: pt.x * sin + pt.y * cos + r.y
++    }));
++}
++
++function getRackTailPos(r) {
++    const angle = getRackAngle(r);
++    const tailX = r.x + Math.cos(angle) * r.totalLengthPx;
++    const tailY = r.y + Math.sin(angle) * r.totalLengthPx;
++    return { x: tailX, y: tailY };
++}
++
+ canvas.addEventListener('mousedown', (e) => {
+     const {x: clickX, y: clickY} = getLogicalPos(e);
+ 
+-    // 1. ?대? 諛곗튂????洹몃９ ??젣 ?뺤씤
++    // 0. ???앸떒 ?몃뱾 ?쒕옒洹??곗옣/異뺤냼/?뚯쟾/蹂듭궗) ?뺤씤
++    if (!isDrawingMode && currentScale > 0) {
++        for (let i = racks.length - 1; i >= 0; i--) {
++            const r = racks[i];
++            
++            if (typeof getRackHandlesPos === 'function') {
++                const handles = getRackHandlesPos(r);
++                if (handles) {
++                    // 1) ?뚯쟾 ?몃뱾 (10???뚯쟾 - 由щえ而?紐⑤뱶??留욊쾶 ?묐룞?섎ŉ Shift ?대┃ ??諛⑺뼢 ?꾪솚)
++                    if (handles.rotate && Math.hypot(handles.rotate.x - clickX, handles.rotate.y - clickY) <= 15) {
++                        let step = (window.activeInteractMode === 'rotate-ccw') ? -10 : 10;
++                        if (e.shiftKey) {
++                            step = -step; // Shift ?꾨Ⅴ硫?諛⑺뼢 諛섏쟾
++                        }
++                        r.angle = (getRackAngle(r) + (step * Math.PI / 180)) % (Math.PI * 2);
++                        // 湲곗〈 ?띿꽦 ?숆린??+                        r.isHoriz = Math.abs(Math.cos(r.angle)) > Math.abs(Math.sin(r.angle));
++                        r.dir = (Math.cos(r.angle) > 0 || Math.sin(r.angle) > 0) ? 1 : -1;
++                        
++                        r.isValid = checkRackValidPlacement(r);
++                        updateRackFormCounts();
++                        draw();
++                        return;
++                    }
++                    
++                    // 2) ?곗옣/異뺤냼 ?몃뱾
++                    if (handles.extend && Math.hypot(handles.extend.x - clickX, handles.extend.y - clickY) <= 15) {
++                        isExtendingRack = true;
++                        extendingRackIndex = i;
++                        r.smallConnected = 0;
++                        extendInitialBays = (r.independent || 1) + (r.connected || 0);
++                        r.totalLengthPx = (85 + (extendInitialBays * r.beamLength)) * currentScale;
++                        extendStartPos = { x: clickX, y: clickY };
++                        updateRackFormCounts();
++                        draw();
++                        return;
++                    }
++                    
++                    // 3) 蹂듭궗 ?몃뱾 (?쒕옒洹?蹂듭젣)
++                    if (handles.copy && Math.hypot(handles.copy.x - clickX, handles.copy.y - clickY) <= 15) {
++                        isMovingRack = true;
++                        currentRackPreview = JSON.parse(JSON.stringify(r));
++                        // 蹂듭젣???숈? angle???ы븿?댁빞??+                        currentRackPreview.angle = getRackAngle(r);
++                        rackDragOffsetX = r.x - clickX;
++                        rackDragOffsetY = r.y - clickY;
++                        updateRackFormCounts();
++                        draw();
++                        return;
++                    }
++                }
++            } else {
++                // fallback to original circle handle logic
++                const tail = getRackTailPos(r);
++                if (Math.hypot(tail.x - clickX, tail.y - clickY) <= 20) {
++                    isExtendingRack = true;
++                    extendingRackIndex = i;
++                    r.smallConnected = 0;
++                    extendInitialBays = (r.independent || 1) + (r.connected || 0);
++                    r.totalLengthPx = (85 + (extendInitialBays * r.beamLength)) * currentScale;
++                    extendStartPos = { x: clickX, y: clickY };
++                    updateRackFormCounts();
++                    draw();
++                    return;
++                }
++            }
++        }
++    }
++
++    // 1. ?대? 諛곗튂????洹몃９ ?대룞 ?뺤씤
+     if (!isDrawingMode && currentScale > 0) {
+         for (let i = racks.length - 1; i >= 0; i--) {
+             const r = racks[i];
+-            const depthPx = (r.rackDepth || 1000) * currentScale;
+             
+             // 諛붿슫??諛뺤뒪 ?먮퀎
+-            let minX = r.isHoriz ? (r.dir > 0 ? r.x : r.x - r.totalLengthPx) : (r.x - depthPx/2);
+-            let maxX = r.isHoriz ? (r.dir > 0 ? r.x + r.totalLengthPx : r.x) : (r.x + depthPx/2);
+-            let minY = r.isHoriz ? (r.y - depthPx/2) : (r.dir > 0 ? r.y : r.y - r.totalLengthPx);
+-            let maxY = r.isHoriz ? (r.y + depthPx/2) : (r.dir > 0 ? r.y + r.totalLengthPx : r.y);
++            const boxes = getRackBoxes(r);
++            let minX = boxes.physical.minX;
++            let maxX = boxes.physical.maxX;
++            let minY = boxes.physical.minY;
++            let maxY = boxes.physical.maxY;
+             
+             // ?쎄컙???곗튂 ?ъ쑀(padding)
+             const pad = 5;
+@@ -443,8 +595,9 @@ canvas.addEventListener('mousedown', (e) => {
+                 
+                 // 湲곗〈 諛곗뿴?먯꽌 鍮쇰궡??currentRackPreview濡??꾩?
+                 currentRackPreview = racks.splice(i, 1)[0];
++                currentRackPreview.angle = getRackAngle(currentRackPreview);
+                 updateRackFormCounts();
+-                draw(); // 踰꾧렇 ?쎌뒪: 利됱떆 ?붾㈃ 媛깆떊
++                draw(); // 利됱떆 ?붾㈃ 媛깆떊
+                 return;
+             }
+         }
+@@ -480,15 +633,76 @@ canvas.addEventListener('mousedown', (e) => {
+         draw();
+         return;
+     }
+-
+-    // 4. ??罹붾쾭??鍮?怨듦컙 ?쒕옒洹???諛곗튂 紐⑤뱶 (AI ?먮룞 諛곗튂 ?꾨떞, 留덉슦???쒕옒洹????앹꽦 湲곕뒫 鍮꾪솢?깊솕)
+-    // if (!isDrawingMode && currentScale > 0) { isDrawingRack = true; ... }
+ });
+ 
+ 
+ canvas.addEventListener('mousemove', (e) => {
+     const {x: currentX, y: currentY} = getLogicalPos(e);
+ 
++    // ???앸떒 ?쒕옒洹??뺤옣/異뺤냼 泥섎━ (?ㅻ쭏???μ븷臾?媛먯? & ???먮룞 蹂묓빀)
++    if (isExtendingRack && extendingRackIndex >= 0 && extendingRackIndex < racks.length) {
++        const r = racks[extendingRackIndex];
++        const deltaPx = r.isHoriz ? (currentX - extendStartPos.x) * r.dir : (currentY - extendStartPos.y) * r.dir;
++        const deltaMm = deltaPx / currentScale;
++        const smallBeamLength = r.smallBeamLength || getSmallBeamLength(r.beamLength);
++
++        // 1. 媛숈? ?쇱씤???덈뒗 留욎????숆낵??蹂묓빀(Auto-Merge) ?ㅻ깄 泥댄겕
++        let snapMergeTarget = null;
++        for (let j = 0; j < racks.length; j++) {
++            if (j === extendingRackIndex) continue;
++            const other = racks[j];
++            if (other.isHoriz === r.isHoriz) {
++                const isCollinear = r.isHoriz ? (Math.abs(other.y - r.y) < 15) : (Math.abs(other.x - r.x) < 15);
++                if (isCollinear) {
++                    const myTail = getRackTailPos(r);
++                    const distToOtherHead = Math.hypot(other.x - currentX, other.y - currentY);
++                    if (distToOtherHead <= 35) {
++                        snapMergeTarget = { index: j, rack: other };
++                        break;
++                    }
++                }
++            }
++        }
++
++        if (snapMergeTarget) {
++            window.activeMergePreview = { sourceIndex: extendingRackIndex, targetIndex: snapMergeTarget.index };
++        } else {
++            window.activeMergePreview = null;
++            
++            let bayDelta = Math.round(deltaMm / r.beamLength);
++            let newTotalBays = Math.max(1, extendInitialBays + bayDelta);
++            
++            // 2. ?ㅻ쭏???μ븷臾?諛?異⑸룎 寃??(?쒖닔 ?쒖? 鍮??⑥쐞濡쒕쭔 ?뺤옣/異뺤냼)
++            r.independent = 1;
++            r.connected = Math.max(0, newTotalBays - 1);
++            r.smallConnected = 0;
++            r.totalLengthPx = (85 + (newTotalBays * r.beamLength)) * currentScale;
++            
++            let isValid = checkRackValidPlacement(r);
++            if (!isValid && newTotalBays > extendInitialBays) {
++                // ?쇰컲 ?곌껐???μ븷臾쇱뿉 ?우븘 ?ㅼ뼱媛????놁쑝硫? ?쒕옒洹??뺤옣 ?쒕룄瑜?吏곸쟾 ?좏슚 移몄닔濡???+                let foundSafeBays = extendInitialBays;
++                for (let b = newTotalBays - 1; b >= extendInitialBays; b--) {
++                    r.connected = Math.max(0, b - 1);
++                    r.smallConnected = 0;
++                    r.totalLengthPx = (85 + (b * r.beamLength)) * currentScale;
++                    if (checkRackValidPlacement(r)) {
++                        foundSafeBays = b;
++                        break;
++                    }
++                }
++                r.connected = Math.max(0, foundSafeBays - 1);
++                r.smallConnected = 0;
++                r.totalLengthPx = (85 + (foundSafeBays * r.beamLength)) * currentScale;
++            }
++        }
++        
++        r.isValid = checkRackValidPlacement(r);
++        updateRackFormCounts();
++        draw();
++        return;
++    }
++
+     // ?μ븷臾??쒕옒洹?以?     if (draggingObstacleIndex !== -1) {
+         const obs = obstacles[draggingObstacleIndex];
+@@ -536,9 +750,50 @@ canvas.addEventListener('mousemove', (e) => {
+         return;
+     }
+ 
+-    // ???덈줈 洹몃━湲?紐⑤뱶 (鍮꾪솢?깊솕 - AI ?먮룞 諛곗튂 ?꾨떞)
+-    // if (isDrawingRack && currentScale > 0) { ... }
+-
++    // 留덉슦???몃쾭 而ㅼ꽌 泥섎━ (?몃뱾 ?? ?ш린議곗젅 而ㅼ꽌/?ъ씤?? ???? grab 而ㅼ꽌)
++    if (!isDrawingMode && !isMovingRack && !isExtendingRack && currentScale > 0) {
++        let isNearTail = false;
++        let isNearBody = false;
++        for (let r of racks) {
++            if (typeof getRackHandlesPos === 'function') {
++                const handles = getRackHandlesPos(r);
++                if (handles) {
++                    // ?뚯쟾 ?몃뱾 ?먮뒗 蹂듭궗 ?몃뱾 洹쇱쿂硫?pointer
++                    if (Math.hypot(handles.rotate.x - currentX, handles.rotate.y - currentY) <= 12 ||
++                        Math.hypot(handles.copy.x - currentX, handles.copy.y - currentY) <= 12) {
++                        canvas.style.cursor = 'pointer';
++                        isNearTail = true;
++                        break;
++                    }
++                    // ?곗옣 ?몃뱾 洹쇱쿂硫??ш린議곗젅 而ㅼ꽌
++                    if (Math.hypot(handles.extend.x - currentX, handles.extend.y - currentY) <= 12) {
++                        canvas.style.cursor = r.isHoriz ? 'ew-resize' : 'ns-resize';
++                        isNearTail = true;
++                        break;
++                    }
++                }
++            } else {
++                const tail = getRackTailPos(r);
++                if (Math.hypot(tail.x - currentX, tail.y - currentY) <= 20) {
++                    canvas.style.cursor = r.isHoriz ? 'ew-resize' : 'ns-resize';
++                    isNearTail = true;
++                    break;
++                }
++            }
++            
++            const boxes = getRackBoxes(r);
++            let minX = boxes.physical.minX;
++            let maxX = boxes.physical.maxX;
++            let minY = boxes.physical.minY;
++            let maxY = boxes.physical.maxY;
++            if (currentX >= minX && currentX <= maxX && currentY >= minY && currentY <= maxY) {
++                isNearBody = true;
++            }
++        }
++        if (!isNearTail) {
++            canvas.style.cursor = isNearBody ? 'grab' : 'default';
++        }
++    }
+ 
+     // ?꾨㈃ 洹몃━??以?媛?대뱶 ??     if (isDrawingMode) {
+@@ -548,11 +803,31 @@ canvas.addEventListener('mousemove', (e) => {
+ });
+ 
+ canvas.addEventListener('mouseup', (e) => {
++    if (isExtendingRack) {
++        if (window.activeMergePreview && window.activeMergePreview.sourceIndex < racks.length && window.activeMergePreview.targetIndex < racks.length) {
++            const src = racks[window.activeMergePreview.sourceIndex];
++            const tgt = racks[window.activeMergePreview.targetIndex];
++            if (src && tgt) {
++                // ???숈쓣 ?섎굹濡?蹂묓빀 (?낅┰ 1? + ?곌껐 N?)
++                src.connected += (tgt.independent || 1) + (tgt.connected || 0);
++                src.smallConnected += (tgt.smallConnected || 0);
++                const smallBeamLength = src.smallBeamLength || getSmallBeamLength(src.beamLength);
++                src.totalLengthPx = (85 + ((src.independent + src.connected) * src.beamLength) + (src.smallConnected * smallBeamLength)) * currentScale;
++                src.isValid = checkRackValidPlacement(src);
++                racks.splice(window.activeMergePreview.targetIndex, 1);
++            }
++            window.activeMergePreview = null;
++        }
++        isExtendingRack = false;
++        extendingRackIndex = -1;
++        updateRackFormCounts();
++        draw();
++    }
++
+     if (draggingObstacleIndex !== -1) {
+         draggingObstacleIndex = -1;
+     }
+     
+-    // isDrawingRack ???뺤젙 湲곕뒫 鍮꾪솢?깊솕 (AI ?먮룞 諛곗튂 ?꾨떞)
+     if (isDrawingRack) {
+         isDrawingRack = false;
+         currentRackPreview = null;
+@@ -578,37 +853,39 @@ canvas.addEventListener('mouseup', (e) => {
+ });
+ 
+ function checkAndMergeRack(movingRack) {
++    const movingAngle = getRackAngle(movingRack);
+     for (let i = 0; i < racks.length; i++) {
+         let placedRack = racks[i];
+         
+-        if (movingRack.isHoriz !== placedRack.isHoriz) continue;
+-        if (movingRack.dir !== placedRack.dir) continue;
++        const placedAngle = getRackAngle(placedRack);
++        if (Math.abs(movingAngle - placedAngle) > 0.02) continue;
+         if (movingRack.beamLength !== placedRack.beamLength) continue;
+         
+-        // ?쇱쭅?좎긽 ?щ?
+-        if (movingRack.isHoriz && Math.abs(movingRack.y - placedRack.y) > 5) continue;
+-        if (!movingRack.isHoriz && Math.abs(movingRack.x - placedRack.x) > 5) continue;
++        // ?쇱쭅?좎긽 ?щ? (Perpendicular distance < 5px)
++        const dx = movingRack.x - placedRack.x;
++        const dy = movingRack.y - placedRack.y;
++        const perpDist = Math.abs(-dx * Math.sin(placedAngle) + dy * Math.cos(placedAngle));
++        if (perpDist > 5) continue;
+         
+         // placedRack 瑗щ━
+-        let placedTailX = placedRack.x + (placedRack.isHoriz ? placedRack.dir * placedRack.totalLengthPx : 0);
+-        let placedTailY = placedRack.y + (!placedRack.isHoriz ? placedRack.dir * placedRack.totalLengthPx : 0);
++        const placedTail = getRackTailPos(placedRack);
+         
+         // movingRack 癒몃━媛 placedRack 瑗щ━???우쓣 ??-        if (Math.hypot(placedTailX - movingRack.x, placedTailY - movingRack.y) < 15) {
++        if (Math.hypot(placedTail.x - movingRack.x, placedTail.y - movingRack.y) < 15) {
+             placedRack.connected += movingRack.independent + movingRack.connected;
+             placedRack.smallConnected += movingRack.smallConnected;
+             
+             let spans = placedRack.independent + placedRack.connected;
+             let lenMm = 85 + (spans * placedRack.beamLength) + (placedRack.smallConnected * placedRack.smallBeamLength);
+             placedRack.totalLengthPx = lenMm * currentScale;
++            placedRack.isValid = checkRackValidPlacement(placedRack);
+             return true;
+         }
+         
+         // movingRack 瑗щ━媛 placedRack 癒몃━???우쓣 ??-        let movingTailX = movingRack.x + (movingRack.isHoriz ? movingRack.dir * movingRack.totalLengthPx : 0);
+-        let movingTailY = movingRack.y + (!movingRack.isHoriz ? movingRack.dir * movingRack.totalLengthPx : 0);
++        const movingTail = getRackTailPos(movingRack);
+         
+-        if (Math.hypot(movingTailX - placedRack.x, movingTailY - placedRack.y) < 15) {
++        if (Math.hypot(movingTail.x - placedRack.x, movingTail.y - placedRack.y) < 15) {
+             placedRack.x = movingRack.x; 
+             placedRack.y = movingRack.y;
+             placedRack.connected += movingRack.independent + movingRack.connected;
+@@ -617,6 +894,7 @@ function checkAndMergeRack(movingRack) {
+             let spans = placedRack.independent + placedRack.connected;
+             let lenMm = 85 + (spans * placedRack.beamLength) + (placedRack.smallConnected * placedRack.smallBeamLength);
+             placedRack.totalLengthPx = lenMm * currentScale;
++            placedRack.isValid = checkRackValidPlacement(placedRack);
+             return true;
+         }
+     }
+@@ -735,14 +1013,36 @@ function finishDrawing() {
+     originalAngles = [];
+     originalVisualLengths = [];
+     userEnteredEdges = [];
+-    // 90??吏곴컖) ?⑥쐞 ?ㅻ깄??湲곕낯?쇰줈 ?섏뿬 移섏닔 ?쒓끝 諛?李뚭렇?ъ쭚 諛⑹?
+-    const snapRadian = Math.PI / 2; 
++    
+     for (let i = 0; i < numEdges; i++) {
+-        let angle = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x);
+-        let snappedAngle = Math.round(angle / snapRadian) * snapRadian;
+-        originalAngles.push(snappedAngle);
++        let p1 = points[i];
++        let p2 = points[i+1];
++        let rawAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
++        
++        // 90??(?섑룊 0, 180??/ ?섏쭅 90, 270?? 洹쇱젒 寃??+        const snapRadian = Math.PI / 2;
++        const nearestOrthogonal = Math.round(rawAngle / snapRadian) * snapRadian;
++        let diff = Math.abs(rawAngle - nearestOrthogonal);
++        while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
++        
++        let finalAngle = rawAngle;
++        // ?섑룊/?섏쭅怨?12????0.2 ?쇰뵒?? ?대궡???뚮쭔 吏곴컖(?섑룊/?섏쭅)?쇰줈 ?ㅻ깄
++        if (diff <= 12 * (Math.PI / 180)) {
++            finalAngle = nearestOrthogonal;
++        } else {
++            // 45???ъ꽑怨?6???대궡???뚮쭔 45???ㅻ깄
++            const snap45 = Math.PI / 4;
++            const nearest45 = Math.round(rawAngle / snap45) * snap45;
++            let diff45 = Math.abs(rawAngle - nearest45);
++            while (diff45 > Math.PI) diff45 = Math.abs(diff45 - Math.PI * 2);
++            if (diff45 <= 6 * (Math.PI / 180)) {
++                finalAngle = nearest45;
++            }
++            // 洹??몄쓽 5媛곹삎, 6媛곹삎 ?ъ꽑 媛곷룄??蹂몃옒 洹몃┛ 媛곷룄 洹몃?濡?100% 蹂댁〈
++        }
+         
+-        let dist = Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y);
++        originalAngles.push(finalAngle);
++        let dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+         originalVisualLengths.push(dist);
+     }
+     
+@@ -753,6 +1053,8 @@ function finishDrawing() {
+ 
+ function getEdgeClearance(p1, p2) {
+     let maxPillarDepth = 0;
++    const cornerDeadZonePx = 1200 * currentScale; // 肄붾꼫 ?곕뱶?ㅽ럹?댁뒪 ?곸뿭
++    
+     obstacles.forEach(obs => {
+         if (obs.type === 'pillar') {
+             let w = (obs.width || 500) * currentScale;
+@@ -760,19 +1062,29 @@ function getEdgeClearance(p1, p2) {
+             
+             if (Math.abs(p1.x - p2.x) < 5) { // ?섏쭅 踰쎈㈃
+                 let wallX = p1.x;
+-                if (Math.abs(obs.x - w/2 - wallX) < 5 || Math.abs(obs.x + w/2 - wallX) < 5) {
+-                    let minY = Math.min(p1.y, p2.y) - h/2 - 5;
+-                    let maxY = Math.max(p1.y, p2.y) + h/2 + 5;
+-                    if (obs.y >= minY && obs.y <= maxY) {
++                if (Math.abs(obs.x - w/2 - wallX) < 15 || Math.abs(obs.x + w/2 - wallX) < 15 || Math.abs(obs.x - wallX) < 15) {
++                    let minY = Math.min(p1.y, p2.y);
++                    let maxY = Math.max(p1.y, p2.y);
++                    // 肄붾꼫 ?곸뿭(?곕뱶?ㅽ럹?댁뒪)???꾩쟾???랁빐 ?덈뒗吏 寃??+                    let distFromP1 = Math.abs(obs.y - p1.y);
++                    let distFromP2 = Math.abs(obs.y - p2.y);
++                    let isCornerPillar = (distFromP1 < cornerDeadZonePx || distFromP2 < cornerDeadZonePx);
++                    
++                    if (!isCornerPillar && obs.y >= minY - h/2 - 5 && obs.y <= maxY + h/2 + 5) {
+                         maxPillarDepth = Math.max(maxPillarDepth, w);
+                     }
+                 }
+             } else if (Math.abs(p1.y - p2.y) < 5) { // ?섑룊 踰쎈㈃
+                 let wallY = p1.y;
+-                if (Math.abs(obs.y - h/2 - wallY) < 5 || Math.abs(obs.y + h/2 - wallY) < 5) {
+-                    let minX = Math.min(p1.x, p2.x) - w/2 - 5;
+-                    let maxX = Math.max(p1.x, p2.x) + w/2 + 5;
+-                    if (obs.x >= minX && obs.x <= maxX) {
++                if (Math.abs(obs.y - h/2 - wallY) < 15 || Math.abs(obs.y + h/2 - wallY) < 15 || Math.abs(obs.y - wallY) < 15) {
++                    let minX = Math.min(p1.x, p2.x);
++                    let maxX = Math.max(p1.x, p2.x);
++                    // 肄붾꼫 ?곸뿭(?곕뱶?ㅽ럹?댁뒪)???꾩쟾???랁빐 ?덈뒗吏 寃??+                    let distFromP1 = Math.abs(obs.x - p1.x);
++                    let distFromP2 = Math.abs(obs.x - p2.x);
++                    let isCornerPillar = (distFromP1 < cornerDeadZonePx || distFromP2 < cornerDeadZonePx);
++                    
++                    if (!isCornerPillar && obs.x >= minX - w/2 - 5 && obs.x <= maxX + w/2 + 5) {
+                         maxPillarDepth = Math.max(maxPillarDepth, h);
+                     }
+                 }
+@@ -787,13 +1099,15 @@ function calculateRackSnap(targetX, targetY, r) {
+     let snappedX = targetX;
+     let snappedY = targetY;
+     const SNAP_DIST = 25; // ?ㅻ깄 諛쒕룞 ?쎌? 諛섍꼍
+-    const depthPx = (r.rackDepth || 1000) * (r.isDouble ? 2 : 1) * currentScale;
++    const depthPx = getRackTotalDepthPx(r);
+ 
+-    // ?꾩옱 醫뚰몴 湲곗? ??諛붿슫??諛뺤뒪
+-    let minX = r.isHoriz ? (r.dir > 0 ? targetX : targetX - r.totalLengthPx) : (targetX - depthPx/2);
+-    let maxX = r.isHoriz ? (r.dir > 0 ? targetX + r.totalLengthPx : targetX) : (targetX + depthPx/2);
+-    let minY = r.isHoriz ? (targetY - depthPx/2) : (r.dir > 0 ? targetY : targetY - r.totalLengthPx);
+-    let maxY = r.isHoriz ? (targetY + depthPx/2) : (r.dir > 0 ? targetY + r.totalLengthPx : targetY);
++    // ?꾩옱 醫뚰몴 湲곗? ?꾩떆 ??諛??뚯쟾 諛붿슫??諛뺤뒪
++    const tempRack = { ...r, x: targetX, y: targetY };
++    const tempBoxes = getRackBoxes(tempRack);
++    let minX = tempBoxes.physical.minX;
++    let maxX = tempBoxes.physical.maxX;
++    let minY = tempBoxes.physical.minY;
++    let maxY = tempBoxes.physical.maxY;
+ 
+     for (let i = 0; i < points.length - 1; i++) {
+         const p1 = points[i];
+@@ -842,39 +1156,40 @@ function calculateRackSnap(targetX, targetY, r) {
+         let placed = racks[i];
+         if (placed === r) continue;
+         
++        const placedBoxes = getRackBoxes(placed);
++        
+         // --- 癒몃━-瑗щ━ ?⑹껜 ?ㅻ깄 ---
+-        if (placed.isHoriz === r.isHoriz && placed.dir === r.dir) {
+-            let placedTailX = placed.x + (placed.isHoriz ? placed.dir * placed.totalLengthPx : 0);
+-            let placedTailY = placed.y + (!placed.isHoriz ? placed.dir * placed.totalLengthPx : 0);
++        const placedAngle = getRackAngle(placed);
++        const curAngle = getRackAngle(r);
++        if (Math.abs(placedAngle - curAngle) < 0.05) {
++            const placedTail = getRackTailPos(placed);
+             
+             // ??癒몃━媛 ?곷?諛?瑗щ━???ㅻ깄
+-            if (Math.hypot(targetX - placedTailX, targetY - placedTailY) < SNAP_DIST) {
+-                snappedX = placedTailX;
+-                snappedY = placedTailY;
++            if (Math.hypot(targetX - placedTail.x, targetY - placedTail.y) < SNAP_DIST) {
++                snappedX = placedTail.x;
++                snappedY = placedTail.y;
+                 break;
+             }
+             
+             // ??瑗щ━媛 ?곷?諛?癒몃━???ㅻ깄
+-            let myTailX = targetX + (r.isHoriz ? r.dir * r.totalLengthPx : 0);
+-            let myTailY = targetY + (!r.isHoriz ? r.dir * r.totalLengthPx : 0);
+-            if (Math.hypot(myTailX - placed.x, myTailY - placed.y) < SNAP_DIST) {
+-                snappedX = placed.x - (r.isHoriz ? r.dir * r.totalLengthPx : 0);
+-                snappedY = placed.y - (!r.isHoriz ? r.dir * r.totalLengthPx : 0);
++            const myTail = getRackTailPos(tempRack);
++            if (Math.hypot(myTail.x - placed.x, myTail.y - placed.y) < SNAP_DIST) {
++                snappedX = placed.x - (myTail.x - targetX);
++                snappedY = placed.y - (myTail.y - targetY);
+                 break;
+             }
+         }
+         
+         // --- ?듬줈 媛꾧꺽(Aisle) 2800mm ?ㅻ깄 ---
+         if (placed.isHoriz === r.isHoriz) {
+-            const placedOuterDepth = placed.rackDepth || 1100;
+-            const placedDepthPx = placedOuterDepth * (placed.isDouble ? 2 : 1) * currentScale;
++            const placedDepthPx = getRackTotalDepthPx(placed);
+             
+             if (r.isHoriz) {
+                 // X 援ш컙 寃뱀묠 ?뺤씤
+-                let myMinX = r.dir > 0 ? targetX : targetX - r.totalLengthPx;
+-                let myMaxX = r.dir > 0 ? targetX + r.totalLengthPx : targetX;
+-                let pMinX = placed.dir > 0 ? placed.x : placed.x - placed.totalLengthPx;
+-                let pMaxX = placed.dir > 0 ? placed.x + placed.totalLengthPx : placed.x;
++                let myMinX = minX;
++                let myMaxX = maxX;
++                let pMinX = placedBoxes.physical.minX;
++                let pMaxX = placedBoxes.physical.maxX;
+                 
+                 if (!(myMaxX < pMinX || myMinX > pMaxX)) {
+                     let distTop = Math.abs((placed.y - placedDepthPx/2) - (targetY + depthPx/2));
+@@ -888,10 +1203,10 @@ function calculateRackSnap(targetX, targetY, r) {
+                 }
+             } else {
+                 // Y 援ш컙 寃뱀묠 ?뺤씤
+-                let myMinY = r.dir > 0 ? targetY : targetY - r.totalLengthPx;
+-                let myMaxY = r.dir > 0 ? targetY + r.totalLengthPx : targetY;
+-                let pMinY = placed.dir > 0 ? placed.y : placed.y - placed.totalLengthPx;
+-                let pMaxY = placed.dir > 0 ? placed.y + placed.totalLengthPx : placed.y;
++                let myMinY = minY;
++                let myMaxY = maxY;
++                let pMinY = placedBoxes.physical.minY;
++                let pMaxY = placedBoxes.physical.maxY;
+                 
+                 if (!(myMaxY < pMinY || myMinY > pMaxY)) {
+                     let distLeft = Math.abs((placed.x - placedDepthPx/2) - (targetX + depthPx/2));
+@@ -909,8 +1224,8 @@ function calculateRackSnap(targetX, targetY, r) {
+     
+     // --- ?듬줈 以묒븰 ?ㅻ깄 (?됯퇏 遺꾨같) ---
+     if (r.isHoriz) {
+-        let myMinX = r.dir > 0 ? targetX : targetX - r.totalLengthPx;
+-        let myMaxX = r.dir > 0 ? targetX + r.totalLengthPx : targetX;
++        let myMinX = minX;
++        let myMaxX = maxX;
+         
+         let boundTop = null; 
+         let boundBottom = null;
+@@ -960,11 +1275,11 @@ function calculateRackSnap(targetX, targetY, r) {
+         // ?ㅻⅨ ??泥댄겕
+         for (let placed of racks) {
+             if (placed === r) continue;
+-            let pMinX = placed.dir > 0 ? placed.x : placed.x - placed.totalLengthPx;
+-            let pMaxX = placed.dir > 0 ? placed.x + placed.totalLengthPx : placed.x;
++            const placedBoxes = getRackBoxes(placed);
++            let pMinX = placedBoxes.physical.minX;
++            let pMaxX = placedBoxes.physical.maxX;
+             if (!(myMaxX < pMinX || myMinX > pMaxX)) {
+-                let placedOuterDepth = placed.rackDepth || 1100;
+-                let placedDepthPx = placedOuterDepth * (placed.isDouble ? 2 : 1) * currentScale;
++                let placedDepthPx = getRackTotalDepthPx(placed);
+                 
+                 if (placed.y < targetY) {
+                     let effY = placed.y + placedDepthPx/2;
+@@ -983,8 +1298,8 @@ function calculateRackSnap(targetX, targetY, r) {
+             }
+         }
+     } else { // ?섏쭅 諛곗튂
+-        let myMinY = r.dir > 0 ? targetY : targetY - r.totalLengthPx;
+-        let myMaxY = r.dir > 0 ? targetY + r.totalLengthPx : targetY;
++        let myMinY = minY;
++        let myMaxY = maxY;
+         
+         let boundLeft = null; 
+         let boundRight = null;
+@@ -1034,11 +1349,11 @@ function calculateRackSnap(targetX, targetY, r) {
+         // ?ㅻⅨ ??泥댄겕
+         for (let placed of racks) {
+             if (placed === r) continue;
+-            let pMinY = placed.dir > 0 ? placed.y : placed.y - placed.totalLengthPx;
+-            let pMaxY = placed.dir > 0 ? placed.y + placed.totalLengthPx : placed.y;
++            const placedBoxes = getRackBoxes(placed);
++            let pMinY = placedBoxes.physical.minY;
++            let pMaxY = placedBoxes.physical.maxY;
+             if (!(myMaxY < pMinY || myMinY > pMaxY)) {
+-                let placedOuterDepth = placed.rackDepth || 1100;
+-                let placedDepthPx = placedOuterDepth * (placed.isDouble ? 2 : 1) * currentScale;
++                let placedDepthPx = getRackTotalDepthPx(placed);
+                 
+                 if (placed.x < targetX) {
+                     let effX = placed.x + placedDepthPx/2;
+@@ -1103,23 +1418,56 @@ function calculatePillarSnap(targetX, targetY, obs) {
+ 
+ // --- ??諛곗튂 ?쒖빟 ?뚭퀬由ъ쬁 (Constraints) ---
+ 
++function getRackTotalDepthPx(r) {
++    const singleDepth = r.rackDepth || 1000;
++    if (r.isDouble) {
++        const holderSize = r.holderSize || 200;
++        return (singleDepth * 2 + holderSize) * currentScale;
++    }
++    return singleDepth * currentScale;
++}
++
+ function getRackBoxes(r) {
+-    const depthPx = (r.rackDepth || 1000) * currentScale;
++    const depthPx = getRackTotalDepthPx(r);
+     const cornerClearancePx = depthPx + (100 * currentScale);
+     
+-    // 臾쇰━??諛붿슫??諛뺤뒪
+-    let pxMinX = r.isHoriz ? (r.dir > 0 ? r.x : r.x - r.totalLengthPx) : (r.x - depthPx/2);
+-    let pxMaxX = r.isHoriz ? (r.dir > 0 ? r.x + r.totalLengthPx : r.x) : (r.x + depthPx/2);
+-    let pxMinY = r.isHoriz ? (r.y - depthPx/2) : (r.dir > 0 ? r.y : r.y - r.totalLengthPx);
+-    let pxMaxY = r.isHoriz ? (r.y + depthPx/2) : (r.dir > 0 ? r.y + r.totalLengthPx : r.y);
++    // ?뚯쟾??4媛?紐⑥꽌由?醫뚰몴 援ы븯湲?+    const corners = getRackRotatedCorners(r);
++    const xs = corners.map(c => c.x);
++    const ys = corners.map(c => c.y);
++    
++    const pxMinX = Math.min(...xs);
++    const pxMaxX = Math.max(...xs);
++    const pxMinY = Math.min(...ys);
++    const pxMaxY = Math.max(...ys);
+     
+     let physicalBox = { minX: pxMinX, maxX: pxMaxX, minY: pxMinY, maxY: pxMaxY };
+     
+-    // ?대━?대윴??諛뺤뒪 (肄붾꼫 二쎌? 怨듦컙???꾪빐 ???앸떒 ?뺤옣)
+-    let cxMinX = pxMinX - (r.isHoriz ? cornerClearancePx : 0);
+-    let cxMaxX = pxMaxX + (r.isHoriz ? cornerClearancePx : 0);
+-    let cxMinY = pxMinY - (!r.isHoriz ? cornerClearancePx : 0);
+-    let cxMaxY = pxMaxY + (!r.isHoriz ? cornerClearancePx : 0);
++    // ?대━?대윴??諛뺤뒪 (肄붾꼫 ?ш컖吏?瑜??꾪빐 湲몄씠 諛⑺뼢 ???앸떒 ?뺤옣)
++    const angle = getRackAngle(r);
++    const cos = Math.cos(angle);
++    const sin = Math.sin(angle);
++    const lenPx = r.totalLengthPx;
++    
++    const localClearanceCorners = [
++        { x: -cornerClearancePx, y: -depthPx / 2 },
++        { x: lenPx + cornerClearancePx, y: -depthPx / 2 },
++        { x: lenPx + cornerClearancePx, y: depthPx / 2 },
++        { x: -cornerClearancePx, y: depthPx / 2 }
++    ];
++    
++    const cCorners = localClearanceCorners.map(pt => ({
++        x: pt.x * cos - pt.y * sin + r.x,
++        y: pt.x * sin + pt.y * cos + r.y
++    }));
++    
++    const cXs = cCorners.map(c => c.x);
++    const cYs = cCorners.map(c => c.y);
++    
++    const cxMinX = Math.min(...cXs);
++    const cxMaxX = Math.max(...cXs);
++    const cxMinY = Math.min(...cYs);
++    const cxMaxY = Math.max(...cYs);
+     
+     let clearanceBox = { minX: cxMinX, maxX: cxMaxX, minY: cxMinY, maxY: cxMaxY };
+     return { physical: physicalBox, clearance: clearanceBox };
+@@ -1149,26 +1497,25 @@ function isPointInPolygon(point, vs) {
+     return inside;
+ }
+ 
+-function checkRackValidPlacement(newRack) {
++function checkRackValidPlacement(newRack, ignoreRack = null) {
+     let boxes = getRackBoxes(newRack);
+     
+     // 議곌굔 A: 寃뱀묠 諛?肄붾꼫 ?ъ쑀怨듦컙 (Dead Space), 洹몃━怨??듬줈(Aisle) 媛꾧꺽 寃??     const AISLE_DIST_PX = 2800 * currentScale;
+     
+     for(let r of racks) {
++        if (r === newRack || r === ignoreRack) continue; // ?먭린 ?먯떊怨쇱쓽 鍮꾧탳 ?쒖쇅
++        
+         let existBoxes = getRackBoxes(r);
+-        // ?덈줈???숈쓽 臾쇰━??諛뺤뒪媛 湲곗〈 ?숈쓽 ?대━?대윴??諛뺤뒪瑜?移⑤쾾?섍굅??
+-        // ?덈줈???숈쓽 ?대━?대윴??諛뺤뒪媛 湲곗〈 ?숈쓽 臾쇰━??諛뺤뒪瑜?移⑤쾾?섎㈃ 遺덊빀寃?
+-        if (checkBoxesOverlap(boxes.physical, existBoxes.clearance) || checkBoxesOverlap(boxes.clearance, existBoxes.physical)) {
++        // ?덈줈???숈쓽 臾쇰━??諛뺤뒪媛 湲곗〈 ?숈쓽 臾쇰━??諛뺤뒪瑜?移⑤쾾?섎㈃ 遺덊빀寃?+        if (checkBoxesOverlap(boxes.physical, existBoxes.physical)) {
+             return false;
+         }
+         
+         // ?듬줈 媛꾧꺽 寃??(2800mm 猷?
+         if (newRack.isHoriz === r.isHoriz) {
+-            let placedOuterDepth = r.rackDepth || 1100;
+-            let placedDepthPx = placedOuterDepth * (r.isDouble ? 2 : 1) * currentScale;
+-            let newOuterDepth = newRack.rackDepth || 1100;
+-            let newDepthPx = newOuterDepth * (newRack.isDouble ? 2 : 1) * currentScale;
++            let placedDepthPx = getRackTotalDepthPx(r);
++            let newDepthPx = getRackTotalDepthPx(newRack);
+             
+             if (newRack.isHoriz) {
+                 let myMinX = newRack.dir > 0 ? newRack.x : newRack.x - newRack.totalLengthPx;
+@@ -1198,7 +1545,7 @@ function checkRackValidPlacement(newRack) {
+         }
+     }
+     
+-    // 議곌굔 C: ?μ븷臾?100mm 吏곸젒 ?닿꺽 寃??(?? 踰??ㅻ깄???섑빐 ?먮룞 議곗젅?섎?濡??ш린??臾쇰━??異⑸룎留?諛⑹?)
++    // 議곌굔 C: ?μ븷臾?吏곸젒 媛꾩꽠 寃??     for (let obs of obstacles) {
+         const isDoorLike = obs.type === 'door' || obs.type === 'shutter';
+         if (!isDoorLike) {
+@@ -1217,7 +1564,6 @@ function checkRackValidPlacement(newRack) {
+                 return false;
+             }
+         } else {
+-            // 異쒖엯援?諛??뷀꽣 ?욎そ 2800mm ?뺣낫
+             let w = (obs.length || 2000) * currentScale;
+             let clearance = 2800 * currentScale;
+             let isHorizDoor = Math.abs(Math.cos(obs.angle)) > 0.5;
+@@ -1245,55 +1591,16 @@ function checkRackValidPlacement(newRack) {
+         }
+     }
+     
+-    // 議곌굔 D: 李쎄퀬 踰쎈㈃ ?숈쟻 ?닿꺽(湲곕뫁 ?곕룞) 諛?諛붽묑?쇰줈 踰쀬뼱??諛⑹?
+-    // 1. ?ㅺ컖???대? ?ы븿 ?щ? (理쒖냼 1px ?⑤뵫)
+-    let padPx = 1 * currentScale;
+-    let wBox = {
+-        minX: boxes.physical.minX + padPx,
+-        maxX: boxes.physical.maxX - padPx,
+-        minY: boxes.physical.minY + padPx,
+-        maxY: boxes.physical.maxY - padPx
+-    };
+-    
+-    let corners = [
+-        [wBox.minX, wBox.minY], [wBox.maxX, wBox.minY],
+-        [wBox.maxX, wBox.maxY], [wBox.minX, wBox.maxY]
++    // 議곌굔 D: 李쎄퀬 ?ㅺ컖??寃쎄퀎 ?대? 寃??+    const ptsToCheck = [
++        [boxes.physical.minX, boxes.physical.minY],
++        [boxes.physical.maxX, boxes.physical.minY],
++        [boxes.physical.minX, boxes.physical.maxY],
++        [boxes.physical.maxX, boxes.physical.maxY]
+     ];
+-    
+-    for(let c of corners) {
+-        if(!isPointInPolygon(c, points)) return false;
+-    }
+-    
+-    // 2. ?숈쟻 踰쎈㈃ ?닿꺽 嫄곕━(Clearance) 寃??-    for (let i = 0; i < points.length - 1; i++) {
+-        let p1 = points[i];
+-        let p2 = points[i+1];
+-        let clearance = getEdgeClearance(p1, p2) - 2; // -2 for float error
+-        
+-        if (Math.abs(p1.x - p2.x) < 5) { // Vertical wall
+-            let wallX = p1.x;
+-            let minY = Math.min(p1.y, p2.y) - 5;
+-            let maxY = Math.max(p1.y, p2.y) + 5;
+-            if (!(boxes.physical.maxY < minY || boxes.physical.minY > maxY)) {
+-                let dist = 0;
+-                if (wallX <= boxes.physical.minX) dist = boxes.physical.minX - wallX;
+-                else if (wallX >= boxes.physical.maxX) dist = wallX - boxes.physical.maxX;
+-                else dist = -1;
+-                
+-                if (dist < clearance) return false;
+-            }
+-        } else if (Math.abs(p1.y - p2.y) < 5) { // Horizontal wall
+-            let wallY = p1.y;
+-            let minX = Math.min(p1.x, p2.x) - 5;
+-            let maxX = Math.max(p1.x, p2.x) + 5;
+-            if (!(boxes.physical.maxX < minX || boxes.physical.minX > maxX)) {
+-                let dist = 0;
+-                if (wallY <= boxes.physical.minY) dist = boxes.physical.minY - wallY;
+-                else if (wallY >= boxes.physical.maxY) dist = wallY - boxes.physical.maxY;
+-                else dist = -1;
+-                
+-                if (dist < clearance) return false;
+-            }
++    for(let pt of ptsToCheck) {
++        if (!isPointInPolygon(pt, points)) {
++            return false;
+         }
+     }
+     
+@@ -1302,7 +1609,7 @@ function checkRackValidPlacement(newRack) {
+ 
+ // ??洹몃９ ?뚮뜑留??ы띁 ?⑥닔
+ // CAD ?ㅽ????묐갑???붿궡??移섏닔??洹몃━湲??ы띁 ?⑥닔
+-function drawDimensionArrow(ctx, x1, y1, x2, y2, text, color = '#f87171', isTextVertical = false) {
++function drawDimensionArrow(ctx, x1, y1, x2, y2, text, color = '#f87171', isTextVertical = false, isFlipped = false) {
+     ctx.save();
+     ctx.strokeStyle = color;
+     ctx.fillStyle = color;
+@@ -1341,25 +1648,24 @@ function drawDimensionArrow(ctx, x1, y1, x2, y2, text, color = '#f87171', isText
+     ctx.font = 'bold 11px Inter';
+     const textWidth = ctx.measureText(text).width + 6;
+     
+-    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)'; // 湲??諛곌꼍
++    ctx.save();
++    ctx.translate(midX, midY);
++    if (isFlipped) {
++        ctx.rotate(Math.PI); // 180???ㅼ쭛??蹂댁젙 (??긽 ?뺣갑??媛?낆꽦 ?좎?)
++    }
+     if (isTextVertical) {
+-        ctx.fillRect(midX - 10, midY - textWidth/2, 20, textWidth);
+-        ctx.save();
+-        ctx.translate(midX, midY);
+         ctx.rotate(-Math.PI / 2);
+-        ctx.fillStyle = color;
+-        ctx.textAlign = 'center';
+-        ctx.textBaseline = 'middle';
+-        ctx.fillText(text, 0, 0);
+-        ctx.restore();
+-    } else {
+-        ctx.fillRect(midX - textWidth/2, midY - 7, textWidth, 14);
+-        ctx.fillStyle = color;
+-        ctx.textAlign = 'center';
+-        ctx.textBaseline = 'middle';
+-        ctx.fillText(text, midX, midY);
+     }
+     
++    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)'; // 湲??諛곌꼍
++    ctx.fillRect(-textWidth/2, -7, textWidth, 14);
++    
++    ctx.fillStyle = color;
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(text, 0, 0);
++    
++    ctx.restore();
+     ctx.restore();
+ }
+ 
+@@ -1371,11 +1677,16 @@ function getSmallBeamLength(beamLength) {
+     return Math.max(1000, (beamLength || 2585) - 1200);
+ }
+ 
+-// ??洹몃９ ?⑥씪 洹몃━湲?+// ??洹몃９ ?⑥씪 洹몃━湲?(蹂듬젹 湲곕낯 2,200mm ?꾨꼍 諛섏쁺)
+ function drawRackGroup(r, isPreview = false) {
++    const singleDepth = r.rackDepth || 1000;
++    const holderSize = r.holderSize || 200; // 媛?대뜲 ???湲곕낯 200mm (300, 500 媛蹂)
++    const isDouble = r.isDouble || false;
++
++    const singleDepthPx = singleDepth * currentScale;
++    const holderPx = (isDouble ? holderSize : 0) * currentScale;
++    const depthPx = isDouble ? (singleDepthPx * 2 + holderPx) : singleDepthPx;
+ 
+-    const outerDepth = r.rackDepth || 1000;
+-    const depthPx = outerDepth * (r.isDouble ? 2 : 1) * currentScale;
+     const colSizePx = 85 * currentScale; // 湲곕뫁 洹쒓꺽 85mm
+     const beamPx = r.beamLength * currentScale;
+     const smallBeamLength = r.smallBeamLength || getSmallBeamLength(r.beamLength);
+@@ -1385,11 +1696,10 @@ function drawRackGroup(r, isPreview = false) {
+     ctx.translate(r.x, r.y);
+     
+     // ?뚯쟾 泥섎━
+-    if (!r.isHoriz) {
+-        ctx.rotate(Math.PI / 2);
+-    }
+-    if (r.dir < 0) {
+-        ctx.rotate(Math.PI);
++    ctx.rotate(getRackAngle(r));
++
++    if (isPreview) {
++        ctx.globalAlpha = 0.45; // ?щ챸泥섎━??蹂듭궗?????ㅽ????곸슜
+     }
+ 
+     // 1. 諛곌꼍 梨꾩슦湲?@@ -1404,16 +1714,17 @@ function drawRackGroup(r, isPreview = false) {
+     ctx.strokeStyle = isPreview && !r.isValid ? 'rgba(239, 68, 68, 0.8)' : '#0ea5e9';
+     ctx.lineWidth = 2;
+     
+-    if (r.isDouble) {
+-        // 蹂듬젹??寃쎌슦 ???꾨옒 媛곴컖 媛濡?鍮???-        const dHalf = depthPx / 2;
+-        ctx.strokeRect(0, -dHalf, r.totalLengthPx, dHalf);
+-        ctx.strokeRect(0, 0, r.totalLengthPx, dHalf);
++    if (isDouble) {
++        // ?곷? ??& ?섎? ??媛곴컖 ?낅┰??1000mm 源딆씠濡??뚮뜑留? 媛?대뜲 holderPx 媛꾧꺽 ?뺣낫
++        const topRackY = -depthPx / 2;
++        const botRackY = depthPx / 2 - singleDepthPx;
++        ctx.strokeRect(0, topRackY, r.totalLengthPx, singleDepthPx);
++        ctx.strokeRect(0, botRackY, r.totalLengthPx, singleDepthPx);
+     } else {
+         ctx.strokeRect(0, -depthPx/2, r.totalLengthPx, depthPx);
+     }
+ 
+-    // 3. 湲곕뫁(Column) ?뺤긽 洹몃━湲?(媛?紐⑥꽌由?諛??꾨젅??寃쎄퀎??85x85mm ?ш컖??
++    // 3. 湲곕뫁 諛?怨좎젙 ????뚮뜑留?     ctx.fillStyle = isPreview ? 'rgba(56, 189, 248, 0.7)' : '#0ea5e9';
+     ctx.strokeStyle = '#fff';
+     ctx.lineWidth = 1;
+@@ -1424,26 +1735,28 @@ function drawRackGroup(r, isPreview = false) {
+     let colX = 0;
+     
+     for (let i = 0; i <= totalSpans; i++) {
+-        // ?⑥뿴/蹂듬젹???곕Ⅸ 湲곕뫁 ?ㅼ떆媛?諛곗튂
+-        if (r.isDouble) {
+-            // ?곷? ?숈쓽 ???꾨옒 湲곕뫁
+-            ctx.fillRect(colX, -depthPx/2, colSizePx, colSizePx);
+-            ctx.strokeRect(colX, -depthPx/2, colSizePx, colSizePx);
+-            ctx.fillRect(colX, -colSizePx, colSizePx, colSizePx);
+-            ctx.strokeRect(colX, -colSizePx, colSizePx, colSizePx);
++        if (isDouble) {
++            const topRackY = -depthPx / 2;
++            const botRackY = depthPx / 2 - singleDepthPx;
+             
+-            // ?섎? ?숈쓽 ???꾨옒 湲곕뫁
+-            ctx.fillRect(colX, 0, colSizePx, colSizePx);
+-            ctx.strokeRect(colX, 0, colSizePx, colSizePx);
+-            ctx.fillRect(colX, depthPx/2 - colSizePx, colSizePx, colSizePx);
+-            ctx.strokeRect(colX, depthPx/2 - colSizePx, colSizePx, colSizePx);
++            // ?곷? ??湲곕뫁
++            ctx.fillRect(colX, topRackY, colSizePx, colSizePx);
++            ctx.strokeRect(colX, topRackY, colSizePx, colSizePx);
++            ctx.fillRect(colX, topRackY + singleDepthPx - colSizePx, colSizePx, colSizePx);
++            ctx.strokeRect(colX, topRackY + singleDepthPx - colSizePx, colSizePx, colSizePx);
++            
++            // ?섎? ??湲곕뫁
++            ctx.fillRect(colX, botRackY, colSizePx, colSizePx);
++            ctx.strokeRect(colX, botRackY, colSizePx, colSizePx);
++            ctx.fillRect(colX, botRackY + singleDepthPx - colSizePx, colSizePx, colSizePx);
++            ctx.strokeRect(colX, botRackY + singleDepthPx - colSizePx, colSizePx, colSizePx);
+ 
+-            // ?뵕 蹂듬젹 怨좎젙 ???Spacer) 釉뚮씪耳??쒓컖??(????2媛?怨좎젙 諛?
++            // ?뵕 蹂듬젹 怨좎젙 ???Spacer) 釉뚮씪耳??쒓컖??             ctx.fillStyle = '#fbbf24'; // ?⑷툑?????             ctx.strokeStyle = '#f59e0b';
+             ctx.lineWidth = 1;
+-            ctx.fillRect(colX + 1, -colSizePx/2, colSizePx - 2, colSizePx);
+-            ctx.strokeRect(colX + 1, -colSizePx/2, colSizePx - 2, colSizePx);
++            ctx.fillRect(colX + 1, -holderPx/2, colSizePx - 2, holderPx);
++            ctx.strokeRect(colX + 1, -holderPx/2, colSizePx - 2, holderPx);
+             ctx.fillStyle = isPreview ? 'rgba(56, 189, 248, 0.7)' : '#0ea5e9';
+             ctx.strokeStyle = '#fff';
+         } else {
+@@ -1459,8 +1772,10 @@ function drawRackGroup(r, isPreview = false) {
+         }
+     }
+ 
+-    // 4. CAD 移섏닔??Dimension Lines) ?뚮뜑留?(鍮④컙???붿궡??諛??섏튂)
++    // 4. CAD 移섏닔??Dimension Lines) ?뚮뜑留?     if (!isPreview) {
++        const isFlipped = (r.dir < 0);
++
+         // ?곗옣 蹂댁“??(Extension Lines)
+         ctx.strokeStyle = 'rgba(248, 113, 113, 0.6)';
+         ctx.lineWidth = 1;
+@@ -1470,11 +1785,54 @@ function drawRackGroup(r, isPreview = false) {
+         ctx.moveTo(0, depthPx/2); ctx.lineTo(-25, depthPx/2);
+         ctx.stroke();
+ 
+-        // 4-1. ?몃줈 源딆씠 移섏닔??(?몄륫 1,100 / ?댁쨷????2,200)
+-        drawDimensionArrow(ctx, -20, -depthPx/2, -20, depthPx/2, (outerDepth * (r.isDouble ? 2 : 1)).toLocaleString(), '#f87171', true);
++        // 4-1. ?몃줈 源딆씠 移섏닔??(?⑥뿴 1,000 / 蹂듬젹 湲곕낯 2,200 ??
++        const totalDepthMm = isDouble ? (singleDepth * 2 + holderSize) : singleDepth;
++        drawDimensionArrow(ctx, -20, -depthPx/2, -20, depthPx/2, totalDepthMm.toLocaleString(), '#f87171', true, isFlipped);
++
++        // 4-2. 媛濡??뺢퇋 濡쒕뱶鍮??댁륫 移섏닔??(2,585 ?? - 泥?踰덉㎏ 踰좎씠 ?섎떒???쒓린
++        if (regularSpans > 0) {
++            drawDimensionArrow(ctx, colSizePx, depthPx/2 + 15, colSizePx + beamPx, depthPx/2 + 15, Math.round(r.beamLength).toLocaleString(), '#f87171', !r.isHoriz, isFlipped);
++        }
++
++        // 4-3. ?묒??곌껐 移섏닔??(1,385 ?? ?쒓린 (?묒??곌껐???덉쓣 ????긽 紐낇솗???쒖떆)
++        if (r.smallConnected > 0) {
++            const smallStartPx = colSizePx + (regularSpans * (colSizePx + beamPx));
++            drawDimensionArrow(ctx, smallStartPx, depthPx/2 + 15, smallStartPx + smallBeamPx, depthPx/2 + 15, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', !r.isHoriz, isFlipped);
++        }
+ 
+-        // 4-3. 媛濡?濡쒕뱶鍮??댁륫 移섏닔??(2,585 ?? - 泥?踰덉㎏ 踰좎씠 ?섎떒???쒓린
+-        drawDimensionArrow(ctx, colSizePx, depthPx/2 + 15, colSizePx + beamPx, depthPx/2 + 15, Math.round(r.beamLength).toLocaleString(), '#f87171');
++        // 5. ???앸떒 ?쒕옒洹??뺤옣 ?몃뱾 (?명꽣?숉떚釉?紐⑤뱶???곕씪 ?쒖꽦?붾맂 紐⑤뱶???꾩씠肄??섎굹留??뚮뜑留?
++        const handleX = r.totalLengthPx;
++        const mode = window.activeInteractMode || null;
++        
++        if (mode && typeof drawRotateHandleIcon === 'function') {
++            ctx.save();
++            if (mode === 'rotate' || mode === 'rotate-ccw') {
++                drawRotateHandleIcon(ctx, handleX, 0);
++            } else if (mode === 'extend') {
++                drawExtendHandleIcon(ctx, handleX, 0);
++            } else if (mode === 'copy') {
++                drawCopyHandleIcon(ctx, handleX, 0);
++            }
++            ctx.restore();
++        }
++    }
++
++    // 6. 諛붿씠?⑥뒪 ?쇰꺼 ?뚮뜑留?+    if (r.bypass) {
++        ctx.save();
++        ctx.fillStyle = '#ef4444'; // ?좊챸??鍮④컙??+        ctx.font = 'bold 12px Inter, sans-serif';
++        ctx.textAlign = 'center';
++        ctx.textBaseline = 'middle';
++        
++        const labelText = "Bypass";
++        const textWidth = ctx.measureText(labelText).width + 12;
++        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
++        ctx.fillRect(r.totalLengthPx / 2 - textWidth / 2, -10, textWidth, 20);
++        
++        ctx.fillStyle = '#ef4444';
++        ctx.fillText(labelText, r.totalLengthPx / 2, 0);
++        ctx.restore();
+     }
+ 
+     ctx.restore();
+@@ -1937,6 +2295,11 @@ function drawDimensions() {
+             }
+         }
+     });
++
++    // ?덇툑??& ?듬줈 媛?대뱶 ?뚮뜑留?+    if (typeof drawRuler === 'function') drawRuler();
++    if (typeof drawCorridorGuide === 'function') drawCorridorGuide();
++    ctx.restore();
+ }
+ 
+ // ???섎웾????諛??곷떒 ??쒕낫?쒖뿉 ?ㅼ떆媛?醫낇빀 ?낅뜲?댄듃
+@@ -1944,6 +2307,7 @@ window.updateRackFormCounts = function() {
+     let totalIndep = 0;
+     let totalConn = 0;
+     let totalSmallConn = 0;
++    let totalBypass = 0;
+     let totalTieHolders = 0;
+     let totalBays = 0;
+     
+@@ -1953,50 +2317,69 @@ window.updateRackFormCounts = function() {
+ 
+     let totalRegularBays = 0;
+     let totalSmallBays = 0;
++    
++    let bypassRegularBays = 0;
++    let bypassSmallBays = 0;
+ 
+     racks.forEach(r => {
+         let reg = (r.independent || 0) + (r.connected || 0);
+         let sm = r.smallConnected || 0;
+         let spans = reg + sm;
+ 
+-        
+-        if (r.isDouble) {
+-            // 蹂듬젹(蹂듭닔) ??1?명듃: ?⑥뿴 2?쇱씤 寃고빀
+-            totalIndep += (r.independent || 0) * 2;
+-            totalConn += (r.connected || 0) * 2;
+-            totalSmallConn += sm * 2;
+-            totalRegularBays += reg * 2;
+-            totalSmallBays += sm * 2;
+-            totalBays += spans * 2;
++        if (r.bypass) {
++            // 諛붿씠?⑥뒪??寃쎌슦 ?쇰컲 移댁슫?몄뿉???쒖쇅?섍퀬 諛붿씠?⑥뒪 ?꾩슜?쇰줈 吏묎퀎
++            let factor = r.isDouble ? 2 : 1;
++            totalBypass += spans * factor;
++            bypassRegularBays += reg * factor;
++            bypassSmallBays += sm * factor;
+             
+-            // 怨좎젙 ???Spacer): 湲곕뫁 ????spans + 1) * 2媛?(????2媛쒖뵫)
+-            if (spans > 0) {
++            // 怨좎젙 ???Spacer)??諛붿씠?⑥뒪 ?щ?? 臾닿??섍쾶 援ъ“臾쇰줈???꾩슂
++            if (r.isDouble && spans > 0) {
+                 totalTieHolders += (spans + 1) * 2;
+             }
+         } else {
+-            // ?⑥뿴 ??-            totalIndep += r.independent || 0;
+-            totalConn += r.connected || 0;
+-            totalSmallConn += sm;
+-            totalRegularBays += reg;
+-            totalSmallBays += sm;
+-            totalBays += spans;
++            if (r.isDouble) {
++                // 蹂듬젹(蹂듭닔) ??1?명듃: ?⑥뿴 2?쇱씤 寃고빀
++                totalIndep += (r.independent || 0) * 2;
++                totalConn += (r.connected || 0) * 2;
++                totalSmallConn += sm * 2;
++                totalRegularBays += reg * 2;
++                totalSmallBays += sm * 2;
++                totalBays += spans * 2;
++                
++                // 怨좎젙 ???Spacer): 湲곕뫁 ????spans + 1) * 2媛?(????2媛쒖뵫)
++                if (spans > 0) {
++                    totalTieHolders += (spans + 1) * 2;
++                }
++            } else {
++                // ?⑥뿴 ??+                totalIndep += r.independent || 0;
++                totalConn += r.connected || 0;
++                totalSmallConn += sm;
++                totalRegularBays += reg;
++                totalSmallBays += sm;
++                totalBays += spans;
++            }
+         }
+     });
+     
+-    // 珥??곸옱 ?뚮젢???섎웾: ?뺢퇋踰좎씠 2PLT + ?묒??곌껐踰좎씠 1PLT * ?⑥닔
+-    const totalPallets = (totalRegularBays * 2 + totalSmallBays * 1) * levels;
++    // 珥??곸옱 ?뚮젢???섎웾: (?쇰컲 ?뺢퇋踰좎씠 * 2 + ?쇰컲 ?묒??곌껐踰좎씠 * 1) * levels + (諛붿씠?⑥뒪 ?뺢퇋踰좎씠 * 2 + 諛붿씠?⑥뒪 ?묒??곌껐踰좎씠 * 1) * (levels - 1)
++    const bypassLevels = Math.max(1, levels - 1);
++    const totalPallets = ((totalRegularBays * 2 + totalSmallBays * 1) * levels) +
++                         ((bypassRegularBays * 2 + bypassSmallBays * 1) * bypassLevels);
+     
+     // 1. ?④? input ?꾨뱶 ?낅뜲?댄듃 (???쒖텧??
+     const indepInput = document.getElementById('rack-independent');
+     const connInput = document.getElementById('rack-connected');
+     const smallConnInput = document.getElementById('rack-small-connected');
++    const bypassInput = document.getElementById('rack-bypass');
+     const tieHolderInput = document.getElementById('rack-tie-holders');
+     const palletsInput = document.getElementById('rack-total-pallets');
+     
+     if(indepInput) indepInput.value = totalIndep > 0 ? totalIndep : '';
+     if(connInput) connInput.value = totalConn > 0 ? totalConn : '';
+     if(smallConnInput) smallConnInput.value = totalSmallConn > 0 ? totalSmallConn : '';
++    if(bypassInput) bypassInput.value = totalBypass > 0 ? totalBypass : '';
+     if(tieHolderInput) tieHolderInput.value = totalTieHolders > 0 ? totalTieHolders : '';
+     if(palletsInput) palletsInput.value = totalPallets > 0 ? totalPallets : '';
+ 
+@@ -2004,6 +2387,7 @@ window.updateRackFormCounts = function() {
+     const dIndep = document.getElementById('display-indep');
+     const dConn = document.getElementById('display-conn');
+     const dSmallConn = document.getElementById('display-small-conn');
++    const dBypass = document.getElementById('display-bypass');
+     const dHolders = document.getElementById('display-holders');
+     const dPallets = document.getElementById('display-pallets');
+     const dBaysBadge = document.getElementById('rack-total-bays-badge');
+@@ -2011,18 +2395,39 @@ window.updateRackFormCounts = function() {
+     if(dIndep) dIndep.innerHTML = `${totalIndep}<span class="small text-muted fs-7">?</span>`;
+     if(dConn) dConn.innerHTML = `${totalConn}<span class="small text-muted fs-7">?</span>`;
+     if(dSmallConn) dSmallConn.innerHTML = `${totalSmallConn}<span class="small text-muted fs-7">?</span>`;
++    if(dBypass) dBypass.innerHTML = `${totalBypass}<span class="small text-muted fs-7">?</span>`;
+     if(dHolders) dHolders.innerHTML = `${totalTieHolders}<span class="small text-muted fs-7">媛?/span>`;
+     if(dPallets) dPallets.innerHTML = `${totalPallets.toLocaleString()}<span class="small text-muted fs-7">PLT</span>`;
+-    if(dBaysBadge) dBaysBadge.innerText = `珥?${totalBays}移?(${levels}??`;
++    
++    // ?쒖? ?뚮젢?몃옓 洹쒓꺽 ?곗텧: [鍮붽만??W) 횞 源딆씠(D) 횞 ?믪씠(H) , (?⑥닔-1)S ?⑥닔??
++    const beamLen = (window.rackSpecs && window.rackSpecs.beamLength) || parseInt(document.getElementById('beam-length')?.value) || 2585;
++    const rackD = (window.rackSpecs && window.rackSpecs.rackDepth) || 1000;
++    const palletH = parseInt(document.getElementById('pallet-h')?.value) || 1200;
++    let rackH = parseInt(document.getElementById('rack-height')?.value) || 0;
++    if (rackH <= 0) {
++        const rawH = (palletH * levels) + (levels * 200) + 300;
++        rackH = Math.ceil(rawH / 500) * 500;
++    }
++    const spanS = Math.max(1, levels - 1); 
++    const specTagText = `${beamLen}횞${rackD}횞${rackH} (${spanS}S ${levels}??`;
++    const specDetailText = `洹쒓꺽: ${beamLen}(W) 횞 ${rackD}(D) 횞 ${rackH}(H) , ${spanS}S ${levels}??;
++
++    if(dBaysBadge) dBaysBadge.innerText = `珥?${totalBays + totalBypass}移?(${spanS}S ${levels}??`;
++    const dSpecDetail = document.getElementById('rack-spec-detail-badge');
++    if(dSpecDetail) dSpecDetail.innerText = specDetailText;
+ 
+     // 3. 罹붾쾭???곷떒 ?ㅼ떆媛???쒕낫??諭껋? 諛??낅뜲?댄듃
++    const topSpec = document.getElementById('top-badge-spec');
+     const topIndep = document.getElementById('top-badge-indep');
+     const topConn = document.getElementById('top-badge-conn');
+     const topSmallWrap = document.getElementById('top-badge-small-wrap');
+     const topSmallConn = document.getElementById('top-badge-small-conn');
++    const topBypassWrap = document.getElementById('top-badge-bypass-wrap');
++    const topBypass = document.getElementById('top-badge-bypass');
+     const topHolders = document.getElementById('top-badge-holders');
+     const topPallets = document.getElementById('top-badge-pallets');
+     
++    if(topSpec) topSpec.innerText = specTagText;
+     if(topIndep) topIndep.innerText = totalIndep;
+     if(topConn) topConn.innerText = totalConn;
+     if(topSmallWrap) {
+@@ -2033,6 +2438,14 @@ window.updateRackFormCounts = function() {
+             topSmallWrap.classList.add('d-none');
+         }
+     }
++    if(topBypassWrap) {
++        if(totalBypass > 0) {
++            topBypassWrap.classList.remove('d-none');
++            if(topBypass) topBypass.innerText = totalBypass;
++        } else {
++            topBypassWrap.classList.add('d-none');
++        }
++    }
+     if(topHolders) topHolders.innerText = totalTieHolders;
+     if(topPallets) topPallets.innerText = totalPallets.toLocaleString();
+ };
+@@ -2124,8 +2537,15 @@ function applyAiRackSpecs() {
+         const wallLenPx = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+         const wallLenMm = wallLenPx / currentScale;
+         const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+-        const isHoriz = Math.abs(Math.cos(angle)) > 0.5;
+-        
++
++        // ?뙚 ?ъ꽑(?媛곸꽑) 踰쎈㈃ ?꾪꽣留? ?섑룊/?섏쭅怨?15???댁긽 踰쀬뼱???ъ꽑 踰쎈㈃? 媛濡??몃줈 ??諛곗튂 ??踰쎌쓣 ?リ퀬 ?섍?誘濡??쒖쇅
++        const isPureHoriz = Math.abs(Math.sin(angle)) < 0.25; // ?섑룊 踰쎈㈃
++        const isPureVert = Math.abs(Math.cos(angle)) < 0.25;  // ?섏쭅 踰쎈㈃
++        if (!isPureHoriz && !isPureVert) {
++            return;
++        }
++
++        const isHoriz = isPureHoriz;
+         let dir = 1;
+         if (isHoriz) {
+             dir = p2.x > p1.x ? 1 : -1;
+@@ -2139,20 +2559,17 @@ function applyAiRackSpecs() {
+         const rackHalfDepthPx = (rackDepth / 2) * currentScale;
+         
+         // ?? 踰??덉そ 諛⑺뼢(targetX/Y) 寃곗젙 ??
+-        // 踰쎈㈃ 以묎컙?먯뿉??짹諛⑺뼢 以??ㅺ컖???대???履쎌쓣 ?좏깮
+         const midX = (p1.x + p2.x) / 2;
+         const midY = (p1.y + p2.y) / 2;
+         let targetX, targetY;
+         
+         if (isHoriz) {
+-            // ?섑룊 踰쎈㈃ ??y 諛⑺뼢?쇰줈 ?대룞
+             const offsetPx = pillarClearance + rackHalfDepthPx;
+             const plusY = midY + offsetPx;
+             const minusY = midY - offsetPx;
+             targetY = isPointInPolygon([midX, plusY], points) ? plusY : minusY;
+-            targetX = null; // ?댄썑 猷⑦봽?먯꽌 bay ?꾩튂濡??ㅼ젙
++            targetX = null;
+         } else {
+-            // ?섏쭅 踰쎈㈃ ??x 諛⑺뼢?쇰줈 ?대룞
+             const offsetPx = pillarClearance + rackHalfDepthPx;
+             const plusX = midX + offsetPx;
+             const minusX = midX - offsetPx;
+@@ -2160,270 +2577,260 @@ function applyAiRackSpecs() {
+             targetY = null;
+         }
+         
+-        // 理쒕? ?ㅼ튂 媛??移몄닔 怨꾩궛
+-        // ?? 肄붾꼫 Dead Zone ?곸슜 ??
+-        // 媛?踰쎈㈃ ????肄붾꼫)?먯꽌 吏寃뚯감媛 吏꾩엯 遺덇???二쎌? 怨듦컙 ?뺣낫
+-        // 怨듭떇: cornerOffset = rackDepth + 100mm (踰??닿꺽 100 + ??源딆씠 ?꾩껜)
+-        const cornerOffsetMm = rackDepth + 100;  // ex. 源딆씠 1000 ??1100mm, 源딆씠 1100 ??1200mm
+-        const usableWallMm = wallLenMm - cornerOffsetMm * 2; // ?묒そ 肄붾꼫 ?쒖쇅 ?ㅼ젣 ?ъ슜 媛??湲몄씠
++        // ?? 肄붾꼫 Dead Zone ?곸슜 (紐⑥꽌由?寃뱀묠 諛⑹?) ??
++        const cornerOffsetMm = rackDepth + 200; 
++        const usableWallMm = wallLenMm - cornerOffsetMm * 2;
+         
+         let maxBays = layout.bays || 0;
+         if (maxBays <= 0) {
+             maxBays = Math.floor(usableWallMm / beamLength);
+         } else {
+-            // 吏??移몄닔媛 ?덉뼱??肄붾꼫 ?ъ쑀遺??댁뿉 ?섏슜 媛?ν븳吏 寃??             maxBays = Math.min(maxBays, Math.floor(usableWallMm / beamLength));
+         }
+         
+         if (maxBays <= 0) return;
+         
+-        // 1 Bay ??異⑸룎??泥댄겕?섎ŉ 諛곗튂 吏꾪뻾
+-        let currentBaysInGroup = 0;
+-        let groupStartX = 0;
+-        let groupStartY = 0;
+-        
+-        const beamLengthPx = beamLength * currentScale;
+         const isDouble = layout.isDouble || false;
+         const rackDepthPx = rackDepth * (isDouble ? 2 : 1) * currentScale;
+-        
+-        for (let b = 0; b < maxBays; b++) {
+-            // ?대쾲 踰좎씠????Wall) 湲곗? ?쒖옉?먭낵 ?앹젏 ?ㅽ봽??怨꾩궛 (mm)
+-            // cornerOffsetMm: 肄붾꼫 Dead Zone (rackDepth + 100mm)留뚰겮 ?쒖옉?먯쓣 ?덉そ?쇰줈 ?대룞
+-            const startMm = cornerOffsetMm + b * beamLength;
+-            const endMm = startMm + beamLength + 85;
+-            
+-            // 罹붾쾭???쎌? 醫뚰몴 蹂??-            let bayMinX, bayMaxX, bayMinY, bayMaxY;
+-            let centerOffsetX = 0;
+-            let centerOffsetY = 0;
+-            
+-            if (isHoriz) {
+-                const bayStartX = p1.x + dir * (startMm * currentScale);
+-                const bayEndX = p1.x + dir * (endMm * currentScale);
+-                
+-                bayMinX = Math.min(bayStartX, bayEndX);
+-                bayMaxX = Math.max(bayStartX, bayEndX);
+-                bayMinY = targetY - rackDepthPx / 2;
+-                bayMaxY = targetY + rackDepthPx / 2;
+-                
+-                centerOffsetX = bayStartX;
+-                centerOffsetY = targetY;
+-            } else {
+-                const bayStartY = p1.y + dir * (startMm * currentScale);
+-                const bayEndY = p1.y + dir * (endMm * currentScale);
+-                
+-                bayMinX = targetX - rackDepthPx / 2;
+-                bayMaxX = targetX + rackDepthPx / 2;
+-                bayMinY = Math.min(bayStartY, bayEndY);
+-                bayMaxY = Math.max(bayStartY, bayEndY);
+-                
+-                centerOffsetX = targetX;
+-                centerOffsetY = bayStartY;
++
++        // 踰쎈㈃???μ븷臾쇱씠 ?덈뒗吏 ?뺤씤
++        let edgeObs = [];
++        obstacles.forEach(obs => {
++            if (obs.type === 'door' || obs.type === 'shutter') {
++                if (obs.edgeIndex === edgeIndex) edgeObs.push(obs);
+             }
+-            
+-            // ?? ?꾪삎 寃쎄퀎 諛??щ? 泥댄겕 ??
+-            const centerInside = isPointInPolygon([
+-                (bayMinX + bayMaxX) / 2,
+-                (bayMinY + bayMaxY) / 2
+-            ], points);
+-            if (!centerInside) {
+-                // ?꾩옱 洹몃９ 留덇컧
+-                if (currentBaysInGroup > 0) {
+-                    const groupLenMm = (currentBaysInGroup * beamLength) + 85;
+-                    const newRack = {
+-                        x: groupStartX,
+-                        y: groupStartY,
+-                        isHoriz: isHoriz,
+-                        dir: dir,
+-                        independent: 1,
+-                        connected: currentBaysInGroup - 1,
+-                        smallConnected: 0,
+-                        beamLength: beamLength,
+-                        smallBeamLength: beamLength - 1200,
+-                        totalLengthPx: groupLenMm * currentScale,
+-                        rackDepth: rackDepth,
+-                        isDouble: isDouble,
+-                        isValid: true
+-                    };
+-                    newRack.isValid = checkRackValidPlacement(newRack);
+-                    racks.push(newRack);
+-                    currentBaysInGroup = 0;
++        });
++
++        if (edgeObs.length > 0) {
++            // ?? 異쒖엯臾????μ븷臾쇱씠 ?덈뒗 踰쎈㈃: ?묒そ 肄붾꼫?먯꽌 ?쒖옉 ??
++            const obs = edgeObs[0];
++            const obsDistFromP1 = obs.visualDistFromStart ? (obs.visualDistFromStart / currentScale) : (wallLenMm / 2);
++            const obsDistFromP2 = wallLenMm - obsDistFromP1;
++            const obsLen = obs.length || 2000;
++            const marginMm = 200;
++
++            // 1援ш컙: p1 肄붾꼫 -> ?μ븷臾?+            const span1Mm = Math.max(0, obsDistFromP1 - obsLen/2 - marginMm - cornerOffsetMm);
++            const bays1 = Math.floor(span1Mm / beamLength);
++            if (bays1 > 0) {
++                const groupLenMm = (bays1 * beamLength) + 85;
++                const startMm = cornerOffsetMm;
++                const rackX = isHoriz ? (p1.x + dir * startMm * currentScale) : targetX;
++                const rackY = isHoriz ? targetY : (p1.y + dir * startMm * currentScale);
++                const r1 = {
++                    x: rackX, y: rackY,
++                    isHoriz: isHoriz, dir: dir,
++                    independent: 1, connected: bays1 - 1, smallConnected: 0,
++                    beamLength: beamLength, smallBeamLength: getSmallBeamLength(beamLength),
++                    totalLengthPx: groupLenMm * currentScale,
++                    rackDepth: rackDepth, isDouble: isDouble, isValid: true
++                };
++                if (checkRackValidPlacement(r1)) {
++                    racks.push(r1);
+                 }
+-                continue;
+             }
+-            
+-            // ?μ븷臾?異⑸룎 ?먯젙
+-            let isColliding = false;
+-            for (let obs of obstacles) {
+-                if (obs.type === 'door' || obs.type === 'shutter') {
+-                    // 臾??뷀꽣 怨꾩뿴: 踰쎈㈃ 諛⑺뼢(isHoriz)???곕Ⅸ 1李⑥썝 ?좊텇 ?ъ쁺 異⑸룎 寃??-                    const obsLenPx = (obs.length || 2000) * currentScale;
+-                    const margin = 100 * currentScale; // 100mm ?덉쟾 留덉쭊 異붽?
+-                    
+-                    if (isHoriz) {
+-                        const obsMinX = obs.x - obsLenPx / 2 - margin;
+-                        const obsMaxX = obs.x + obsLenPx / 2 + margin;
+-                        if (!(bayMaxX < obsMinX || bayMinX > obsMaxX)) {
+-                            isColliding = true;
+-                            break;
+-                        }
+-                    } else {
+-                        const obsMinY = obs.y - obsLenPx / 2 - margin;
+-                        const obsMaxY = obs.y + obsLenPx / 2 + margin;
+-                        if (!(bayMaxY < obsMinY || bayMinY > obsMaxY)) {
+-                            isColliding = true;
+-                            break;
+-                        }
+-                    }
+-                } else {
+-                    // ?ш컖 ?μ븷臾?怨꾩뿴 (2D Bounding Box 異⑸룎)
+-                    const obsWPx = (obs.width || 500) * currentScale;
+-                    const obsHPx = (obs.height || 500) * currentScale;
+-                    const obsMinX = obs.x - obsWPx / 2;
+-                    const obsMaxX = obs.x + obsWPx / 2;
+-                    const obsMinY = obs.y - obsHPx / 2;
+-                    const obsMaxY = obs.y + obsHPx / 2;
+-                    
+-                    const margin = 50 * currentScale;
+-                    if (!(bayMaxX - margin < obsMinX || bayMinX + margin > obsMaxX || bayMaxY - margin < obsMinY || bayMinY + margin > obsMaxY)) {
+-                        isColliding = true;
+-                        break;
+-                    }
++
++            // 2援ш컙: p2 肄붾꼫 -> ?μ븷臾?+            const span2Mm = Math.max(0, obsDistFromP2 - obsLen/2 - marginMm - cornerOffsetMm);
++            const bays2 = Math.floor(span2Mm / beamLength);
++            if (bays2 > 0) {
++                const groupLenMm = (bays2 * beamLength) + 85;
++                const startMm = cornerOffsetMm;
++                const oppDir = -dir;
++                const rackX = isHoriz ? (p2.x + oppDir * startMm * currentScale) : targetX;
++                const rackY = isHoriz ? targetY : (p2.y + oppDir * startMm * currentScale);
++                const r2 = {
++                    x: rackX, y: rackY,
++                    isHoriz: isHoriz, dir: oppDir,
++                    independent: 1, connected: bays2 - 1, smallConnected: 0,
++                    beamLength: beamLength, smallBeamLength: getSmallBeamLength(beamLength),
++                    totalLengthPx: groupLenMm * currentScale,
++                    rackDepth: rackDepth, isDouble: isDouble, isValid: true
++                };
++                if (checkRackValidPlacement(r2)) {
++                    racks.push(r2);
+                 }
+             }
++
++        } else {
++            // ?? ?쇰컲 踰쎈㈃ (?⑥씪 ?곗냽 諛곗튂) ??
++            let currentBaysInGroup = 0;
++            let groupStartX = 0;
++            let groupStartY = 0;
+             
+-            if (!isColliding) {
+-                // 異⑸룎?섏? ?딆쑝硫?洹몃９??異붽?
+-                if (currentBaysInGroup === 0) {
+-                    groupStartX = centerOffsetX;
+-                    groupStartY = centerOffsetY;
++            for (let b = 0; b < maxBays; b++) {
++                const startMm = cornerOffsetMm + b * beamLength;
++                const endMm = startMm + beamLength + 85;
++                
++                let bayMinX, bayMaxX, bayMinY, bayMaxY;
++                let centerOffsetX = 0;
++                let centerOffsetY = 0;
++                
++                if (isHoriz) {
++                    const bayStartX = p1.x + dir * (startMm * currentScale);
++                    const bayEndX = p1.x + dir * (endMm * currentScale);
++                    bayMinX = Math.min(bayStartX, bayEndX);
++                    bayMaxX = Math.max(bayStartX, bayEndX);
++                    bayMinY = targetY - rackDepthPx / 2;
++                    bayMaxY = targetY + rackDepthPx / 2;
++                    centerOffsetX = bayStartX;
++                    centerOffsetY = targetY;
++                } else {
++                    const bayStartY = p1.y + dir * (startMm * currentScale);
++                    const bayEndY = p1.y + dir * (endMm * currentScale);
++                    bayMinX = targetX - rackDepthPx / 2;
++                    bayMaxX = targetX + rackDepthPx / 2;
++                    bayMinY = Math.min(bayStartY, bayEndY);
++                    bayMaxY = Math.max(bayStartY, bayEndY);
++                    centerOffsetX = targetX;
++                    centerOffsetY = bayStartY;
+                 }
+-                currentBaysInGroup++;
+-            } else {
+-                // 異⑸룎??諛쒖깮?섎㈃, ?댁쟾源뚯? 紐⑥씤 ??洹몃９??癒쇱? 異붽??섍퀬 珥덇린??-                if (currentBaysInGroup > 0) {
+-                    const groupLenMm = (currentBaysInGroup * beamLength) + 85;
+-                    const newRack = {
+-                        x: groupStartX,
+-                        y: groupStartY,
+-                        isHoriz: isHoriz,
+-                        dir: dir,
+-                        independent: 1,
+-                        connected: currentBaysInGroup - 1,
+-                        smallConnected: 0,
+-                        beamLength: beamLength,
+-                        smallBeamLength: beamLength - 1200,
+-                        totalLengthPx: groupLenMm * currentScale,
+-                        rackDepth: rackDepth,
+-                        isDouble: isDouble,
+-                        isValid: true
+-                    };
+-                    newRack.isValid = checkRackValidPlacement(newRack);
+-                    racks.push(newRack);
+-                    
+-                    currentBaysInGroup = 0;
++                
++                // 4媛?肄붾꼫 ?꾩껜 ?ㅺ컖???대? ?ы븿 寃??+                const margin = 20 * currentScale;
++                const corners = [
++                    [bayMinX + margin, bayMinY + margin],
++                    [bayMaxX - margin, bayMinY + margin],
++                    [bayMinX + margin, bayMaxY - margin],
++                    [bayMaxX - margin, bayMaxY - margin]
++                ];
++                let allCornersInside = corners.every(pt => isPointInPolygon(pt, points));
++
++                if (!allCornersInside) {
++                    if (currentBaysInGroup > 0) {
++                        const groupLenMm = (currentBaysInGroup * beamLength) + 85;
++                        const newRack = {
++                            x: groupStartX, y: groupStartY,
++                            isHoriz: isHoriz, dir: dir,
++                            independent: 1, connected: currentBaysInGroup - 1, smallConnected: 0,
++                            beamLength: beamLength, smallBeamLength: getSmallBeamLength(beamLength),
++                            totalLengthPx: groupLenMm * currentScale,
++                            rackDepth: rackDepth, isDouble: isDouble, isValid: true
++                        };
++                        if (checkRackValidPlacement(newRack)) {
++                            racks.push(newRack);
++                        }
++                        currentBaysInGroup = 0;
++                    }
++                    continue;
+                 }
+-            }
+-        }
+-        
+-        // ?⑥? 怨듦컙???묒? ?곌껐(Small Connected) ?ㅼ튂 媛???щ? 泥댄겕
+-        const smallBeamLength = getSmallBeamLength(beamLength);
+-        const smallBeamLengthPx = smallBeamLength * currentScale;
+-        const remainingMm = usableWallMm - (maxBays * beamLength);
+-        let hasSmallBay = false;
+-
+-        if (remainingMm >= smallBeamLength + 85) {
+-            const sStartMm = cornerOffsetMm + maxBays * beamLength;
+-            const sEndMm = sStartMm + smallBeamLength + 85;
+-
+-            let sBayMinX, sBayMaxX, sBayMinY, sBayMaxY;
+-            if (isHoriz) {
+-                const sStartX = p1.x + dir * (sStartMm * currentScale);
+-                const sEndX = p1.x + dir * (sEndMm * currentScale);
+-                sBayMinX = Math.min(sStartX, sEndX);
+-                sBayMaxX = Math.max(sStartX, sEndX);
+-                sBayMinY = targetY - rackDepthPx / 2;
+-                sBayMaxY = targetY + rackDepthPx / 2;
+-            } else {
+-                const sStartY = p1.y + dir * (sStartMm * currentScale);
+-                const sEndY = p1.y + dir * (sEndMm * currentScale);
+-                sBayMinX = targetX - rackDepthPx / 2;
+-                sBayMaxX = targetX + rackDepthPx / 2;
+-                sBayMinY = Math.min(sStartY, sEndY);
+-                sBayMaxY = Math.max(sStartY, sEndY);
+-            }
+-
+-            const sInside = isPointInPolygon([(sBayMinX + sBayMaxX) / 2, (sBayMinY + sBayMaxY) / 2], points);
+-            let sColliding = false;
+-
+-            if (sInside) {
++                
++                // ?μ븷臾?異⑸룎 ?먯젙
++                let isColliding = false;
+                 for (let obs of obstacles) {
+                     if (obs.type === 'door' || obs.type === 'shutter') {
+                         const obsLenPx = (obs.length || 2000) * currentScale;
+                         const margin = 100 * currentScale;
+                         if (isHoriz) {
+-                            if (!(sBayMaxX < obs.x - obsLenPx/2 - margin || sBayMinX > obs.x + obsLenPx/2 + margin)) {
+-                                sColliding = true; break;
++                            if (!(bayMaxX < obs.x - obsLenPx/2 - margin || bayMinX > obs.x + obsLenPx/2 + margin)) {
++                                isColliding = true; break;
+                             }
+                         } else {
+-                            if (!(sBayMaxY < obs.y - obsLenPx/2 - margin || sBayMinY > obs.y + obsLenPx/2 + margin)) {
+-                                sColliding = true; break;
++                            if (!(bayMaxY < obs.y - obsLenPx/2 - margin || bayMinY > obs.y + obsLenPx/2 + margin)) {
++                                isColliding = true; break;
+                             }
+                         }
+                     } else {
+                         const obsWPx = (obs.width || 500) * currentScale;
+                         const obsHPx = (obs.height || 500) * currentScale;
+                         const margin = 50 * currentScale;
+-                        if (!(sBayMaxX - margin < obs.x - obsWPx/2 || sBayMinX + margin > obs.x + obsWPx/2 || sBayMaxY - margin < obs.y - obsHPx/2 || sBayMinY + margin > obs.y + obsHPx/2)) {
+-                            sColliding = true; break;
++                        if (!(bayMaxX - margin < obs.x - obsWPx/2 || bayMinX + margin > obs.x + obsWPx/2 || bayMaxY - margin < obs.y - obsHPx/2 || bayMinY + margin > obs.y + obsHPx/2)) {
++                            isColliding = true; break;
++                        }
++                    }
++                }
++                
++                if (!isColliding) {
++                    if (currentBaysInGroup === 0) {
++                        groupStartX = centerOffsetX;
++                        groupStartY = centerOffsetY;
++                    }
++                    currentBaysInGroup++;
++                } else {
++                    if (currentBaysInGroup > 0) {
++                        const groupLenMm = (currentBaysInGroup * beamLength) + 85;
++                        const newRack = {
++                            x: groupStartX, y: groupStartY,
++                            isHoriz: isHoriz, dir: dir,
++                            independent: 1, connected: currentBaysInGroup - 1, smallConnected: 0,
++                            beamLength: beamLength, smallBeamLength: getSmallBeamLength(beamLength),
++                            totalLengthPx: groupLenMm * currentScale,
++                            rackDepth: rackDepth, isDouble: isDouble, isValid: true
++                        };
++                        if (checkRackValidPlacement(newRack)) {
++                            racks.push(newRack);
+                         }
++                        currentBaysInGroup = 0;
+                     }
+                 }
+-                if (!sColliding) {
++            }
++            
++            // ?⑥? 怨듦컙 ?묒? ?곌껐 寃??+            const smallBeamLength = getSmallBeamLength(beamLength);
++            const remainingMm = usableWallMm - (maxBays * beamLength);
++            let hasSmallBay = false;
++
++            if (remainingMm >= smallBeamLength + 85) {
++                const sStartMm = cornerOffsetMm + maxBays * beamLength;
++                const sEndMm = sStartMm + smallBeamLength + 85;
++
++                let sBayMinX, sBayMaxX, sBayMinY, sBayMaxY;
++                if (isHoriz) {
++                    const sStartX = p1.x + dir * (sStartMm * currentScale);
++                    const sEndX = p1.x + dir * (sEndMm * currentScale);
++                    sBayMinX = Math.min(sStartX, sEndX);
++                    sBayMaxX = Math.max(sStartX, sEndX);
++                    sBayMinY = targetY - rackDepthPx / 2;
++                    sBayMaxY = targetY + rackDepthPx / 2;
++                } else {
++                    const sStartY = p1.y + dir * (sStartMm * currentScale);
++                    const sEndY = p1.y + dir * (sEndMm * currentScale);
++                    sBayMinX = targetX - rackDepthPx / 2;
++                    sBayMaxX = targetX + rackDepthPx / 2;
++                    sBayMinY = Math.min(sStartY, sEndY);
++                    sBayMaxY = Math.max(sStartY, sEndY);
++                }
++
++                const sInside = isPointInPolygon([(sBayMinX + sBayMaxX) / 2, (sBayMinY + sBayMaxY) / 2], points);
++                if (sInside) {
+                     hasSmallBay = true;
+                 }
+             }
+-        }
+ 
+-        // 猷⑦봽媛 ?앸궃 ???⑥븘?덈뒗 洹몃９ 泥섎━ (?묒? ?곌껐 ?ы븿)
+-        if (currentBaysInGroup > 0 || hasSmallBay) {
+-            const indep = currentBaysInGroup > 0 ? 1 : 1;
+-            const conn = Math.max(0, currentBaysInGroup - 1);
+-            const smallConn = hasSmallBay ? 1 : 0;
+-            const groupLenMm = (currentBaysInGroup * beamLength) + (hasSmallBay ? smallBeamLength : 0) + 85;
+-
+-            const newRack = {
+-                x: groupStartX,
+-                y: groupStartY,
+-                isHoriz: isHoriz,
+-                dir: dir,
+-                independent: indep,
+-                connected: conn,
+-                smallConnected: smallConn,
+-                beamLength: beamLength,
+-                smallBeamLength: smallBeamLength,
+-                totalLengthPx: groupLenMm * currentScale,
+-                rackDepth: rackDepth,
+-                isDouble: isDouble,
+-                isValid: true
+-            };
+-            newRack.isValid = checkRackValidPlacement(newRack);
+-            racks.push(newRack);
++            if (currentBaysInGroup > 0 || hasSmallBay) {
++                const indep = 1;
++                const conn = Math.max(0, currentBaysInGroup - 1);
++                const smallConn = hasSmallBay ? 1 : 0;
++                const groupLenMm = (currentBaysInGroup * beamLength) + (hasSmallBay ? smallBeamLength : 0) + 85;
++
++                const newRack = {
++                    x: groupStartX, y: groupStartY,
++                    isHoriz: isHoriz, dir: dir,
++                    independent: indep, connected: conn, smallConnected: smallConn,
++                    beamLength: beamLength, smallBeamLength: smallBeamLength,
++                    totalLengthPx: groupLenMm * currentScale,
++                    rackDepth: rackDepth, isDouble: isDouble, isValid: true
++                };
++                if (checkRackValidPlacement(newRack)) {
++                    racks.push(newRack);
++                }
++            }
+         }
+     });
+ 
+     // ?????????????????????????????????????????????????????????????
+-    // ?뙚 2?④퀎: 以묒븰 怨듦컙 蹂듬젹(Double Row) ???먮룞 諛곗튂 ?붿쭊
++    // ?뙚 2?④퀎: 以묒븰 怨듦컙 蹂듬젹(Double Row) ???먮룞 ?ㅼ쨷 ??Multi-Column) 諛곗튂 ?붿쭊 (寃쎄퀎 ?꾧꺽 寃??
+     // ?????????????????????????????????????????????????????????????
+     if (spec.isCenterDouble) {
++        const isVert = (spec.centerDirection === 'vert');
+         const beamLength = spec.beamLength || 2585;
+         const smallBeamLength = getSmallBeamLength(beamLength);
+         const rackDepth = spec.rackDepth || 1000;
++        const holderSizeMm = spec.holderSize || 200; // 媛?대뜲 ???湲곕낯 200mm (300, 500 ??媛蹂 媛??
+         const astMm = spec.ast || 2800; // ?묒뾽 ?듬줈??(湲곕낯 2800mm)
+-        const doubleDepthMm = rackDepth * 2; // 蹂듬젹 源딆씠 (?? 1000*2 = 2000mm)
++        const doubleDepthMm = (rackDepth * 2) + holderSizeMm; // 蹂듬젹 源딆씠 (湲곕낯 1000*2 + 200 = 2200mm)
+         const doubleDepthPx = doubleDepthMm * currentScale;
+         
+-        // 李쎄퀬 ?ㅺ컖?뺤쓽 ?꾩껜 Bounding Box 怨꾩궛
+         let polyMinX = Infinity, polyMaxX = -Infinity, polyMinY = Infinity, polyMaxY = -Infinity;
+         points.forEach(p => {
+             if (p.x < polyMinX) polyMinX = p.x;
+@@ -2432,7 +2839,6 @@ function applyAiRackSpecs() {
+             if (p.y > polyMaxY) polyMaxY = p.y;
+         });
+ 
+-        // 踰쎈㈃ ??諛?吏寃뚯감 ?듬줈??AST) ?닿꺽???쒖쇅??以묒븰 媛???곸뿭 (mm)
+         const wallClearanceMm = rackDepth + 100 + astMm; // 踰??닿꺽 + ?숆퉲??+ AST ?듬줈??         const innerMinX = polyMinX + wallClearanceMm * currentScale;
+         const innerMaxX = polyMaxX - wallClearanceMm * currentScale;
+@@ -2442,150 +2848,244 @@ function applyAiRackSpecs() {
+         const centerWidthMm = (innerMaxX - innerMinX) / currentScale;
+         const centerHeightMm = (innerMaxY - innerMinY) / currentScale;
+ 
+-        // 以묒븰 ?곸뿭??理쒖냼 1媛?踰좎씠(鍮붽만??85)? 蹂듬젹 源딆씠媛 ?ㅼ뼱媛????덈뒗吏 ?뺤씤
+-        if (centerWidthMm >= beamLength + 85 && centerHeightMm >= doubleDepthMm) {
+-            // 以묒븰 ?곸뿭 ?댁뿉??諛곗튂 媛?ν븳 媛濡?踰좎씠 ??怨꾩궛
+-            const maxCenterBays = Math.floor((centerWidthMm - 100) / beamLength);
+-            
+-            if (maxCenterBays > 0) {
+-                const centerY = (innerMinY + innerMaxY) / 2;
+-                const startX = innerMinX + 50 * currentScale;
++        if (isVert) {
++            // ?? ?몃줈(Vertical) 蹂듬젹 ???ㅼ쨷 ??Multi-Column) ?섑븰???꾨꼍 諛곗튂 ??
++            if (centerHeightMm >= beamLength + 85 && centerWidthMm >= doubleDepthMm) {
++                const maxCenterBays = Math.floor((centerHeightMm - 100) / beamLength);
+                 
+-                let centerBaysInGroup = 0;
+-                let cGroupStartX = 0;
+-                let cGroupStartY = centerY;
+-
+-                for (let b = 0; b < maxCenterBays; b++) {
+-                    const bayStartMm = b * beamLength;
+-                    const bayEndMm = bayStartMm + beamLength + 85;
+-
+-                    const bayStartX = startX + bayStartMm * currentScale;
+-                    const bayEndX = startX + bayEndMm * currentScale;
+-
+-                    const bayMinX = Math.min(bayStartX, bayEndX);
+-                    const bayMaxX = Math.max(bayStartX, bayEndX);
+-                    const bayMinY = centerY - doubleDepthPx / 2;
+-                    const bayMaxY = centerY + doubleDepthPx / 2;
+-
+-                    // 1) ?ㅺ컖???대? ?먯젙
+-                    const centerPtInside = isPointInPolygon([(bayMinX + bayMaxX) / 2, centerY], points);
+-                    const topPtInside = isPointInPolygon([(bayMinX + bayMaxX) / 2, bayMinY], points);
+-                    const botPtInside = isPointInPolygon([(bayMinX + bayMaxX) / 2, bayMaxY], points);
+-
+-                    if (!centerPtInside || !topPtInside || !botPtInside) {
+-                        if (centerBaysInGroup > 0) {
+-                            const groupLenMm = (centerBaysInGroup * beamLength) + 85;
+-                            const centerRack = {
+-                                x: cGroupStartX,
+-                                y: cGroupStartY,
+-                                isHoriz: true,
+-                                dir: 1,
+-                                independent: 1,
+-                                connected: centerBaysInGroup - 1,
+-                                smallConnected: 0,
+-                                beamLength: beamLength,
+-                                smallBeamLength: smallBeamLength,
+-                                totalLengthPx: groupLenMm * currentScale,
+-                                rackDepth: rackDepth,
+-                                isDouble: true,
+-                                isValid: true
+-                            };
+-                            centerRack.isValid = checkRackValidPlacement(centerRack);
+-                            racks.push(centerRack);
+-                            centerBaysInGroup = 0;
++                // 媛????뿉 ?덉쟾?섍쾶 ?ㅼ뼱媛????덈뒗 理쒕? 蹂듬젹 ??????(醫???諛??대? ?듬줈 理쒖냼 2800mm 蹂댁옣)
++                const colPitchMm = doubleDepthMm + astMm; // ?? 2200 + 2800 = 5000mm
++                let numCols = Math.max(1, Math.floor((centerWidthMm + astMm) / colPitchMm));
++
++                // ?대? ?듬줈??洹좊벑 遺꾨같
++                const totalInteriorAisleSpaceMm = centerWidthMm - (numCols * doubleDepthMm);
++                const interiorAisleMm = numCols > 1 ? (totalInteriorAisleSpaceMm / (numCols - 1)) : 0;
++
++                for (let colIdx = 0; colIdx < numCols; colIdx++) {
++                    const colLeftX = numCols > 1 
++                        ? (innerMinX + (colIdx * (doubleDepthMm + interiorAisleMm)) * currentScale)
++                        : (innerMinX + (centerWidthMm - doubleDepthMm) / 2 * currentScale);
++                    const colCenterX = colLeftX + doubleDepthPx / 2;
++                    const startY = innerMinY + 50 * currentScale;
++                    
++                    let centerBaysInGroup = 0;
++                    let cGroupStartX = colCenterX;
++                    let cGroupStartY = startY;
++
++                    for (let b = 0; b < maxCenterBays; b++) {
++                        const bayStartMm = b * beamLength;
++                        const bayEndMm = bayStartMm + beamLength + 85;
++
++                        const bayStartY = startY + bayStartMm * currentScale;
++                        const bayEndY = startY + bayEndMm * currentScale;
++
++                        const bayMinX = colCenterX - doubleDepthPx / 2;
++                        const bayMaxX = colCenterX + doubleDepthPx / 2;
++                        const bayMinY = Math.min(bayStartY, bayEndY);
++                        const bayMaxY = Math.max(bayStartY, bayEndY);
++
++                        // 4媛?瑗?쭞???꾩껜媛 李쎄퀬 ?ㅺ컖???대????꾩쟾???ㅼ뼱?덈뒗吏 ?꾧꺽 寃??+                        const margin = 20 * currentScale;
++                        const corners = [
++                            [bayMinX + margin, bayMinY + margin],
++                            [bayMaxX - margin, bayMinY + margin],
++                            [bayMinX + margin, bayMaxY - margin],
++                            [bayMaxX - margin, bayMaxY - margin],
++                            [colCenterX, (bayMinY + bayMaxY) / 2]
++                        ];
++                        let allInside = corners.every(pt => isPointInPolygon(pt, points));
++
++                        if (!allInside) {
++                            if (centerBaysInGroup > 0) {
++                                const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                                const centerRack = {
++                                    x: cGroupStartX, y: cGroupStartY,
++                                    isHoriz: false, dir: 1,
++                                    independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                                    beamLength: beamLength, smallBeamLength: smallBeamLength,
++                                    totalLengthPx: groupLenMm * currentScale,
++                                    rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                                };
++                                if (checkRackValidPlacement(centerRack)) {
++                                    racks.push(centerRack);
++                                }
++                                centerBaysInGroup = 0;
++                            }
++                            continue;
+                         }
+-                        continue;
+-                    }
+ 
+-                    // 2) ?μ븷臾?異⑸룎 ?먯젙
+-                    let isColliding = false;
+-                    for (let obs of obstacles) {
+-                        const obsWPx = (obs.width || 500) * currentScale;
+-                        const obsHPx = (obs.height || 500) * currentScale;
+-                        const obsMinX = obs.x - obsWPx / 2;
+-                        const obsMaxX = obs.x + obsWPx / 2;
+-                        const obsMinY = obs.y - obsHPx / 2;
+-                        const obsMaxY = obs.y + obsHPx / 2;
+-                        const margin = 50 * currentScale;
++                        let isColliding = false;
++                        for (let obs of obstacles) {
++                            const obsWPx = (obs.width || 500) * currentScale;
++                            const obsHPx = (obs.height || 500) * currentScale;
++                            const obsMinX = obs.x - obsWPx / 2;
++                            const obsMaxX = obs.x + obsWPx / 2;
++                            const obsMinY = obs.y - obsHPx / 2;
++                            const obsMaxY = obs.y + obsHPx / 2;
++                            const margin = 50 * currentScale;
++
++                            if (!(bayMaxX - margin < obsMinX || bayMinX + margin > obsMaxX || bayMaxY - margin < obsMinY || bayMinY + margin > obsMaxY)) {
++                                isColliding = true; break;
++                            }
++                        }
+ 
+-                        if (!(bayMaxX - margin < obsMinX || bayMinX + margin > obsMaxX || bayMaxY - margin < obsMinY || bayMinY + margin > obsMaxY)) {
+-                            isColliding = true;
+-                            break;
++                        if (!isColliding) {
++                            if (centerBaysInGroup === 0) {
++                                cGroupStartX = colCenterX;
++                                cGroupStartY = bayStartY;
++                            }
++                            centerBaysInGroup++;
++                        } else {
++                            if (centerBaysInGroup > 0) {
++                                const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                                const centerRack = {
++                                    x: cGroupStartX, y: cGroupStartY,
++                                    isHoriz: false, dir: 1,
++                                    independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                                    beamLength: beamLength, smallBeamLength: smallBeamLength,
++                                    totalLengthPx: groupLenMm * currentScale,
++                                    rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                                };
++                                if (checkRackValidPlacement(centerRack)) {
++                                    racks.push(centerRack);
++                                }
++                                centerBaysInGroup = 0;
++                            }
+                         }
+                     }
+ 
+-                    if (!isColliding) {
+-                        if (centerBaysInGroup === 0) {
+-                            cGroupStartX = bayStartX;
+-                            cGroupStartY = centerY;
+-                        }
+-                        centerBaysInGroup++;
+-                    } else {
+-                        if (centerBaysInGroup > 0) {
+-                            const groupLenMm = (centerBaysInGroup * beamLength) + 85;
+-                            const centerRack = {
+-                                x: cGroupStartX,
+-                                y: cGroupStartY,
+-                                isHoriz: true,
+-                                dir: 1,
+-                                independent: 1,
+-                                connected: centerBaysInGroup - 1,
+-                                smallConnected: 0,
+-                                beamLength: beamLength,
+-                                smallBeamLength: smallBeamLength,
+-                                totalLengthPx: groupLenMm * currentScale,
+-                                rackDepth: rackDepth,
+-                                isDouble: true,
+-                                isValid: true
+-                            };
+-                            centerRack.isValid = checkRackValidPlacement(centerRack);
++                    if (centerBaysInGroup > 0) {
++                        const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                        const centerRack = {
++                            x: cGroupStartX, y: cGroupStartY,
++                            isHoriz: false, dir: 1,
++                            independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                            beamLength: beamLength, smallBeamLength: smallBeamLength,
++                            totalLengthPx: groupLenMm * currentScale,
++                            rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                        };
++                        if (checkRackValidPlacement(centerRack)) {
+                             racks.push(centerRack);
+-                            centerBaysInGroup = 0;
+                         }
+                     }
+                 }
++            }
++        } else {
++            // ?? 媛濡?Horizontal) 蹂듬젹 ??諛곗튂 ??
++            if (centerWidthMm >= beamLength + 85 && centerHeightMm >= doubleDepthMm) {
++                const maxCenterBays = Math.floor((centerWidthMm - 100) / beamLength);
++                const rowPitchMm = doubleDepthMm + astMm;
++                let numRows = Math.max(1, Math.floor((centerHeightMm + astMm) / rowPitchMm));
++
++                const totalInteriorAisleSpaceMm = centerHeightMm - (numRows * doubleDepthMm);
++                const interiorAisleMm = numRows > 1 ? (totalInteriorAisleSpaceMm / (numRows - 1)) : 0;
++
++                for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
++                    const rowTopY = numRows > 1 
++                        ? (innerMinY + (rowIdx * (doubleDepthMm + interiorAisleMm)) * currentScale)
++                        : (innerMinY + (centerHeightMm - doubleDepthMm) / 2 * currentScale);
++                    const centerY = rowTopY + doubleDepthPx / 2;
++                    const startX = innerMinX + 50 * currentScale;
++                    
++                    let centerBaysInGroup = 0;
++                    let cGroupStartX = 0;
++                    let cGroupStartY = centerY;
++
++                    for (let b = 0; b < maxCenterBays; b++) {
++                        const bayStartMm = b * beamLength;
++                        const bayEndMm = bayStartMm + beamLength + 85;
++
++                        const bayStartX = startX + bayStartMm * currentScale;
++                        const bayEndX = startX + bayEndMm * currentScale;
++
++                        const bayMinX = Math.min(bayStartX, bayEndX);
++                        const bayMaxX = Math.max(bayStartX, bayEndX);
++                        const bayMinY = centerY - doubleDepthPx / 2;
++                        const bayMaxY = centerY + doubleDepthPx / 2;
++
++                        const margin = 20 * currentScale;
++                        const corners = [
++                            [bayMinX + margin, bayMinY + margin],
++                            [bayMaxX - margin, bayMinY + margin],
++                            [bayMinX + margin, bayMaxY - margin],
++                            [bayMaxX - margin, bayMaxY - margin],
++                            [(bayMinX + bayMaxX) / 2, centerY]
++                        ];
++                        let allInside = corners.every(pt => isPointInPolygon(pt, points));
++
++                        if (!allInside) {
++                            if (centerBaysInGroup > 0) {
++                                const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                                const centerRack = {
++                                    x: cGroupStartX, y: cGroupStartY,
++                                    isHoriz: true, dir: 1,
++                                    independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                                    beamLength: beamLength, smallBeamLength: smallBeamLength,
++                                    totalLengthPx: groupLenMm * currentScale,
++                                    rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                                };
++                                if (checkRackValidPlacement(centerRack)) {
++                                    racks.push(centerRack);
++                                }
++                                centerBaysInGroup = 0;
++                            }
++                            continue;
++                        }
+ 
+-                // 以묒븰 蹂듬젹 ?숈쓽 ?⑥? 怨듦컙???묒? ?곌껐 ?ㅼ튂 媛???щ? 泥댄겕
+-                const cRemainingMm = centerWidthMm - (maxCenterBays * beamLength);
+-                let cHasSmallBay = false;
+-
+-                if (cRemainingMm >= smallBeamLength + 85 && centerBaysInGroup > 0) {
+-                    const cSStartMm = maxCenterBays * beamLength;
+-                    const cSEndMm = cSStartMm + smallBeamLength + 85;
+-                    const cSStartX = startX + cSStartMm * currentScale;
+-                    const cSEndX = startX + cSEndMm * currentScale;
+-
+-                    const cSMinX = Math.min(cSStartX, cSEndX);
+-                    const cSMaxX = Math.max(cSStartX, cSEndX);
+-                    const cSMinY = centerY - doubleDepthPx / 2;
+-                    const cSMaxY = centerY + doubleDepthPx / 2;
++                        let isColliding = false;
++                        for (let obs of obstacles) {
++                            const obsWPx = (obs.width || 500) * currentScale;
++                            const obsHPx = (obs.height || 500) * currentScale;
++                            const obsMinX = obs.x - obsWPx / 2;
++                            const obsMaxX = obs.x + obsWPx / 2;
++                            const obsMinY = obs.y - obsHPx / 2;
++                            const obsMaxY = obs.y + obsHPx / 2;
++                            const obsMargin = 50 * currentScale;
++
++                            if (!(bayMaxX - obsMargin < obsMinX || bayMinX + obsMargin > obsMaxX || bayMaxY - obsMargin < obsMinY || bayMinY + obsMargin > obsMaxY)) {
++                                isColliding = true; break;
++                            }
++                        }
+ 
+-                    const cSInside = isPointInPolygon([(cSMinX + cSMaxX) / 2, centerY], points);
+-                    if (cSInside) {
+-                        cHasSmallBay = true;
++                        if (!isColliding) {
++                            if (centerBaysInGroup === 0) {
++                                cGroupStartX = bayStartX;
++                                cGroupStartY = centerY;
++                            }
++                            centerBaysInGroup++;
++                        } else {
++                            if (centerBaysInGroup > 0) {
++                                const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                                const centerRack = {
++                                    x: cGroupStartX, y: cGroupStartY,
++                                    isHoriz: true, dir: 1,
++                                    independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                                    beamLength: beamLength, smallBeamLength: smallBeamLength,
++                                    totalLengthPx: groupLenMm * currentScale,
++                                    rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                                };
++                                if (checkRackValidPlacement(centerRack)) {
++                                    racks.push(centerRack);
++                                }
++                                centerBaysInGroup = 0;
++                            }
++                        }
+                     }
+-                }
+ 
+-                // ?⑥? 以묒븰 洹몃９ 留덈Т由?(?묒? ?곌껐 ?ы븿)
+-                if (centerBaysInGroup > 0) {
+-                    const groupLenMm = (centerBaysInGroup * beamLength) + (cHasSmallBay ? smallBeamLength : 0) + 85;
+-                    const centerRack = {
+-                        x: cGroupStartX,
+-                        y: cGroupStartY,
+-                        isHoriz: true,
+-                        dir: 1,
+-                        independent: 1,
+-                        connected: centerBaysInGroup - 1,
+-                        smallConnected: cHasSmallBay ? 1 : 0,
+-                        beamLength: beamLength,
+-                        smallBeamLength: smallBeamLength,
+-                        totalLengthPx: groupLenMm * currentScale,
+-                        rackDepth: rackDepth,
+-                        isDouble: true,
+-                        isValid: true
+-                    };
+-                    centerRack.isValid = checkRackValidPlacement(centerRack);
+-                    racks.push(centerRack);
++                    if (centerBaysInGroup > 0) {
++                        const groupLenMm = (centerBaysInGroup * beamLength) + 85;
++                        const centerRack = {
++                            x: cGroupStartX, y: cGroupStartY,
++                            isHoriz: true, dir: 1,
++                            independent: 1, connected: centerBaysInGroup - 1, smallConnected: 0,
++                            beamLength: beamLength, smallBeamLength: smallBeamLength,
++                            totalLengthPx: groupLenMm * currentScale,
++                            rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
++                        };
++                        if (checkRackValidPlacement(centerRack)) {
++                            racks.push(centerRack);
++                        }
++                    }
+                 }
+             }
+         }
+@@ -2596,3 +3096,96 @@ function applyAiRackSpecs() {
+     }
+ }
+ 
++// ?뱪 ?덇툑??Ruler) 洹몃━湲??⑥닔
++function drawRuler() {
++    if (!window.ruler || !window.ruler.visible) return;
++    
++    ctx.save();
++    // ?덇툑?먯꽑: rgba(0, 200, 200, 0.4)
++    ctx.strokeStyle = 'rgba(0, 200, 200, 0.4)';
++    ctx.lineWidth = 4;
++    ctx.setLineDash([5, 5]); // ?먯꽑 ?ㅽ??쇰줈 ?쒕옒洹?媛?대뱶
++    
++    // 二쇱꽑 洹몃━湲?+    ctx.beginPath();
++    ctx.moveTo(window.ruler.x1, window.ruler.y1);
++    ctx.lineTo(window.ruler.x2, window.ruler.y2);
++    ctx.stroke();
++    ctx.setLineDash([]);
++    
++    // ???앹젏 ??洹몃━湲?(?쒕옒洹??몃뱾)
++    ctx.fillStyle = 'rgba(0, 200, 200, 0.8)';
++    ctx.beginPath();
++    ctx.arc(window.ruler.x1, window.ruler.y1, 8, 0, Math.PI * 2);
++    ctx.fill();
++    ctx.beginPath();
++    ctx.arc(window.ruler.x2, window.ruler.y2, 8, 0, Math.PI * 2);
++    ctx.fill();
++    
++    // 移섏닔 怨꾩궛 (mm ?⑥쐞)
++    const distPx = Math.hypot(window.ruler.x2 - window.ruler.x1, window.ruler.y2 - window.ruler.y1);
++    const distMm = currentScale > 0 ? Math.round(distPx / currentScale) : 0;
++    
++    // 移섏닔 ?띿뒪??洹몃━湲?(媛?대뜲)
++    const midX = (window.ruler.x1 + window.ruler.x2) / 2;
++    const midY = (window.ruler.y1 + window.ruler.y2) / 2;
++    
++    ctx.font = 'bold 12px Inter, sans-serif';
++    const text = `${distMm} mm`;
++    const textWidth = ctx.measureText(text).width + 10;
++    
++    // ?띿뒪??諛곌꼍 諛뺤뒪 (?대┃ ?곸뿭 ?쒖떆)
++    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
++    ctx.strokeStyle = 'rgba(0, 200, 200, 0.6)';
++    ctx.lineWidth = 1;
++    ctx.fillRect(midX - textWidth / 2, midY - 10, textWidth, 20);
++    ctx.strokeRect(midX - textWidth / 2, midY - 10, textWidth, 20);
++    
++    // ?띿뒪??異쒕젰
++    ctx.fillStyle = '#00c8c8'; // rgba(0, 200, 200, 1) ?좊챸?섍쾶
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(text, midX, midY);
++    
++    ctx.restore();
++}
++
++// ?벀 ?듬줈 媛?대뱶(Corridor Guide) 洹몃━湲??⑥닔
++function drawCorridorGuide() {
++    if (!window.corridorGuide || !window.corridorGuide.visible || !window.corridorGuide.width) return;
++    
++    ctx.save();
++    const wPx = window.corridorGuide.width * currentScale;
++    const hPx = (window.corridorGuide.height || 1200) * currentScale;
++    const rx = window.corridorGuide.x - wPx / 2;
++    const ry = window.corridorGuide.y - hPx / 2;
++    
++    // ?곗깋 諛섑닾紐??ш컖??梨꾩슦湲?+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
++    ctx.fillRect(rx, ry, wPx, hPx);
++    
++    // ?곗깋 ?먯꽑 ?뚮몢由?+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
++    ctx.lineWidth = 1.5;
++    ctx.setLineDash([4, 4]);
++    ctx.strokeRect(rx, ry, wPx, hPx);
++    ctx.setLineDash([]);
++    
++    // 以묒븰???곗깋 ?띿뒪??洹몃━湲?+    ctx.fillStyle = '#ffffff';
++    ctx.font = 'bold 12px Inter, sans-serif';
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    
++    const text = `?듬줈 媛?대뱶: ${window.corridorGuide.width} mm`;
++    // ?띿뒪???룸같寃?諛뺤뒪
++    const textWidth = ctx.measureText(text).width + 10;
++    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
++    ctx.fillRect(window.corridorGuide.x - textWidth / 2, window.corridorGuide.y - 10, textWidth, 20);
++    
++    ctx.fillStyle = '#ffffff';
++    ctx.fillText(text, window.corridorGuide.x, window.corridorGuide.y);
++    
++    ctx.restore();
++}
++

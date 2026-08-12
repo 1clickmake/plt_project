@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>파렛트랙 자동 견적 시스템 - B2B SaaS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -179,6 +180,9 @@
     </style>
 </head>
 <body>
+<script>
+window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
+</script>
 <div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
     <div class="text-center mb-3 flex-shrink-0">
         <?php if (!empty($vendor)): ?>
@@ -320,67 +324,16 @@
                         <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-rack-specs')">❓</button>
                     </h6>
                     <div class="row g-2 mb-3">
-                        <div class="col-4">
+                        <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 단수 <span class="text-danger">*</span></label>
                             <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-levels" value="3" placeholder="예: 3단">
                         </div>
-                        <div class="col-4">
-                            <label class="form-label text-muted small mb-1">설치 칸수</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-bays" placeholder="최대설치">
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 높이(mm)</label>
                             <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
                         </div>
                     </div>
 
-                    <!-- 실시간 자재 산출 현황 카드 -->
-                    <div class="p-3 rounded-3 mb-2" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-info fw-bold small">📐 실시간 랙 자재 산출</span>
-                            <span class="badge bg-info text-dark" id="rack-total-bays-badge">총 0칸</span>
-                        </div>
-                        <div class="row g-1 text-center">
-                            <div class="col" style="flex: 1 0 18%;">
-                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
-                                    <div class="text-muted" style="font-size: 0.68rem;">독립형</div>
-                                    <div class="fw-bold text-white fs-6" id="display-indep">0<span class="small text-muted fs-7">대</span></div>
-                                    <input type="hidden" id="rack-independent" value="">
-                                </div>
-                            </div>
-                            <div class="col" style="flex: 1 0 18%;">
-                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
-                                    <div class="text-muted" style="font-size: 0.68rem;">연결형</div>
-                                    <div class="fw-bold text-white fs-6" id="display-conn">0<span class="small text-muted fs-7">대</span></div>
-                                    <input type="hidden" id="rack-connected" value="">
-                                </div>
-                            </div>
-                            <div class="col" style="flex: 1 0 20%;">
-                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
-                                    <div class="text-info" style="font-size: 0.68rem;">작은연결</div>
-                                    <div class="fw-bold text-info fs-6" id="display-small-conn">0<span class="small text-muted fs-7">대</span></div>
-                                    <input type="hidden" id="rack-small-connected" value="">
-                                </div>
-                            </div>
-                            <div class="col" style="flex: 1 0 18%;">
-                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
-                                    <div class="text-warning" style="font-size: 0.68rem;">🔗 홀더</div>
-                                    <div class="fw-bold text-warning fs-6" id="display-holders">0<span class="small text-muted fs-7">개</span></div>
-                                    <input type="hidden" id="rack-tie-holders" value="">
-                                </div>
-                            </div>
-                            <div class="col" style="flex: 1 0 22%;">
-                                <div class="p-1 py-2 rounded bg-dark border border-secondary">
-                                    <div class="text-success" style="font-size: 0.68rem;">📦 파랫트</div>
-                                    <div class="fw-bold text-success fs-6" id="display-pallets">0<span class="small text-muted fs-7">PLT</span></div>
-                                    <input type="hidden" id="rack-total-pallets" value="">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-muted small mt-2" style="font-size: 0.73rem;">
-                            * 2585→1385, 2785→1485, 2985→1585 작은연결이 남는 공간에 자동 적용됩니다.
-                        </div>
-                    </div>
                 </div>
 
                 <!-- 5단계: 추가 자료 및 요청사항 -->
@@ -400,19 +353,15 @@
                         <div id="file-preview-area"></div>
                     </div>
 
-                    <div>
-                        <label class="form-label text-muted small mb-1">💬 AI에게 남길 요청사항</label>
-                        <textarea class="form-control bg-transparent text-white border-secondary" id="ai-request" rows="4"
-                            placeholder="예) '가운데 공간에는 랙을 복수로 설치해줘', '전체공간에 랙을 설치해줘' 등 자유롭게 작성하세요."></textarea>
-                    </div>
+                    <input type="hidden" id="ai-request" value="">
                 </div>
 
                 <!-- 6단계: 실행 -->
                 <div class="pt-3 border-top border-secondary pb-2">
-                    <h5 class="fw-semibold mb-2"><span class="step-badge">6단계</span> 자동 배치 실행</h5>
+                    <h5 class="fw-semibold mb-2"><span class="step-badge">6단계</span> 배치 실행</h5>
                     <p class="text-muted small mb-3">모든 필수 정보가 입력되면 뿅!</p>
                     <button id="run-layout-btn" class="btn btn-primary-gradient w-100 py-3 rounded-3 shadow-lg" onclick="runAutoLayout()">
-                        🚀 파렛트랙 자동 배치 실행
+                        🚀 파렛트랙 배치 실행
                     </button>
                 </div>
             </div>
@@ -422,36 +371,31 @@
         <!-- 우측: 캔버스 및 시각화 -->
         <div class="col-xl-9 col-lg-8 h-100">
             <div class="glass-panel p-4 h-100 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <h5 class="fw-semibold text-info m-0">실시간 2D 배치 도면</h5>
-                        <!-- 상단 종합 실시간 자재 배지 바 -->
+                <!-- 상단 배지 바 (한 줄 컴팩트) -->
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="fw-semibold text-info m-0 me-1">실시간 2D 배치 도면</h5>
                         <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
-                            <span class="text-white">독립 <strong id="top-badge-indep" class="text-info">0</strong>대</span>
+                            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">2585×1000×4500 (2S 3단)</span>
                             <span class="text-secondary">|</span>
-                            <span class="text-white">연결 <strong id="top-badge-conn" class="text-info">0</strong>대</span>
+                            <span>독립 <strong id="top-badge-indep" class="text-primary">0</strong>대</span>
+                            <span class="text-secondary">|</span>
+                            <span>연결 <strong id="top-badge-conn" class="text-primary">0</strong>대</span>
                             <span id="top-badge-small-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-info">작은연결 <strong id="top-badge-small-conn" class="text-info">0</strong>대</span></span>
+                            <span id="top-badge-bypass-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-danger">바이패스 <strong id="top-badge-bypass" class="text-danger">0</strong>대</span></span>
                             <span class="text-secondary">|</span>
-                            <span class="text-warning">🔗 홀더 <strong id="top-badge-holders" class="text-warning">0</strong>개</span>
+                            <span class="text-warning">🔗 <strong id="top-badge-holders" class="text-warning">0</strong>홀더</span>
                             <span class="text-secondary">|</span>
                             <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">0</strong> PLT</span>
                         </div>
-                    </div>
-
-                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                        <button class="btn btn-sm btn-outline-info" onclick="zoomIn()">➕ 줌인</button>
-                        <button class="btn btn-sm btn-outline-info" onclick="zoomOut()">➖ 줌아웃</button>
-                        <button class="btn btn-sm btn-outline-info" onclick="resetZoom()">🔄 원위치</button>
-                        <span class="badge bg-secondary">평면도</span>
-                        <button id="request-quote-btn" class="btn quote-submit-btn px-3 py-1 rounded-3 d-none" data-bs-toggle="modal" data-bs-target="#quoteRequestModal">
-                            ✅ 배치도 수락 &mdash; 견적 요청하기
-                        </button>
+<!-- 배치도수락 버튼 제거 (리모컨 전용) -->
                     </div>
                 </div>
 
+                <!-- 캔버스 영역 (리모컨 패널 포함, position:relative) -->
+                <div class="canvas-container flex-grow-1 position-relative" id="canvas-wrapper">
 
-                <!-- 캔버스 영역 -->
-                <div class="canvas-container flex-grow-1" id="canvas-wrapper">
+
                     <!-- 기본 가이드 텍스트 -->
                     <div class="text-center text-secondary" id="canvas-guide">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">✏️</div>
@@ -459,6 +403,8 @@
                     </div>
                     <!-- 커스텀 드로잉용 캔버스 (평소엔 숨김) -->
                     <canvas id="drawingCanvas" width="800" height="600" style="display:none;"></canvas>
+
+                    <!-- 🎮 TV 리모컨 스타일 플로팅 컨트롤 패널 (fixed: 캔버스 바깥 우측 상단 고정) -->
                 </div>
             </div>
         </div>
@@ -562,6 +508,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/canvas2d.js?v=<?= time() ?>"></script>
+<script src="/assets/js/canvas-interactions.js?v=<?= time() ?>"></script>
 <script>
 
 // --- 도움말 오프캔버스 스크롤 ---
@@ -611,7 +558,31 @@ function removeFile(index) {
     renderPreviews();
 }
 
-// 드래그앤드롭 파일 업로드
+// 창고 벽면 길이 입력 검증 헬퍼 함수
+function checkWarehouseLengthsEntered(isSubmitting = false) {
+    if (typeof isPolygonClosed === 'function' && !isPolygonClosed()) {
+        alert('⚠️ 1단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!\n(점을 찍어 다각형 외곽선을 닫아야 합니다)');
+        return false;
+    }
+
+    const inputs = document.querySelectorAll('#inputs-container input[type="number"]');
+    if (inputs.length === 0) {
+        alert('⚠️ 1단계와 2단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!');
+        return false;
+    }
+
+    for (let i = 0; i < inputs.length; i++) {
+        const val = parseInt(inputs[i].value);
+        if (!val || val <= 0) {
+            alert(`⚠️ 2단계: ${i + 1}번 선분(벽면)의 길이를 입력해주세요!\n모든 벽면의 실제 길이를 입력해야 AI가 정확한 치수로 랙을 배치할 수 있습니다.`);
+            inputs[i].focus();
+            return false;
+        }
+    }
+    return true;
+}
+
+// 드래그앤드롭 파일 업로드 및 AI 요청창 클릭 감지
 document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('file-drop-zone');
     if (dropZone) {
@@ -623,13 +594,34 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFileSelect(e.dataTransfer.files);
         });
     }
+
+    // AI에게 남길 요청사항 클릭/포커스 시 창고 길이 미입력 체크
+    const aiRequestInput = document.getElementById('ai-request');
+    if (aiRequestInput) {
+        let hasWarnedFocus = false;
+        aiRequestInput.addEventListener('focus', () => {
+            if (!hasWarnedFocus) {
+                if (!checkWarehouseLengthsEntered()) {
+                    hasWarnedFocus = true;
+                    setTimeout(() => { hasWarnedFocus = false; }, 3000);
+                }
+            }
+        });
+        aiRequestInput.addEventListener('click', () => {
+            if (!hasWarnedFocus) {
+                if (!checkWarehouseLengthsEntered()) {
+                    hasWarnedFocus = true;
+                    setTimeout(() => { hasWarnedFocus = false; }, 3000);
+                }
+            }
+        });
+    }
 });
 
-// --- 자동 배치 실행 (Gemini AI 연동) ---
+// --- 배치 실행 (수동 모드 진입) ---
 function runAutoLayout() {
-    // 1단계: 도면 완성 여부 확인
-    if (typeof isPolygonClosed === 'function' && !isPolygonClosed()) {
-        alert('⚠️ 1단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!\n(점을 찍어 도형을 닫아야 합니다)');
+    // 1단계 & 2단계: 도면 및 벽면 길이 입력 확인
+    if (!checkWarehouseLengthsEntered(true)) {
         return;
     }
     // 4단계: 필수값 확인
@@ -652,171 +644,101 @@ function runAutoLayout() {
     }
 
     const btn = document.getElementById('run-layout-btn');
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Gemini AI 분석 중...';
+    btn.innerHTML = '✅ 도면 활성화 완료';
+    btn.classList.remove('btn-primary-gradient');
+    btn.classList.add('btn-success');
 
-    // DOM 입력에서 실제/자동계산된 벽면 치수 수집 (0으로 전송되는 것 방지)
-    const edgeLengths = [];
-    const inputs = document.querySelectorAll('#inputs-container input[type="number"]');
-    inputs.forEach(input => {
-        edgeLengths.push(parseInt(input.value) || 0);
-    });
+    // 리모컨 패널 자동 표시
+    const remoteCtrl = document.getElementById('canvas-remote-ctrl');
+    if (remoteCtrl) remoteCtrl.classList.remove('d-none');
+    
+    // 리모컨 내 견적 버튼 표시
+    const remoteQuoteBtn = document.getElementById('remote-quote-btn');
+    if (remoteQuoteBtn) remoteQuoteBtn.classList.remove('d-none');
 
-    const obstacles = (typeof window.obstacles !== 'undefined') ? window.obstacles : [];
-
-    const payload = {
-        pallet_w:       parseInt(document.getElementById('pallet-w').value),
-        pallet_d:       parseInt(document.getElementById('pallet-d').value),
-        pallet_h:       parseInt(document.getElementById('pallet-h').value),
-        pallet_weight:  parseInt(document.getElementById('pallet-weight').value),
-        fork_direction: document.querySelector('input[name="forkDirection"]:checked')?.value ?? 'W',
-        lift_height:    parseInt(document.getElementById('forklift-lift-height').value),
-        ast:            parseInt(document.getElementById('forklift-ast').value),
-        forklift_type:  document.getElementById('forklift-type').value,
-        rack_levels:    parseInt(document.getElementById('rack-levels').value),
-        rack_bays:      parseInt(document.getElementById('rack-bays').value) || 0,
-        rack_height:    parseInt(document.getElementById('rack-height').value) || 0,
-        edge_lengths:   edgeLengths,
-        obstacles:      obstacles.map(o => ({type: o.type, name: o.name})),
-        user_request:   document.getElementById('ai-request')?.value ?? '',
-    };
-
-
-    fetch('/api/canvas/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(json => {
-        btn.disabled = false;
-        btn.innerHTML = '🚀 파렛트랙 자동 배치 실행';
-
-        if (!json.success) {
-            alert('❌ AI 분석 중 오류가 발생했습니다:\n' + json.message);
-            return;
-        }
-
-        const d = json.data;
-        showAiResult(d);
-
-        // --- 캔버스에 2D 파랫트랙 배치 시각화 트리거 ---
-        window.rackSpecs = {
-            levels: payload.rack_levels,
-            beamLength: d.beam_length_mm || payload.pallet_w,
-            rackDepth: d.rack_depth_mm || payload.pallet_d,
-            layoutRacks: d.layout_racks || []
-        };
-
-        // 전체 공간 배치 요청 여부 판단
-        const userReqText = (payload.user_request || '').toLowerCase();
-        const isFullLayout = userReqText.includes('전체') || userReqText.includes('전부') || 
-                             userReqText.includes('모든') || userReqText.includes('다') ||
-                             payload.rack_bays === 0;
-
-        // 다중 배치 정보가 없거나, 전체 공간 요청인데 1개 벽면만 온 경우
-        if (!window.rackSpecs.layoutRacks || window.rackSpecs.layoutRacks.length === 0) {
-            const userReq = payload.user_request;
-            let targetLine = 1;
-            const match = userReq.match(/(\d+)\s*번\s*(라인|벽면|벽)/);
-            if (match) {
-                targetLine = parseInt(match[1]);
-            }
-            let edgeIndex = targetLine - 1;
-            if (edgeIndex < 0 || edgeIndex >= edgeLengths.length) {
-                edgeIndex = 0;
-            }
-            window.rackSpecs.layoutRacks = [{
-                edgeIndex: edgeIndex,
-                bays: payload.rack_bays || 0,
-                isDouble: false
-            }];
-        }
-
-        // 전체 공간 배치인데 AI가 1개 벽면만 응답한 경우 → JS가 직접 나머지 모든 벽면 추가
-        if (isFullLayout && window.rackSpecs.layoutRacks.length < edgeLengths.length) {
-            const coveredEdges = new Set(window.rackSpecs.layoutRacks.map(r => r.edgeIndex));
-            const beamLen = window.rackSpecs.beamLength || 2585;
-            for (let ei = 0; ei < edgeLengths.length; ei++) {
-                if (coveredEdges.has(ei)) continue;
-                const wallMm = edgeLengths[ei] || 0;
-                if (wallMm < beamLen + 300) continue; // 너무 짧은 벽면 제외
-                window.rackSpecs.layoutRacks.push({
-                    edgeIndex: ei,
-                    bays: 0, // 0 = 최대한 많이
-                    isDouble: false
-                });
-            }
-        }
-
-        // 중앙 공간 복수(복렬) 랙 배치 요청 여부 판단
-        const isCenterDouble = userReqText.includes('가운데') || userReqText.includes('중앙') || 
-                               userReqText.includes('복수') || userReqText.includes('복렬') ||
-                               userReqText.includes('center') || userReqText.includes('double') ||
-                               (d.center_double_racks && d.center_double_racks.length > 0);
-
-        window.rackSpecs.isCenterDouble = isCenterDouble;
-        window.rackSpecs.ast = d.aisle_width_mm || payload.ast || 2800;
-        window.rackSpecs.beamThicknessBar = d.beam_thickness_bar || 125;
-        window.rackSpecs.levels = payload.rack_levels || 3;
-
-
-        // 캔버스 다시 그리기
-        if (typeof draw === 'function') {
-            draw();
-        }
-
-
-        // 배치 완료 후 견적요청 버튼 표시
-        const reqBtn = document.getElementById('request-quote-btn');
-        if (reqBtn) reqBtn.classList.remove('d-none');
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = '🚀 파렛트랙 자동 배치 실행';
-        alert('❌ 서버 통신 오류: ' + err.message);
-    });
+    // 단식 1개, 복식 1개를 중앙에 생성
+    if (typeof window.spawnInitialRacks === 'function') {
+        window.spawnInitialRacks();
+    } else if (typeof draw === 'function') {
+        draw();
+    }
 }
 
-// --- AI 분석 결과 캔버스 우측 하단에 표시 (순수 안내 텍스트만 깔끔하게 출력) ---
+// --- AI 분석 결과 (fixed 위치, 좌측 하단, 전체 내용 스크롤) ---
 function showAiResult(d) {
-    const wrapper = document.getElementById('canvas-wrapper');
     const old = document.getElementById('ai-result-panel');
     if (old) old.remove();
 
     const panel = document.createElement('div');
     panel.id = 'ai-result-panel';
-    panel.style.cssText = 'position:absolute;bottom:12px;right:12px;width:380px;max-height:220px;overflow-y:auto;background:rgba(15,23,42,0.95);border:1px solid rgba(56,189,248,0.4);border-radius:0.75rem;padding:16px;font-size:0.88rem;z-index:100;color:#e2e8f0;line-height:1.5;box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
+    // fixed 위치: 화면 우측 하단 고정 (캔버스 스크롤과 무관)
+    panel.style.cssText = [
+        'position:fixed',
+        'bottom:20px',
+        'right:20px',
+        'width:420px',
+        'max-height:65vh',
+        'display:flex',
+        'flex-direction:column',
+        'background:rgba(10,15,30,0.97)',
+        'border:1px solid rgba(56,189,248,0.5)',
+        'border-radius:0.85rem',
+        'padding:0',
+        'font-size:0.85rem',
+        'z-index:9999',
+        'color:#e2e8f0',
+        'line-height:1.6',
+        'box-shadow:0 12px 40px rgba(0,0,0,0.75)',
+        'backdrop-filter:blur(16px)'
+    ].join(';');
     
     let text = d.summary || '설치 계획이 정상적으로 수립되었습니다.';
     
-    // 1. 마크다운 JSON 블록 및 따옴표/괄호 정제
+    // 1. 마크다운 JSON 블록 제거
     text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     
-    // 2. 만약 '{ "summary": "..." }' 형태의 JSON 문자열이 그대로 넘어온 경우
+    // 2. JSON 문자열 내 summary 값만 추출
     if (text.includes('"summary"')) {
-        const match = text.match(/"summary"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"?/);
+        const match = text.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
         if (match && match[1]) {
-            text = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            text = match[1];
         } else {
-            // 잘린 JSON 형태 대응: {"summary": "내용...
             text = text.replace(/^\s*\{?\s*"summary"\s*:\s*"?/i, '');
-            text = text.replace(/"\s*,\s*".*$/s, ''); // 뒤에 이어지는 다른 키-값 쌍 제거
-            text = text.replace(/"\s*\}?\s*$/s, '');  // 닫는 따옴표와 중괄호 제거
         }
     }
     
-    // 3. 앞뒤 남은 중괄호, 따옴표, 공백 완전 제거
+    // 3. 이스케이프된 줄바꿈 → 실제 줄바꿈
+    text = text.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\t/g, ' ');
+    text = text.replace(/\\"/g, '"');
+    
+    // 4. 마크다운 헤더 → 이모지 소제목
+    text = text.replace(/###\s*(.*)/g, '📌 $1');
+    text = text.replace(/##\s*(.*)/g, '📋 $1');
+    text = text.replace(/#\s*(.*)/g,  '📍 $1');
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // 5. 앞뒤 불필요한 따옴표/괄호 제거
     text = text.replace(/^[\{\s"'\\]+/, '').replace(/[\}\s"'\\]+$/, '').trim();
+    
+    // 정제된 순수 텍스트 리포트를 전역 변수에 임시 저장 (견적요청 제출 시 DB 저장용)
+    window.lastAiSummary = text;
+    
+    // 6. 줄바꿈을 <br>로 변환 (innerHTML 출력용)
+    const htmlText = text.replace(/\n/g, '<br>');
 
     panel.innerHTML = `
-        <div style="color:#e2e8f0;word-break:break-all;position:relative;padding-right:20px;">
-            <button onclick="this.closest('#ai-result-panel').remove()" style="position:absolute;top:0;right:0;background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;">✕</button>
-            <div class="text-info fw-bold mb-1">💡 AI 설계 요약</div>
-            ${text}
+        <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(56,189,248,0.2);display:flex;justify-content:space-between;align-items:center;background:rgba(56,189,248,0.08);border-top-left-radius:0.85rem;border-top-right-radius:0.85rem;flex-shrink:0;">
+            <div class="text-info fw-bold d-flex align-items-center gap-1" style="font-size:0.86rem;">
+                <span>💡</span>
+                <span>AI 설계 요약 및 시공 리포트</span>
+            </div>
+            <button onclick="document.getElementById('ai-result-panel').remove()" style="background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;padding:0;line-height:1;" title="닫기">✕</button>
+        </div>
+        <div style="padding:12px 14px 14px;overflow-y:auto;flex:1 1 auto;white-space:normal;color:#e2e8f0;word-break:keep-all;line-height:1.7;font-size:0.83rem;">
+            ${htmlText}
         </div>
     `;
-    wrapper.appendChild(panel);
+    document.body.appendChild(panel);
 }
 
 
@@ -832,9 +754,52 @@ function submitQuoteRequest() {
         return;
     }
 
-    // TODO: 실제 백엔드 FormData 전송 (추후 구현)
-    alert(`✅ 견적 요청이 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n담당자가 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
-    bootstrap.Modal.getInstance(document.getElementById('quoteRequestModal'))?.hide();
+    const submitBtn = document.querySelector('.quote-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = '⏳ 제출 중...';
+    }
+
+    const payload = {
+        vendor_user_id: window.vendorUserId || 0,
+        company: company,
+        name: name,
+        phone: phone,
+        address: address,
+        canvas_data: JSON.stringify({
+            racks: typeof racks !== 'undefined' ? racks : [],
+            points: typeof points !== 'undefined' ? points : [],
+            obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
+            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
+        }),
+        summary: window.lastAiSummary || ''
+    };
+
+    fetch('/quote/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 견적 요청 제출';
+        }
+        if (res.success) {
+            alert(`✅ 견적 요청이 성공적으로 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n공급사 담당자가 확인 후 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
+            bootstrap.Modal.getInstance(document.getElementById('quoteRequestModal'))?.hide();
+        } else {
+            alert('❌ 오류: ' + res.message);
+        }
+    })
+    .catch(err => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 견적 요청 제출';
+        }
+        alert('❌ 서버 통신 오류가 발생했습니다: ' + err.message);
+    });
 }
 
 // --- 도면 입력 생성 함수 ---
@@ -867,6 +832,71 @@ window.generateCustomInputs = function(numEdges) {
     // 초기 정렬 및 축적 렌더링 강제 트리거
     if (typeof alignAndScalePolygon === 'function') {
         alignAndScalePolygon();
+    }
+};
+
+// --- 전역 인터랙션 모드 제어 ---
+window.activeInteractMode = null; // 기본은 null (이동 모드)
+
+window.setInteractMode = function(mode) {
+    const btnRotate = document.getElementById('mode-btn-rotate');
+    const btnRotateCcw = document.getElementById('mode-btn-rotate-ccw');
+    const btnExtend = document.getElementById('mode-btn-extend');
+    const btnCopy = document.getElementById('mode-btn-copy');
+    const btnBypass = document.getElementById('mode-btn-bypass');
+    
+    // 이미 활성화된 모드를 다시 클릭 시 모드 해제(null)
+    if (window.activeInteractMode === mode) {
+        window.activeInteractMode = null;
+    } else {
+        window.activeInteractMode = mode;
+    }
+    
+    // 버튼 스타일 리셋
+    if (btnRotate) {
+        btnRotate.style.background = 'rgba(251,191,36,0.06)';
+        btnRotate.style.color = '#fbbf24';
+    }
+    if (btnRotateCcw) {
+        btnRotateCcw.style.background = 'rgba(251,191,36,0.06)';
+        btnRotateCcw.style.color = '#fbbf24';
+    }
+    if (btnExtend) {
+        btnExtend.style.background = 'rgba(56,189,248,0.06)';
+        btnExtend.style.color = '#38bdf8';
+    }
+    if (btnCopy) {
+        btnCopy.style.background = 'rgba(52,211,153,0.06)';
+        btnCopy.style.color = '#34d399';
+    }
+    if (btnBypass) {
+        btnBypass.style.background = 'rgba(244,63,94,0.06)';
+        btnBypass.style.color = '#f43f5e';
+    }
+    
+    // 활성화된 모드 버튼 하이라이트
+    if (window.activeInteractMode === 'rotate' && btnRotate) {
+        btnRotate.style.background = '#fbbf24';
+        btnRotate.style.color = '#000';
+    } else if (window.activeInteractMode === 'rotate-ccw' && btnRotateCcw) {
+        btnRotateCcw.style.background = '#fbbf24';
+        btnRotateCcw.style.color = '#000';
+    } else if (window.activeInteractMode === 'extend' && btnExtend) {
+        btnExtend.style.background = '#38bdf8';
+        btnExtend.style.color = '#000';
+    } else if (window.activeInteractMode === 'copy' && btnCopy) {
+        btnCopy.style.background = '#34d399';
+        btnCopy.style.color = '#000';
+    } else if (window.activeInteractMode === 'bypass' && btnBypass) {
+        btnBypass.style.background = '#f43f5e';
+        btnBypass.style.color = '#000';
+    }
+    
+    // 캔버스 즉시 갱신 (핸들 렌더링 변경 반영)
+    if (typeof updateRackFormCounts === 'function') {
+        updateRackFormCounts();
+    }
+    if (typeof draw === 'function') {
         draw();
     }
 };
@@ -886,6 +916,143 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof startCustomDrawing === 'function') startCustomDrawing();
 });
 </script>
+
+<!-- 🎮 TV 리모컨 컨트롤 패널 (position:fixed - 항상 우측 상단 고정) -->
+<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; top:80px; right:20px; z-index:9998; user-select:none;">
+    <div style="
+        background: linear-gradient(160deg, rgba(10,15,28,0.98) 0%, rgba(22,33,52,0.98) 100%);
+        border: 1px solid rgba(56,189,248,0.4);
+        border-radius: 22px;
+        padding: 14px 11px 14px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+        width: 128px;
+        backdrop-filter: blur(16px);
+    ">
+        <!-- 헤더 -->
+        <div class="text-center mb-2" style="font-size:0.63rem; color:rgba(148,163,184,0.75); letter-spacing:0.1em; font-weight:700;">📐 CANVAS</div>
+
+        <!-- 줌 버튼 행 -->
+        <div class="d-flex justify-content-between gap-1 mb-2">
+            <button onclick="zoomIn()" title="줌인" style="
+                flex:1; padding:6px 0; border-radius:8px; border:none;
+                background: rgba(56,189,248,0.13); color:#38bdf8; font-size:1.05rem;
+                cursor:pointer; transition: background 0.15s;
+            " onmouseover="this.style.background='rgba(56,189,248,0.3)'" onmouseout="this.style.background='rgba(56,189,248,0.13)'">＋</button>
+            <button onclick="resetZoom()" title="원위치" style="
+                flex:1; padding:6px 0; border-radius:8px; border:none;
+                background: rgba(99,102,241,0.18); color:#a5b4fc; font-size:0.68rem; font-weight:700;
+                cursor:pointer; transition: background 0.15s;
+            " onmouseover="this.style.background='rgba(99,102,241,0.38)'" onmouseout="this.style.background='rgba(99,102,241,0.18)'">원위치</button>
+            <button onclick="zoomOut()" title="줌아웃" style="
+                flex:1; padding:6px 0; border-radius:8px; border:none;
+                background: rgba(56,189,248,0.13); color:#38bdf8; font-size:1.05rem;
+                cursor:pointer; transition: background 0.15s;
+            " onmouseover="this.style.background='rgba(56,189,248,0.3)'" onmouseout="this.style.background='rgba(56,189,248,0.13)'">－</button>
+        </div>
+
+        <!-- 방향 십자 키패드 -->
+        <div style="display:flex; justify-content:center; margin-bottom:4px;">
+            <button onclick="panCanvas(0,-60)" title="위로" style="
+                width:36px; height:30px; border-radius:7px; border:none;
+                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
+                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▲</button>
+        </div>
+        <div style="display:flex; justify-content:center; gap:4px; margin-bottom:4px;">
+            <button onclick="panCanvas(-60,0)" title="왼쪽" style="
+                width:36px; height:30px; border-radius:7px; border:none;
+                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
+                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">◀</button>
+            <div style="width:36px; height:30px; border-radius:7px; background:rgba(22,33,52,0.8); border:1px solid rgba(56,189,248,0.12);"></div>
+            <button onclick="panCanvas(60,0)" title="오른쪽" style="
+                width:36px; height:30px; border-radius:7px; border:none;
+                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
+                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▶</button>
+        </div>
+        <div style="display:flex; justify-content:center; margin-bottom:10px;">
+            <button onclick="panCanvas(0,60)" title="아래로" style="
+                width:36px; height:30px; border-radius:7px; border:none;
+                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
+                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▼</button>
+        </div>
+
+        <!-- 구분선 -->
+        <div style="height:1px; background: rgba(56,189,248,0.18); margin: 6px 0 8px;"></div>
+
+        <!-- 🛠️ 편집 모드 선택 패널 -->
+        <div class="text-center mb-1" style="font-size:0.6rem; color:rgba(148,163,184,0.6); letter-spacing:0.05em; font-weight:700;">🛠️ EDIT MODE</div>
+        <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
+            <!-- 회전 모드 가로 2단 분할 (시계 / 반시계) -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <!-- 시계 회전 모드 (Amber) -->
+                <button id="mode-btn-rotate" onclick="setInteractMode('rotate')" style="
+                    border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
+                    background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.65rem; font-weight:700;
+                    padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:2px;
+                " onmouseover="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.06)'">
+                    <span>↻</span> <span>시계</span>
+                </button>
+                <!-- 반시계 회전 모드 (Amber) -->
+                <button id="mode-btn-rotate-ccw" onclick="setInteractMode('rotate-ccw')" style="
+                    border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
+                    background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.65rem; font-weight:700;
+                    padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:2px;
+                " onmouseover="if(window.activeInteractMode!=='rotate-ccw') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate-ccw') this.style.background='rgba(251,191,36,0.06)'">
+                    <span>↺</span> <span>반시계</span>
+                </button>
+            </div>
+            <!-- 연장 모드 (Sky Blue) -->
+            <button id="mode-btn-extend" onclick="setInteractMode('extend')" style="
+                width:100%; border: 1px solid rgba(56,189,248,0.3); border-radius:8px;
+                background: rgba(56,189,248,0.06); color:#38bdf8; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
+            " onmouseover="if(window.activeInteractMode!=='extend') this.style.background='rgba(56,189,248,0.18)'" onmouseout="if(window.activeInteractMode!=='extend') this.style.background='rgba(56,189,248,0.06)'">
+                <span>⬌</span> <span>연장 편집</span>
+            </button>
+            <!-- 복사 모드 (Emerald) -->
+            <button id="mode-btn-copy" onclick="setInteractMode('copy')" style="
+                width:100%; border: 1px solid rgba(52,211,153,0.3); border-radius:8px;
+                background: rgba(52,211,153,0.06); color:#34d399; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
+            " onmouseover="if(window.activeInteractMode!=='copy') this.style.background='rgba(52,211,153,0.18)'" onmouseout="if(window.activeInteractMode!=='copy') this.style.background='rgba(52,211,153,0.06)'">
+                <span>❐</span> <span>복사 편집</span>
+            </button>
+            <!-- 바이패스 모드 (Rose) - 텍스트만 표시 -->
+            <button id="mode-btn-bypass" onclick="setInteractMode('bypass')" style="
+                width:100%; border: 1px solid rgba(244,63,94,0.3); border-radius:8px;
+                background: rgba(244,63,94,0.06); color:#f43f5e; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.18)'" onmouseout="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.06)'">
+                <span>Bypass</span>
+            </button>
+        </div>
+
+        <!-- 정렬 버튼 (Purple) - 즉시 실행 -->
+        <button id="mode-btn-align" onclick="if(typeof autoAlignRacks === 'function') autoAlignRacks();" style="
+            width:100%; border: 1px solid rgba(168,85,247,0.3); border-radius:8px;
+            background: rgba(168,85,247,0.06); color:#c084fc; font-size:0.7rem; font-weight:700;
+            padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px; margin: 4px 0 2px;
+        " onmouseover="this.style.background='rgba(168,85,247,0.18)'" onmouseout="this.style.background='rgba(168,85,247,0.06)'">
+            <span>≡</span> <span>간격 자동 정렬</span>
+        </button>
+
+        <!-- 구분선 -->
+        <div style="height:1px; background: rgba(56,189,248,0.18); margin: 2px 0 8px;"></div>
+
+        <!-- 견적 요청 버튼 (빨간색) -->
+        <button id="remote-quote-btn" class="d-none" data-bs-toggle="modal" data-bs-target="#quoteRequestModal" style="
+            width:100%; border: 1px solid rgba(239,68,68,0.7); border-radius:10px;
+            background: rgba(220,38,38,0.2); color:#fca5a5;
+            font-size:0.67rem; font-weight:700; padding:8px 4px;
+            cursor:pointer; transition: all 0.2s; line-height:1.35; letter-spacing:0.01em;
+        " onmouseover="this.style.background='rgba(220,38,38,0.42)';this.style.color='#fff'" onmouseout="this.style.background='rgba(220,38,38,0.2)';this.style.color='#fca5a5'">
+            🔴 견적요청
+        </button>
+    </div>
+</div>
 
 </body>
 </html>

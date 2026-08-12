@@ -120,6 +120,10 @@ return function(FastRoute\RouteCollector $r) {
 
     // SaaS Vendor Routes
     $r->addRoute(['GET', 'POST'], '/vendor/settings', ['App\Controllers\VendorController', 'settings']);
+    $r->addRoute('GET',  '/vendor/quotes',        ['App\Controllers\VendorController', 'quotes']);
+    $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
+    $r->addRoute('POST', '/vendor/quotes/send-email', ['App\Controllers\VendorController', 'sendQuoteEmail']);
     $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
+    $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);
 };

@@ -1,0 +1,254 @@
+﻿diff --git a/public/js/canvas2d.js b/public/assets/js/canvas2d.js
+index 1809a7f..500f2c2 100644
+--- a/public/js/canvas2d.js
++++ b/public/assets/js/canvas2d.js
+@@ -10,7 +10,6 @@ let originalAngles = []; // 泥섏쓬??洹몃젮吏??ㅻ깄??媛곷룄 蹂닿?
+ let originalVisualLengths = []; // 泥섏쓬??洹몃젮吏?鍮꾩＜???쎌? 湲몄씠 蹂닿?
+ let userEnteredEdges = []; // ?ъ슜?먭? ?ㅻ낫?쒕줈 ?섎룞 ?낅젰???ｌ? ?몃뜳??蹂닿? (Array ???뺤떇)
+ let mousePos = null;
+-let snapGuideEnabled = true; // global flag for snap guide visibility
+ 
+ let draggedItemType = null; // ?몃??먯꽌 ?쒕옒洹?(HTML -> Canvas)
+ 
+@@ -59,12 +58,6 @@ function getLogicalPos(e) {
+     };
+ }
+ 
+-// ?ㅻ깄 媛?대뱶 ?좉? ?⑥닔
+-function toggleSnapGuide() {
+-    snapGuideEnabled = !snapGuideEnabled;
+-    draw();
+-}
+-
+ // ?덊떚???붿뒪?뚮젅??諛??ъ씠利?留욎땄 ?ㅼ젙
+ function resizeCanvas() {
+     const parent = canvas.parentElement;
+@@ -2307,7 +2300,6 @@ window.updateRackFormCounts = function() {
+     let totalIndep = 0;
+     let totalConn = 0;
+     let totalSmallConn = 0;
+-    let totalBypass = 0;
+     let totalTieHolders = 0;
+     let totalBays = 0;
+     
+@@ -2317,69 +2309,50 @@ window.updateRackFormCounts = function() {
+ 
+     let totalRegularBays = 0;
+     let totalSmallBays = 0;
+-    
+-    let bypassRegularBays = 0;
+-    let bypassSmallBays = 0;
+ 
+     racks.forEach(r => {
+         let reg = (r.independent || 0) + (r.connected || 0);
+         let sm = r.smallConnected || 0;
+         let spans = reg + sm;
+ 
+-        if (r.bypass) {
+-            // 諛붿씠?⑥뒪??寃쎌슦 ?쇰컲 移댁슫?몄뿉???쒖쇅?섍퀬 諛붿씠?⑥뒪 ?꾩슜?쇰줈 吏묎퀎
+-            let factor = r.isDouble ? 2 : 1;
+-            totalBypass += spans * factor;
+-            bypassRegularBays += reg * factor;
+-            bypassSmallBays += sm * factor;
++        
++        if (r.isDouble) {
++            // 蹂듬젹(蹂듭닔) ??1?명듃: ?⑥뿴 2?쇱씤 寃고빀
++            totalIndep += (r.independent || 0) * 2;
++            totalConn += (r.connected || 0) * 2;
++            totalSmallConn += sm * 2;
++            totalRegularBays += reg * 2;
++            totalSmallBays += sm * 2;
++            totalBays += spans * 2;
+             
+-            // 怨좎젙 ???Spacer)??諛붿씠?⑥뒪 ?щ?? 臾닿??섍쾶 援ъ“臾쇰줈???꾩슂
+-            if (r.isDouble && spans > 0) {
++            // 怨좎젙 ???Spacer): 湲곕뫁 ????spans + 1) * 2媛?(????2媛쒖뵫)
++            if (spans > 0) {
+                 totalTieHolders += (spans + 1) * 2;
+             }
+         } else {
+-            if (r.isDouble) {
+-                // 蹂듬젹(蹂듭닔) ??1?명듃: ?⑥뿴 2?쇱씤 寃고빀
+-                totalIndep += (r.independent || 0) * 2;
+-                totalConn += (r.connected || 0) * 2;
+-                totalSmallConn += sm * 2;
+-                totalRegularBays += reg * 2;
+-                totalSmallBays += sm * 2;
+-                totalBays += spans * 2;
+-                
+-                // 怨좎젙 ???Spacer): 湲곕뫁 ????spans + 1) * 2媛?(????2媛쒖뵫)
+-                if (spans > 0) {
+-                    totalTieHolders += (spans + 1) * 2;
+-                }
+-            } else {
+-                // ?⑥뿴 ??-                totalIndep += r.independent || 0;
+-                totalConn += r.connected || 0;
+-                totalSmallConn += sm;
+-                totalRegularBays += reg;
+-                totalSmallBays += sm;
+-                totalBays += spans;
+-            }
++            // ?⑥뿴 ??+            totalIndep += r.independent || 0;
++            totalConn += r.connected || 0;
++            totalSmallConn += sm;
++            totalRegularBays += reg;
++            totalSmallBays += sm;
++            totalBays += spans;
+         }
+     });
+     
+-    // 珥??곸옱 ?뚮젢???섎웾: (?쇰컲 ?뺢퇋踰좎씠 * 2 + ?쇰컲 ?묒??곌껐踰좎씠 * 1) * levels + (諛붿씠?⑥뒪 ?뺢퇋踰좎씠 * 2 + 諛붿씠?⑥뒪 ?묒??곌껐踰좎씠 * 1) * (levels - 1)
+-    const bypassLevels = Math.max(1, levels - 1);
+-    const totalPallets = ((totalRegularBays * 2 + totalSmallBays * 1) * levels) +
+-                         ((bypassRegularBays * 2 + bypassSmallBays * 1) * bypassLevels);
++    // 珥??곸옱 ?뚮젢???섎웾: ?뺢퇋踰좎씠 2PLT + ?묒??곌껐踰좎씠 1PLT * ?⑥닔
++    const totalPallets = (totalRegularBays * 2 + totalSmallBays * 1) * levels;
+     
+     // 1. ?④? input ?꾨뱶 ?낅뜲?댄듃 (???쒖텧??
+     const indepInput = document.getElementById('rack-independent');
+     const connInput = document.getElementById('rack-connected');
+     const smallConnInput = document.getElementById('rack-small-connected');
+-    const bypassInput = document.getElementById('rack-bypass');
+     const tieHolderInput = document.getElementById('rack-tie-holders');
+     const palletsInput = document.getElementById('rack-total-pallets');
+     
+     if(indepInput) indepInput.value = totalIndep > 0 ? totalIndep : '';
+     if(connInput) connInput.value = totalConn > 0 ? totalConn : '';
+     if(smallConnInput) smallConnInput.value = totalSmallConn > 0 ? totalSmallConn : '';
+-    if(bypassInput) bypassInput.value = totalBypass > 0 ? totalBypass : '';
+     if(tieHolderInput) tieHolderInput.value = totalTieHolders > 0 ? totalTieHolders : '';
+     if(palletsInput) palletsInput.value = totalPallets > 0 ? totalPallets : '';
+ 
+@@ -2387,7 +2360,6 @@ window.updateRackFormCounts = function() {
+     const dIndep = document.getElementById('display-indep');
+     const dConn = document.getElementById('display-conn');
+     const dSmallConn = document.getElementById('display-small-conn');
+-    const dBypass = document.getElementById('display-bypass');
+     const dHolders = document.getElementById('display-holders');
+     const dPallets = document.getElementById('display-pallets');
+     const dBaysBadge = document.getElementById('rack-total-bays-badge');
+@@ -2395,24 +2367,24 @@ window.updateRackFormCounts = function() {
+     if(dIndep) dIndep.innerHTML = `${totalIndep}<span class="small text-muted fs-7">?</span>`;
+     if(dConn) dConn.innerHTML = `${totalConn}<span class="small text-muted fs-7">?</span>`;
+     if(dSmallConn) dSmallConn.innerHTML = `${totalSmallConn}<span class="small text-muted fs-7">?</span>`;
+-    if(dBypass) dBypass.innerHTML = `${totalBypass}<span class="small text-muted fs-7">?</span>`;
+     if(dHolders) dHolders.innerHTML = `${totalTieHolders}<span class="small text-muted fs-7">媛?/span>`;
+     if(dPallets) dPallets.innerHTML = `${totalPallets.toLocaleString()}<span class="small text-muted fs-7">PLT</span>`;
+-    
+     // ?쒖? ?뚮젢?몃옓 洹쒓꺽 ?곗텧: [鍮붽만??W) 횞 源딆씠(D) 횞 ?믪씠(H) , (?⑥닔-1)S ?⑥닔??
+     const beamLen = (window.rackSpecs && window.rackSpecs.beamLength) || parseInt(document.getElementById('beam-length')?.value) || 2585;
+     const rackD = (window.rackSpecs && window.rackSpecs.rackDepth) || 1000;
+     const palletH = parseInt(document.getElementById('pallet-h')?.value) || 1200;
+     let rackH = parseInt(document.getElementById('rack-height')?.value) || 0;
+     if (rackH <= 0) {
++        // 湲곕낯 怨꾩궛: (?뚮젢?몃넂??횞 ?⑥닔) + (?⑤떦 ?꾨젅??媛꾧꺽 200mm 횞 ?⑥닔) + 踰좎씠??300mm
+         const rawH = (palletH * levels) + (levels * 200) + 300;
++        // 500?⑥쐞 ?щ┝ 泥섎━
+         rackH = Math.ceil(rawH / 500) * 500;
+     }
+-    const spanS = Math.max(1, levels - 1); 
++    const spanS = Math.max(1, levels - 1); // 3??-> 2S, 4??-> 3S
+     const specTagText = `${beamLen}횞${rackD}횞${rackH} (${spanS}S ${levels}??`;
+     const specDetailText = `洹쒓꺽: ${beamLen}(W) 횞 ${rackD}(D) 횞 ${rackH}(H) , ${spanS}S ${levels}??;
+ 
+-    if(dBaysBadge) dBaysBadge.innerText = `珥?${totalBays + totalBypass}移?(${spanS}S ${levels}??`;
++    if(dBaysBadge) dBaysBadge.innerText = `珥?${totalBays}移?(${spanS}S ${levels}??`;
+     const dSpecDetail = document.getElementById('rack-spec-detail-badge');
+     if(dSpecDetail) dSpecDetail.innerText = specDetailText;
+ 
+@@ -2422,8 +2394,6 @@ window.updateRackFormCounts = function() {
+     const topConn = document.getElementById('top-badge-conn');
+     const topSmallWrap = document.getElementById('top-badge-small-wrap');
+     const topSmallConn = document.getElementById('top-badge-small-conn');
+-    const topBypassWrap = document.getElementById('top-badge-bypass-wrap');
+-    const topBypass = document.getElementById('top-badge-bypass');
+     const topHolders = document.getElementById('top-badge-holders');
+     const topPallets = document.getElementById('top-badge-pallets');
+     
+@@ -2438,14 +2408,6 @@ window.updateRackFormCounts = function() {
+             topSmallWrap.classList.add('d-none');
+         }
+     }
+-    if(topBypassWrap) {
+-        if(totalBypass > 0) {
+-            topBypassWrap.classList.remove('d-none');
+-            if(topBypass) topBypass.innerText = totalBypass;
+-        } else {
+-            topBypassWrap.classList.add('d-none');
+-        }
+-    }
+     if(topHolders) topHolders.innerText = totalTieHolders;
+     if(topPallets) topPallets.innerText = totalPallets.toLocaleString();
+ };
+@@ -3101,19 +3063,16 @@ function drawRuler() {
+     if (!window.ruler || !window.ruler.visible) return;
+     
+     ctx.save();
+-    // ?덇툑?먯꽑: rgba(0, 200, 200, 0.4)
+     ctx.strokeStyle = 'rgba(0, 200, 200, 0.4)';
+     ctx.lineWidth = 4;
+-    ctx.setLineDash([5, 5]); // ?먯꽑 ?ㅽ??쇰줈 ?쒕옒洹?媛?대뱶
++    ctx.setLineDash([5, 5]);
+     
+-    // 二쇱꽑 洹몃━湲?     ctx.beginPath();
+     ctx.moveTo(window.ruler.x1, window.ruler.y1);
+     ctx.lineTo(window.ruler.x2, window.ruler.y2);
+     ctx.stroke();
+     ctx.setLineDash([]);
+     
+-    // ???앹젏 ??洹몃━湲?(?쒕옒洹??몃뱾)
+     ctx.fillStyle = 'rgba(0, 200, 200, 0.8)';
+     ctx.beginPath();
+     ctx.arc(window.ruler.x1, window.ruler.y1, 8, 0, Math.PI * 2);
+@@ -3122,11 +3081,9 @@ function drawRuler() {
+     ctx.arc(window.ruler.x2, window.ruler.y2, 8, 0, Math.PI * 2);
+     ctx.fill();
+     
+-    // 移섏닔 怨꾩궛 (mm ?⑥쐞)
+     const distPx = Math.hypot(window.ruler.x2 - window.ruler.x1, window.ruler.y2 - window.ruler.y1);
+     const distMm = currentScale > 0 ? Math.round(distPx / currentScale) : 0;
+     
+-    // 移섏닔 ?띿뒪??洹몃━湲?(媛?대뜲)
+     const midX = (window.ruler.x1 + window.ruler.x2) / 2;
+     const midY = (window.ruler.y1 + window.ruler.y2) / 2;
+     
+@@ -3134,15 +3091,13 @@ function drawRuler() {
+     const text = `${distMm} mm`;
+     const textWidth = ctx.measureText(text).width + 10;
+     
+-    // ?띿뒪??諛곌꼍 諛뺤뒪 (?대┃ ?곸뿭 ?쒖떆)
+     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+     ctx.strokeStyle = 'rgba(0, 200, 200, 0.6)';
+     ctx.lineWidth = 1;
+     ctx.fillRect(midX - textWidth / 2, midY - 10, textWidth, 20);
+     ctx.strokeRect(midX - textWidth / 2, midY - 10, textWidth, 20);
+     
+-    // ?띿뒪??異쒕젰
+-    ctx.fillStyle = '#00c8c8'; // rgba(0, 200, 200, 1) ?좊챸?섍쾶
++    ctx.fillStyle = '#00c8c8';
+     ctx.textAlign = 'center';
+     ctx.textBaseline = 'middle';
+     ctx.fillText(text, midX, midY);
+@@ -3160,25 +3115,21 @@ function drawCorridorGuide() {
+     const rx = window.corridorGuide.x - wPx / 2;
+     const ry = window.corridorGuide.y - hPx / 2;
+     
+-    // ?곗깋 諛섑닾紐??ш컖??梨꾩슦湲?     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+     ctx.fillRect(rx, ry, wPx, hPx);
+     
+-    // ?곗깋 ?먯꽑 ?뚮몢由?     ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+     ctx.lineWidth = 1.5;
+     ctx.setLineDash([4, 4]);
+     ctx.strokeRect(rx, ry, wPx, hPx);
+     ctx.setLineDash([]);
+     
+-    // 以묒븰???곗깋 ?띿뒪??洹몃━湲?     ctx.fillStyle = '#ffffff';
+     ctx.font = 'bold 12px Inter, sans-serif';
+     ctx.textAlign = 'center';
+     ctx.textBaseline = 'middle';
+     
+     const text = `?듬줈 媛?대뱶: ${window.corridorGuide.width} mm`;
+-    // ?띿뒪???룸같寃?諛뺤뒪
+     const textWidth = ctx.measureText(text).width + 10;
+     ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+     ctx.fillRect(window.corridorGuide.x - textWidth / 2, window.corridorGuide.y - 10, textWidth, 20);
