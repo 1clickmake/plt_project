@@ -332,22 +332,6 @@
                 rotateRack(currentRackPreview);
                 return;
             }
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-
-            if (typeof racks !== 'undefined' && Array.isArray(racks)) {
-                for (let i = racks.length - 1; i >= 0; i--) {
-                    const r = racks[i];
-                    if (typeof getRackBoxes !== 'function') continue;
-                    const boxes = getRackBoxes(r);
-                    if (clickX >= boxes.physical.minX && clickX <= boxes.physical.maxX &&
-                        clickY >= boxes.physical.minY && clickY <= boxes.physical.maxY) {
-                        rotateRack(r);
-                        return;
-                    }
-                }
-            }
         });
 
 

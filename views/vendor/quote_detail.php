@@ -11,124 +11,8 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <style>
-        :root {
-            --bg-primary: #020617;
-            --bg-secondary: #0f172a;
-            --accent-amber: #fbbf24;
-            --accent-glow: rgba(251, 191, 36, 0.35);
-            --text-light: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-rgba: rgba(255, 255, 255, 0.08);
-        }
-        
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: radial-gradient(circle at top left, #0f172a 0%, #020617 100%);
-            color: var(--text-light);
-            min-height: 100vh;
-            display: flex;
-            overflow-x: hidden;
-            margin: 0;
-        }
-
-        /* Sidebar Styling */
-        .sidebar {
-            width: 260px;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 1000;
-        }
-        
-        .sidebar-brand {
-            padding: 24px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #a855f7;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            text-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
-        }
-
-        .sidebar-menu {
-            padding: 20px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex-grow: 1;
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.92rem;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-        }
-
-        .menu-item:hover {
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-light);
-            transform: translateX(4px);
-        }
-
-        .menu-item.active {
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(217, 119, 6, 0.12) 100%);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-            color: #fde047;
-        }
-
-        /* Main Content Styling */
-        .main-content {
-            margin-left: 260px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        .top-navbar {
-            height: 70px;
-            background: rgba(15, 23, 42, 0.3);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 40px;
-        }
-
-        .content-body {
-            padding: 40px;
-            flex-grow: 1;
-        }
-        
-        /* Glassmorphic panels */
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
-        }
-    </style>
+    <!-- External Vendor Dashboard CSS -->
+    <link href="/css/vendor_dashboard.css" rel="stylesheet">
 </head>
 <body>
 
@@ -166,6 +50,11 @@
                 SaaS Dashboard &gt; 견적 요청 상세 보기
             </div>
             <div class="d-flex align-items-center gap-3">
+                <div class="btn-group" role="group">
+                    <a href="/vendor/quotes/<?= $quote['id'] ?>" class="btn btn-info btn-sm px-3 fw-bold text-dark" style="font-size:0.85rem;">견적상세보기</a>
+                    <a href="/vendor/quotes/<?= $quote['id'] ?>/price" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">단가확인</a>
+                    <a href="/vendor/quotes/<?= $quote['id'] ?>/document" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">견적서</a>
+                </div>
                 <a href="/vendor/quotes" class="btn btn-outline-secondary btn-sm rounded px-3" style="font-size:0.8rem; border-color: rgba(255,255,255,0.15); color:#cbd5e1;">
                     ◀ 목록으로 돌아가기
                 </a>
@@ -182,10 +71,13 @@
                 <div class="col-lg-6">
                     <!-- 인적사항 -->
                     <div class="glass-panel p-4 mb-4">
-                        <h5 class="fw-bold text-info mb-3 d-flex align-items-center gap-2 pb-2 border-bottom border-secondary">
-                            <span>👤</span> 의뢰 고객 정보
+                        <h5 class="fw-bold text-info mb-3 pb-2 border-bottom border-secondary customer-info-title">
+                            <span><span>👤</span> 의뢰 고객 정보</span>
+                            <span class="fs-6 fw-normal text-muted print-only-date" style="display: none;">(접수일 : <?= date('Y-m-d', strtotime($quote['created_at'])) ?>)</span>
                         </h5>
-                        <div class="row g-3">
+                        
+                        <!-- 화면 표시용 (프린트시 숨김) -->
+                        <div class="row g-3 d-print-none">
                             <div class="col-6">
                                 <span class="text-light opacity-75 small d-block">회사명</span>
                                 <span class="text-light fw-bold fs-5"><?= htmlspecialchars($quote['company']) ?></span>
@@ -207,82 +99,137 @@
                                 <span class="text-light fw-semibold"><?= htmlspecialchars($quote['address']) ?></span>
                             </div>
                         </div>
+
+                        <!-- 프린트 전용 레이아웃 -->
+                        <div class="d-none d-print-block print-customer-info" style="font-size: 80%; line-height: 1.6;">
+                            <div class="d-flex">
+                                <div style="flex: 1;"><strong>회사명 :</strong> <?= htmlspecialchars($quote['company']) ?></div>
+                                <div style="flex: 1;"><strong>담당자 :</strong> <?= htmlspecialchars($quote['name']) ?></div>
+                            </div>
+                            <div class="d-flex mt-1">
+                                <div style="flex: 1;"><strong>연락처 :</strong> <?= htmlspecialchars($quote['phone']) ?></div>
+                                <div style="flex: 1;"><strong>시공현장주소 :</strong> <?= htmlspecialchars($quote['address']) ?></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- CAD 도면 시각화 캔버스 -->
+                    <!-- CAD 도면 시각화 캔버스 / 이미지 -->
                     <div class="glass-panel p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
                             <h5 class="m-0 fw-bold text-success d-flex align-items-center gap-2">
-                                <span>📐</span> 배치 설계 도면 프리뷰
+                                <span>📐</span> 배치 설계 도면 캡쳐
                             </h5>
-                            <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">Read-Only CAD</span>
+                            <div>
+                                <button onclick="window.print()" class="btn btn-sm btn-outline-primary rounded px-2 py-1 me-2" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-print"></i> 프린트 출력
+                                </button>
+                                <?php if (!empty($quote['image_path'])): ?>
+                                    <a href="<?= htmlspecialchars($quote['image_path']) ?>" target="_blank" class="btn btn-sm btn-outline-info rounded px-2 py-1 me-2" style="font-size: 0.75rem;">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i> 전체이미지 보기
+                                    </a>
+                                <?php endif; ?>
+                                <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">Read-Only Image</span>
+                            </div>
                         </div>
                         <div class="text-center">
-                            <canvas id="quoteCanvas" width="800" height="500" style="
-                                background: #090d16;
-                                border: 1px solid rgba(255,255,255,0.08);
-                                border-radius: 12px;
-                                width: 100%;
-                                height: auto;
-                            "></canvas>
-                            <small class="text-info d-block mt-2">💡 고객이 배치 설계를 완료하고 전송한 시점의 실시간 도면 스냅샷입니다.</small>
+                            <?php if (!empty($quote['image_path'])): ?>
+                                <img src="<?= htmlspecialchars($quote['image_path']) ?>" alt="도면 캡쳐" style="
+                                    background: #090d16;
+                                    border: 1px solid rgba(255,255,255,0.08);
+                                    border-radius: 12px;
+                                    width: 100%;
+                                    height: auto;
+                                ">
+                            <?php else: ?>
+                                <canvas id="quoteCanvas" width="800" height="500" style="
+                                    background: #090d16;
+                                    border: 1px solid rgba(255,255,255,0.08);
+                                    border-radius: 12px;
+                                    width: 100%;
+                                    height: auto;
+                                "></canvas>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. AI 분석 설계 리포트 전문 (우측) -->
+                <!-- 2. 시공리포트 전문 (우측) -->
                 <div class="col-lg-6">
-                    <div class="glass-panel p-4 mb-4 d-flex flex-column" style="max-height: 400px;">
-                        <h5 class="fw-bold text-warning mb-3 pb-2 border-bottom border-secondary d-flex align-items-center gap-2">
-                            <span>💡</span> AI 설계 요약 및 시공 리포트
+                    <div class="glass-panel p-4 h-100 d-flex flex-column print-scroll-reset" style="min-height: 500px;">
+                        <h5 class="fw-bold text-warning pb-2 border-bottom border-secondary d-flex align-items-center gap-2">
+                            <span>💡</span> 시공리포트
                         </h5>
-                        <div class="flex-grow-1" style="line-height: 1.8; font-size: 0.88rem; overflow-y: auto; white-space: pre-line; word-break: keep-all; color: #e2e8f0;">
-                            <?php if (empty($quote['summary'])): ?>
-                                <p class="text-muted">요청된 AI 리포트 본문이 비어있습니다.</p>
-                            <?php else: ?>
-                                <?= htmlspecialchars($quote['summary']) ?>
+                        <div class="flex-grow-1 print-scroll-reset" style="line-height: 1.0; font-size: 0.88rem; overflow-y: auto; max-height: 700px; white-space: pre-line; word-break: keep-all; color: #e2e8f0;">
+                            <?php
+                                // 창고 벽면 길이 포맷팅
+                                $edgeText = '';
+                                if (!empty($quote['edge_lengths'])) {
+                                    $edges = explode(',', $quote['edge_lengths']);
+                                    $edgeArr = [];
+                                    foreach ($edges as $idx => $len) {
+                                        $edgeArr[] = ($idx + 1) . "번 길이: " . trim($len) . "mm";
+                                    }
+                                    $edgeText = implode(', ', $edgeArr);
+                                }
+                            ?>
+
+                            <?php if ($edgeText): ?>
+                                <div>
+                                    <h6 class="text-white fw-bold">[창고 벽면 길이]</h6>
+                                    <div class="ps-2 text-light"><?= htmlspecialchars($edgeText) ?></div>
+                                </div>
+                            <?php endif; ?>
+
+                            <div>
+                                <h6 class="text-white fw-bold">[랙 및 적재물 제원]</h6>
+                                <div class="ps-2 text-light">
+                                    <div>파렛트 규격: <?= htmlspecialchars($quote['pallet_w'] ?? 0) ?>(W) x <?= htmlspecialchars($quote['pallet_d'] ?? 0) ?>(D) x <?= htmlspecialchars($quote['pallet_h'] ?? 0) ?>(H) mm</div>
+                                    <div>포크 진입 방향: <?= htmlspecialchars($quote['fork_direction'] ?? '') ?></div>
+                                    <div>총 중량: <?= htmlspecialchars($quote['pallet_weight'] ?? 0) ?> kg / PLT</div>
+                                    <div class="mt-2">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
+                                    <div>최대 인상높이: <?= htmlspecialchars($quote['forklift_lift_height'] ?? 0) ?> mm</div>
+                                    <div>직각교차 통로폭(AST): <?= htmlspecialchars($quote['forklift_ast'] ?? 0) ?> mm</div>
+                                    <div class="mt-2">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
+                                    <div>설치 높이: <?= htmlspecialchars($quote['rack_height'] ?? '') ?></div>
+                                </div>
+                            </div>
+
+                            <?php if (!empty($quote['rack_spec'])): ?>
+                                <div>
+                                    <h6 class="text-white fw-bold">
+                                        <?= htmlspecialchars($quote['rack_spec']) ?>
+                                        <?php if (!empty($quote['rack_type'])): ?>
+                                            (<?= htmlspecialchars($quote['rack_type']) ?>)
+                                        <?php endif; ?>
+                                    </h6>
+                                    <div class="ps-2 text-light">
+                                        독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT
+                                    </div>
+                                    <?php if (!empty($quote['rack_small_conn']) || !empty($quote['rack_bypass'])): ?>
+                                        <div class="ps-2 text-light mt-1 text-muted" style="font-size: 0.8rem; color: #e2e8f0;">
+                                            <?php if (!empty($quote['rack_bypass'])): ?>
+                                                <div class="mt-2 pt-2 border-top border-secondary w-75">
+                                                    <?php if (!empty($quote['rack_bypass_type'])): ?>
+                                                        <div class="fw-bold mb-1" style="color: #f87171;"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></div>
+                                                    <?php endif; ?>
+                                                    <div class="text-danger fw-bold">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($quote['summary'])): ?>
+                                <div>
+                                    <h6 class="text-white fw-bold mb-2">[AI 분석 리포트]</h6>
+                                    <div class="ps-2 text-light">
+                                        <?= htmlspecialchars(str_replace('[AI 분석 리포트]', '', $quote['summary'])) ?>
+                                    </div>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
-
-                    <!-- 3. 관리자 견적 승인 및 이메일 전송 폼 -->
-                    <div class="glass-panel p-4" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(251, 191, 36, 0.2);">
-                        <h5 class="fw-bold text-amber mb-3 d-flex align-items-center gap-2 pb-2 border-bottom border-secondary" style="color: #f59e0b;">
-                            <span>💰</span> 최종 견적 산출 및 고객 이메일 발송
-                        </h5>
-                        <?php if(isset($quote['status']) && $quote['status'] === 'completed'): ?>
-                            <div class="alert alert-success bg-transparent border-success text-success d-flex align-items-center gap-2 p-3">
-                                <i class="fa-solid fa-circle-check fs-4"></i>
-                                <div>
-                                    <strong>이미 전송이 완료된 견적서입니다.</strong><br>
-                                    최종 단가: <?= number_format($quote['admin_price'] ?? 0) ?> 원 / 마진율: <?= floatval($quote['admin_margin'] ?? 0) ?>%
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        <form id="admin-quote-form" onsubmit="sendAdminQuote(event)">
-                            <input type="hidden" id="quote_id" value="<?= $quote['id'] ?>">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small mb-1">총 견적 단가 (원)</label>
-                                    <input type="number" class="form-control bg-transparent text-white border-secondary fw-bold text-end" id="admin_price" value="<?= $quote['admin_price'] ?? '' ?>" placeholder="0" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small mb-1">마진율 (%)</label>
-                                    <input type="number" step="0.1" class="form-control bg-transparent text-white border-secondary text-end" id="admin_margin" value="<?= $quote['admin_margin'] ?? '' ?>" placeholder="0.0">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label text-muted small mb-1">고객 전달 코멘트</label>
-                                    <textarea class="form-control bg-transparent text-white border-secondary" id="admin_notes" rows="3" placeholder="예: 물류비 포함 최종 견적입니다."><?= htmlspecialchars($quote['admin_notes'] ?? '') ?></textarea>
-                                </div>
-                                <div class="col-12 mt-4">
-                                    <button type="submit" id="btn-send-quote" class="btn btn-warning w-100 py-3 fw-bold shadow-lg" style="color: #451a03; font-size:1.1rem; border-radius: 12px;">
-                                        <i class="fa-solid fa-paper-plane me-2"></i> 최종 견적서 이메일 전송 🚀
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -292,6 +239,9 @@
     <script>
     window.addEventListener('DOMContentLoaded', () => {
         const rawData = <?= json_encode($quote['canvas_data']) ?>;
+        const hasImagePath = <?= !empty($quote['image_path']) ? 'true' : 'false' ?>;
+        
+        if (hasImagePath) return; // 이미지가 있으면 캔버스 그릴 필요 없음
         if (!rawData) return;
         
         let data;
@@ -412,46 +362,6 @@
 
         ctx.restore();
     });
-
-    async function sendAdminQuote(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btn-send-quote');
-        const quoteId = document.getElementById('quote_id').value;
-        const price = document.getElementById('admin_price').value;
-        const margin = document.getElementById('admin_margin').value;
-        const notes = document.getElementById('admin_notes').value;
-
-        if(!confirm('고객에게 견적서를 최종 전송하시겠습니까?')) return;
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> 전송 중...';
-
-        const formData = new FormData();
-        formData.append('quote_id', quoteId);
-        formData.append('admin_price', price);
-        formData.append('admin_margin', margin);
-        formData.append('admin_notes', notes);
-
-        try {
-            const res = await fetch('/vendor/quotes/send-email', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await res.json();
-            if (result.success) {
-                alert(result.message);
-                location.reload();
-            } else {
-                alert('오류: ' + result.message);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> 최종 견적서 이메일 전송 🚀';
-            }
-        } catch(err) {
-            alert('서버 에러: ' + err.message);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> 최종 견적서 이메일 전송 🚀';
-        }
-    }
     </script>
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

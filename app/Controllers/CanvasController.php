@@ -303,24 +303,108 @@ class CanvasController extends BaseController {
             $company      = trim($body['company'] ?? '');
             $name         = trim($body['name'] ?? '');
             $phone        = trim($body['phone'] ?? '');
+            $email        = trim($body['email'] ?? '');
             $address      = trim($body['address'] ?? '');
             $canvasData   = $body['canvas_data'] ?? '';
             $summary      = $body['summary'] ?? '';
+            $edge_lengths = $body['edge_lengths'] ?? '';
+            $pallet_w     = intval($body['pallet_w'] ?? 0);
+            $pallet_d     = intval($body['pallet_d'] ?? 0);
+            $pallet_h     = intval($body['pallet_h'] ?? 0);
+            $pallet_weight= intval($body['pallet_weight'] ?? 0);
+            $fork_dir     = $body['fork_direction'] ?? '';
+            $fork_type    = $body['forklift_type'] ?? '';
+            $fork_lift_h  = intval($body['forklift_lift_height'] ?? 0);
+            $fork_ast     = intval($body['forklift_ast'] ?? 0);
+            $rack_levels  = intval($body['rack_levels'] ?? 0);
+            $rack_height  = $body['rack_height'] ?? '';
+            $rack_spec    = $body['rack_spec'] ?? '';
+            $rack_type    = $body['rack_type'] ?? '';
+            $rack_indep   = intval($body['rack_indep'] ?? 0);
+            $rack_conn    = intval($body['rack_conn'] ?? 0);
+            $rack_small   = intval($body['rack_small_conn'] ?? 0);
+            $rack_bypass  = intval($body['rack_bypass'] ?? 0);
+            $rack_bypass_type = $body['rack_bypass_type'] ?? '';
+            $rack_holders = intval($body['rack_holders'] ?? 0);
+            $rack_pallets = intval($body['rack_pallets'] ?? 0);
+            $condition_type = $body['condition_type'] ?? 'new';
+            $self_install = intval($body['self_install'] ?? 0);
 
-            if (!$vendorUserId || !$company || !$name || !$phone || !$address) {
+            if ($company === '' || $name === '' || $phone === '' || $address === '') {
                 throw new \Exception("필수 입력 정보가 누락되었습니다.");
             }
 
+            $imageData = $body['image_data'] ?? '';
+            $imagePath = '';
+            
+            if (!empty($imageData) && preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                $type = strtolower($type[1]);
+                
+                if (in_array($type, ['jpg', 'jpeg', 'png', 'gif'])) {
+                    $imageData = base64_decode($imageData);
+                    if ($imageData !== false) {
+                        $dir = __DIR__ . '/../../public/uploads/quotes';
+                        if (!is_dir($dir)) {
+                            mkdir($dir, 0755, true);
+                        }
+                        $filename = 'quote_' . time() . '_' . rand(1000, 9999) . '.' . $type;
+                        $filepath = $dir . '/' . $filename;
+                        if (file_put_contents($filepath, $imageData)) {
+                            $imagePath = '/uploads/quotes/' . $filename;
+                        }
+                    }
+                }
+            }
+
             $db = Database::getInstance();
-            $stmt = $db->prepare("INSERT INTO quote_requests (vendor_user_id, company, name, phone, address, canvas_data, summary) VALUES (:vuid, :company, :name, :phone, :address, :cdata, :summary)");
+            $sql = "INSERT INTO quote_requests (
+                        vendor_user_id, company, name, phone, email, address, canvas_data, image_path, summary,
+                        edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
+                        forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
+                        rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
+                        condition_type, self_install
+                    ) VALUES (
+                        :vuid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :summary,
+                        :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
+                        :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
+                        :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
+                        :condition_type, :self_install
+                    )";
+            
+            $stmt = $db->prepare($sql);
             $stmt->execute([
                 'vuid'    => $vendorUserId,
                 'company' => $company,
                 'name'    => $name,
                 'phone'   => $phone,
+                'email'   => $email,
                 'address' => $address,
                 'cdata'   => $canvasData,
-                'summary' => $summary
+                'imgpath' => $imagePath,
+                'summary' => $summary,
+                'edge_lengths' => $edge_lengths,
+                'pallet_w' => $pallet_w,
+                'pallet_d' => $pallet_d,
+                'pallet_h' => $pallet_h,
+                'pallet_weight' => $pallet_weight,
+                'fork_dir' => $fork_dir,
+                'fork_type' => $fork_type,
+                'fork_lift_h' => $fork_lift_h,
+                'fork_ast' => $fork_ast,
+                'rack_levels' => $rack_levels,
+                'rack_height' => $rack_height,
+                'rack_spec' => $rack_spec,
+                'rack_type' => $rack_type,
+                'rack_indep' => $rack_indep,
+                'rack_conn' => $rack_conn,
+                'rack_small' => $rack_small,
+                'rack_bypass' => $rack_bypass,
+                'rack_bypass_type' => $rack_bypass_type,
+                'rack_holders' => $rack_holders,
+                'rack_pallets' => $rack_pallets,
+                'condition_type' => $condition_type,
+                'self_install' => $self_install
             ]);
 
             echo json_encode(['success' => true, 'message' => '견적 요청이 성공적으로 저장되었습니다.']);

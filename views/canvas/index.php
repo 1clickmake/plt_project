@@ -382,7 +382,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                             <span class="text-secondary">|</span>
                             <span>연결 <strong id="top-badge-conn" class="text-primary">0</strong>대</span>
                             <span id="top-badge-small-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-info">작은연결 <strong id="top-badge-small-conn" class="text-info">0</strong>대</span></span>
-                            <span id="top-badge-bypass-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-danger">바이패스 <strong id="top-badge-bypass" class="text-danger">0</strong>대</span></span>
+                            <span id="top-badge-bypass-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-danger">연결 <strong id="top-badge-bypass" class="text-danger">0</strong>대 (바이패스)</span></span>
                             <span class="text-secondary">|</span>
                             <span class="text-warning">🔗 <strong id="top-badge-holders" class="text-warning">0</strong>홀더</span>
                             <span class="text-secondary">|</span>
@@ -480,6 +480,34 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
       <div class="modal-body">
         <p class="text-muted small mb-4">배치도가 마음에 드시나요? 연락처를 남겨주시면 담당자가 빠르게 안내드리겠습니다! <span class="text-warning">(★ 는 필수 입력사항)</span></p>
         <div class="row g-3">
+          
+          <!-- 자재 상태 선택 -->
+          <div class="col-12">
+            <label class="form-label text-muted small mb-2 d-block">자재 상태 선택 <span class="text-danger">★</span></label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="condition_type" id="cond_new" value="new" checked>
+              <label class="form-check-label text-white small" for="cond_new">신규</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="condition_type" id="cond_used" value="used">
+              <label class="form-check-label text-white small" for="cond_used">중고</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="condition_type" id="cond_both" value="both">
+              <label class="form-check-label text-white small" for="cond_both">모두</label>
+            </div>
+          </div>
+
+          <!-- 직접설치 체크박스 -->
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="modal-self-install" value="1">
+              <label class="form-check-label text-white small" for="modal-self-install">
+                직접 설치 (자재만 납품받기)
+              </label>
+            </div>
+          </div>
+
           <div class="col-12">
             <label class="form-label text-muted small mb-1">회사명 <span class="text-danger">★</span></label>
             <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-company" placeholder="예: 주식회사 파로퀘스">
@@ -492,6 +520,11 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
             <label class="form-label text-muted small mb-1">연락처 (카카오톡 수신용) <span class="text-danger">★</span></label>
             <input type="tel" class="form-control bg-transparent text-white border-secondary" id="modal-phone" placeholder="010-0000-0000">
           </div>
+          <div class="col-12">
+            <label class="form-label text-muted small mb-1">이메일 (견적서 수신용) <span class="text-danger">★</span></label>
+            <input type="email" class="form-control bg-transparent text-white border-secondary" id="modal-email" placeholder="example@email.com">
+          </div>
+          
           <div class="col-12">
             <label class="form-label text-muted small mb-1">시공 현장 주소 <span class="text-danger">★</span> <span class="text-secondary" style="font-size:0.7rem;">(최소 시/군/구 수준)</span></label>
             <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-address" placeholder="예: 경기도 성남시 분당구">
@@ -747,9 +780,16 @@ function submitQuoteRequest() {
     const company = document.getElementById('modal-company').value.trim();
     const name    = document.getElementById('modal-name').value.trim();
     const phone   = document.getElementById('modal-phone').value.trim();
+    const email   = document.getElementById('modal-email').value.trim();
     const address = document.getElementById('modal-address').value.trim();
 
-    if (!company || !name || !phone || !address) {
+    const conditionTypeNode = document.querySelector('input[name="condition_type"]:checked');
+    const conditionType = conditionTypeNode ? conditionTypeNode.value : 'new';
+    
+    const selfInstallNode = document.getElementById('modal-self-install');
+    const selfInstall = (selfInstallNode && selfInstallNode.checked) ? 1 : 0;
+
+    if (!company || !name || !phone || !email || !address) {
         alert('★ 표시된 필수 항목을 모두 입력해주세요.');
         return;
     }
@@ -760,19 +800,139 @@ function submitQuoteRequest() {
         submitBtn.innerText = '⏳ 제출 중...';
     }
 
+    const canvas = document.getElementById('drawingCanvas');
+    let imgData = '';
+    if (canvas) {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        ctx.drawImage(canvas, 0, 0);
+        imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    let edge_lengths_array = [];
+    const edgeInputs = document.querySelectorAll('#inputs-container input[type="number"]');
+    if (edgeInputs.length > 0) {
+        edgeInputs.forEach(input => {
+            edge_lengths_array.push(input.value || 0);
+        });
+    } else if (window.edgeLengths && window.edgeLengths.length > 0) {
+        window.edgeLengths.forEach(len => {
+            edge_lengths_array.push(len);
+        });
+    }
+    const edge_lengths_str = edge_lengths_array.join(', ');
+
+    const pw = document.getElementById('pallet-w') ? document.getElementById('pallet-w').value : '';
+    const pd = document.getElementById('pallet-d') ? document.getElementById('pallet-d').value : '';
+    const ph = document.getElementById('pallet-h') ? document.getElementById('pallet-h').value : '';
+    const pWeight = document.getElementById('pallet-weight') ? document.getElementById('pallet-weight').value : '';
+    
+    let forkDir = 'W';
+    if (document.getElementById('forkD') && document.getElementById('forkD').checked) {
+        forkDir = 'D';
+    }
+
+    let forkliftText = '';
+    const forkliftSelect = document.getElementById('forklift-type');
+    if (forkliftSelect) {
+        forkliftText = forkliftSelect.options[forkliftSelect.selectedIndex].text;
+    }
+    const forkliftLiftHeight = document.getElementById('forklift-lift-height') ? document.getElementById('forklift-lift-height').value : '';
+    const forkliftAst = document.getElementById('forklift-ast') ? document.getElementById('forklift-ast').value : '';
+
+    const levels = document.getElementById('rack-levels') ? document.getElementById('rack-levels').value : '3';
+    let rHeight = document.getElementById('rack-height') ? document.getElementById('rack-height').value : '';
+
+    const spec = document.getElementById('top-badge-spec') ? document.getElementById('top-badge-spec').innerText : '';
+    let rackSpec = '';
+    let rackType = '';
+    if (spec) {
+        const parts = spec.split('(');
+        rackSpec = parts[0].trim();
+        if (parts[1]) {
+            rackType = parts[1].replace(')', '').trim();
+        }
+    }
+    
+    const indep = document.getElementById('top-badge-indep') ? document.getElementById('top-badge-indep').innerText : '0';
+    const conn = document.getElementById('top-badge-conn') ? document.getElementById('top-badge-conn').innerText : '0';
+    const small_conn = document.getElementById('top-badge-small-conn') ? document.getElementById('top-badge-small-conn').innerText : '0';
+    const bypass = document.getElementById('top-badge-bypass') ? document.getElementById('top-badge-bypass').innerText : '0';
+    const holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
+    const pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
+
+    if (!rHeight && spec) {
+        const match = spec.match(/×\s*\d+\s*×\s*(\d+)/);
+        if (match) {
+            rHeight = match[1] + ' (자동 계산)';
+        }
+    } else if (!rHeight) {
+        const p_h = parseInt(ph) || 1500;
+        const l = parseInt(levels) || 3;
+        rHeight = ((p_h + 200) * l) + ' (자동 계산)';
+    } else if (rHeight) {
+        rHeight += ' mm';
+    }
+
+    if (indep === '0' && conn === '0') {
+        alert('⚠️ 6단계 [배치 실행] 버튼을 눌러 도면에 랙을 배치한 후 견적을 제출해주세요!');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 견적 요청 제출';
+        }
+        return;
+    }
+
+    let rackBypassType = '';
+    if (parseInt(bypass) > 0) {
+        const l = parseInt(levels) || 3;
+        const bpLevels = Math.max(1, l - 1);
+        const spanS = Math.max(1, l - 1);
+        const bpS = Math.max(1, spanS - 1);
+        rackBypassType = bpS + 'S ' + bpLevels + '단';
+    }
+
     const payload = {
         vendor_user_id: window.vendorUserId || 0,
         company: company,
         name: name,
         phone: phone,
+        email: email,
         address: address,
+        condition_type: conditionType,
+        self_install: selfInstall,
         canvas_data: JSON.stringify({
             racks: typeof racks !== 'undefined' ? racks : [],
             points: typeof points !== 'undefined' ? points : [],
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
             currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
         }),
-        summary: window.lastAiSummary || ''
+        summary: window.lastAiSummary || '',
+        edge_lengths: edge_lengths_str,
+        pallet_w: pw,
+        pallet_d: pd,
+        pallet_h: ph,
+        pallet_weight: pWeight,
+        fork_direction: forkDir,
+        forklift_type: forkliftText,
+        forklift_lift_height: forkliftLiftHeight,
+        forklift_ast: forkliftAst,
+        rack_levels: levels,
+        rack_height: rHeight,
+        rack_spec: rackSpec,
+        rack_type: rackType,
+        rack_indep: indep,
+        rack_conn: conn,
+        rack_small_conn: small_conn,
+        rack_bypass: bypass,
+        rack_bypass_type: rackBypassType,
+        rack_holders: holders,
+        rack_pallets: pallets,
+        image_data: imgData
     };
 
     fetch('/quote/submit', {
@@ -1028,16 +1188,16 @@ window.addEventListener('DOMContentLoaded', () => {
             " onmouseover="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.18)'" onmouseout="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.06)'">
                 <span>Bypass</span>
             </button>
+            
+            <!-- 도면자동정렬 버튼 -->
+            <button id="remote-align-btn" onclick="if(window.autoAlignRacks) window.autoAlignRacks();" style="
+                width:100%; border: 1px solid rgba(56,189,248,0.5); border-radius:8px; margin-top: 6px;
+                background: rgba(56,189,248,0.1); color:#38bdf8; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.1)'">
+                <span>🎛️</span> <span style="margin-left:4px;">도면자동정렬</span>
+            </button>
         </div>
-
-        <!-- 정렬 버튼 (Purple) - 즉시 실행 -->
-        <button id="mode-btn-align" onclick="if(typeof autoAlignRacks === 'function') autoAlignRacks();" style="
-            width:100%; border: 1px solid rgba(168,85,247,0.3); border-radius:8px;
-            background: rgba(168,85,247,0.06); color:#c084fc; font-size:0.7rem; font-weight:700;
-            padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px; margin: 4px 0 2px;
-        " onmouseover="this.style.background='rgba(168,85,247,0.18)'" onmouseout="this.style.background='rgba(168,85,247,0.06)'">
-            <span>≡</span> <span>간격 자동 정렬</span>
-        </button>
 
         <!-- 구분선 -->
         <div style="height:1px; background: rgba(56,189,248,0.18); margin: 2px 0 8px;"></div>

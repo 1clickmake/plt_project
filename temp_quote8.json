@@ -1,0 +1,88 @@
+{
+    "racks": [
+        {
+            "x": 52.62,
+            "y": 65.72,
+            "isHoriz": true,
+            "dir": 1,
+            "independent": 1,
+            "connected": 0,
+            "smallConnected": 0,
+            "beamLength": 2585,
+            "smallBeamLength": 1385,
+            "totalLengthPx": 69.95400000000001,
+            "rackDepth": 1000,
+            "isDouble": false,
+            "isValid": true,
+            "angle": 0,
+            "bypassBays": [
+                [
+                    false
+                ],
+                []
+            ]
+        },
+        {
+            "x": 207.20000000000002,
+            "y": 220.3,
+            "isHoriz": true,
+            "dir": 1,
+            "independent": 1,
+            "connected": 0,
+            "smallConnected": 0,
+            "beamLength": 2585,
+            "smallBeamLength": 1385,
+            "totalLengthPx": 69.95400000000001,
+            "rackDepth": 1000,
+            "isDouble": true,
+            "isValid": true,
+            "angle": 0,
+            "bypassBays": [
+                [
+                    false
+                ],
+                [
+                    false
+                ]
+            ]
+        }
+    ],
+    "points": [
+        {
+            "x": 50,
+            "y": 50
+        },
+        {
+            "x": 836,
+            "y": 50
+        },
+        {
+            "x": 836,
+            "y": 574
+        },
+        {
+            "x": 50,
+            "y": 573.9999999999999
+        },
+        {
+            "x": 50,
+            "y": 50
+        }
+    ],
+    "obstacles": [
+        {
+            "type": "door",
+            "name": "출입문1",
+            "x": 404,
+            "y": 50,
+            "angle": 0,
+            "length": 2000,
+            "edgeIndex": 0,
+            "ratioOnEdge": 0.45038167938931295,
+            "visualDistFromStart": 354,
+            "visualEdgeLength": 786
+        }
+    ],
+    "currentScale": 0.0262,
+    "stats_html": "<div class=\"d-flex align-items-center gap-2 flex-wrap\">\n            <span class=\"badge bg-primary text-white\" style=\"font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;\">2585×1000×5500 (2S 3단)<\/span>\n            <span class=\"text-secondary\">|<\/span>\n            <span>독립 <strong class=\"text-primary\">3<\/strong>대<\/span>\n            <span class=\"text-secondary\">|<\/span>\n            <span>연결 <strong class=\"text-primary\">0<\/strong>대<\/span> <span class=\"text-secondary\">|<\/span> <span class=\"text-warning\">🔗 <strong class=\"text-warning\">4<\/strong>홀더<\/span>\n            <span class=\"text-secondary\">|<\/span>\n            <span class=\"text-success\">📦 <strong class=\"text-success\">18<\/strong> PLT<\/span>\n        <\/div>"
+}

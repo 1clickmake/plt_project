@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="background: white; padding: 20px;">
+    <h2>Test Canvas</h2>
+    <canvas id="c" width="800" height="500" style="background: #090d16; border: 1px solid #ccc;"></canvas>
+    
+    <script>
+    const data = {
+        "racks": [
+            {
+                "x": 52.62,
+                "y": 65.72,
+                "isHoriz": true,
+                "dir": 1,
+                "independent": 1,
+                "connected": 0,
+                "smallConnected": 0,
+                "beamLength": 2585,
+                "smallBeamLength": 1385,
+                "totalLengthPx": 69.95400000000001,
+                "rackDepth": 1000,
+                "isDouble": false,
+                "isValid": true,
+                "angle": 0
+            },
+            {
+                "x": 207.20000000000002,
+                "y": 220.3,
+                "isHoriz": true,
+                "dir": 1,
+                "independent": 1,
+                "connected": 0,
+                "smallConnected": 0,
+                "beamLength": 2585,
+                "smallBeamLength": 1385,
+                "totalLengthPx": 69.95400000000001,
+                "rackDepth": 1000,
+                "isDouble": true,
+                "isValid": true,
+                "angle": 0
+            }
+        ],
+        "points": [
+            { "x": 50, "y": 50 },
+            { "x": 836, "y": 50 },
+            { "x": 836, "y": 574 },
+            { "x": 50, "y": 573.9999999999999 },
+            { "x": 50, "y": 50 }
+        ],
+        "obstacles": [
+            {
+                "type": "door",
+                "name": "출입문1",
+                "x": 404,
+                "y": 50,
+                "angle": 0,
+                "length": 2000,
+                "edgeIndex": 0,
+                "ratioOnEdge": 0.45,
+                "visualDistFromStart": 354,
+                "visualEdgeLength": 786
+            }
+        ],
+        "currentScale": 0.0262
+    };
+
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const points = data.points;
+    const racks = data.racks;
+    const obstacles = data.obstacles;
+    const scale = data.currentScale;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    points.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+    });
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const boundsWidth = maxX - minX;
+    const boundsHeight = maxY - minY;
+    const margin = 60;
+    const scaleX = (canvas.width - margin * 2) / boundsWidth;
+    const scaleY = (canvas.height - margin * 2) / boundsHeight;
+    const finalZoom = Math.min(scaleX, scaleY, 1);
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(finalZoom, finalZoom);
+    ctx.translate(-centerX, -centerY);
+
+    // 2. 창고 외곽 벽면 그리기
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 6 / finalZoom;
+    ctx.fillStyle = 'rgba(30, 58, 138, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 벽면 치수 텍스트
+    ctx.fillStyle = '#93c5fd';
+    ctx.font = 'bold ' + (14 / finalZoom) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i+1];
+        const distMm = Math.round(Math.hypot(p2.x - p1.x, p2.y - p1.y) / scale);
+        
+        let cx = (p1.x + p2.x) / 2;
+        let cy = (p1.y + p2.y) / 2;
+        
+        let dx = p2.x - p1.x;
+        let dy = p2.y - p1.y;
+        let length = Math.hypot(dx, dy);
+        let nx = -dy / length;
+        let ny = dx / length;
+        
+        const offset = 25 / finalZoom;
+        
+        ctx.save();
+        ctx.translate(cx + nx * offset, cy + ny * offset);
+        let textAngle = Math.atan2(dy, dx);
+        if (textAngle > Math.PI / 2 || textAngle < -Math.PI / 2) {
+            textAngle += Math.PI;
+        }
+        ctx.rotate(textAngle);
+        ctx.fillText(`[${i+1}] ${distMm}mm`, 0, 0);
+        ctx.restore();
+    }
+
+    obstacles.forEach(obs => {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2 / finalZoom;
+        const w = (obs.width || 500) * scale;
+        const h = (obs.height || 500) * scale;
+        ctx.fillRect(obs.x - w / 2, obs.y - h / 2, w, h);
+        ctx.strokeRect(obs.x - w / 2, obs.y - h / 2, w, h);
+    });
+
+    racks.forEach(r => {
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        let angle = r.angle || 0;
+        ctx.rotate(angle);
+
+        const singleDepthPx = (r.rackDepth || 1000) * scale;
+        const holderPx = (r.isDouble ? (r.holderSize || 200) : 0) * scale;
+        const isDouble = r.isDouble || false;
+        const depthPx = isDouble ? (singleDepthPx * 2 + holderPx) : singleDepthPx;
+        const totalLenPx = r.totalLengthPx || 0;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = '#0ea5e9';
+        ctx.lineWidth = 4 / finalZoom;
+        
+        if (isDouble) {
+            const topRackY = -depthPx / 2;
+            const botRackY = depthPx / 2 - singleDepthPx;
+            ctx.fillRect(0, topRackY, totalLenPx, singleDepthPx);
+            ctx.strokeRect(0, topRackY, totalLenPx, singleDepthPx);
+            ctx.fillRect(0, botRackY, totalLenPx, singleDepthPx);
+            ctx.strokeRect(0, botRackY, totalLenPx, singleDepthPx);
+        } else {
+            ctx.fillRect(0, -depthPx / 2, totalLenPx, depthPx);
+            ctx.strokeRect(0, -depthPx / 2, totalLenPx, depthPx);
+        }
+        ctx.restore();
+    });
+
+    let horizRacks = racks.filter(r => r.isHoriz).sort((a,b) => a.y - b.y);
+    for(let i=0; i<horizRacks.length-1; i++) {
+        let r1 = horizRacks[i];
+        let r2 = horizRacks[i+1];
+        
+        let r1MinX = r1.dir > 0 ? r1.x : r1.x - (r1.totalLengthPx || 0)/scale;
+        let r1MaxX = r1.dir > 0 ? r1.x + (r1.totalLengthPx || 0)/scale : r1.x;
+        let r2MinX = r2.dir > 0 ? r2.x : r2.x - (r2.totalLengthPx || 0)/scale;
+        let r2MaxX = r2.dir > 0 ? r2.x + (r2.totalLengthPx || 0)/scale : r2.x;
+        
+        let overlapMinX = Math.max(r1MinX, r2MinX);
+        let overlapMaxX = Math.min(r1MaxX, r2MaxX);
+        
+        if (overlapMaxX > overlapMinX) {
+            let cx = (overlapMinX + overlapMaxX) / 2;
+            let r1DepthPx = ((r1.rackDepth || 1000) * (r1.isDouble ? 2 : 1) + (r1.isDouble ? (r1.holderSize || 200) : 0)) * scale;
+            let r2DepthPx = ((r2.rackDepth || 1000) * (r2.isDouble ? 2 : 1) + (r2.isDouble ? (r2.holderSize || 200) : 0)) * scale;
+            
+            let y1 = r1.y + r1DepthPx/2;
+            let y2 = r2.y - r2DepthPx/2;
+            
+            if (y2 > y1) {
+                let distMm = Math.round((y2 - y1) / scale);
+                ctx.beginPath();
+                ctx.moveTo(cx, y1); ctx.lineTo(cx, y2);
+                ctx.strokeStyle = 'rgba(251, 146, 60, 0.7)'; ctx.lineWidth = 1 / finalZoom; ctx.stroke();
+            }
+        }
+    }
+
+    ctx.restore();
+    </script>
+</body>
+</html>

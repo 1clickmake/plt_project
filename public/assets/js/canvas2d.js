@@ -1,3 +1,67 @@
+
+function drawGridBackground() {
+    if (currentScale <= 0) return;
+    const gridLineMm = cameraZoom >= 1.5 ? 100 : 500;
+    const textStepMm = cameraZoom >= 1.5 ? 500 : 1000;
+    const linePx = gridLineMm * currentScale;
+    
+    const parent = canvas.parentElement;
+    const viewTop = parent.scrollTop / cameraZoom;
+    const viewLeft = parent.scrollLeft / cameraZoom;
+    
+    let startX = (0 % linePx) - linePx;
+    let startY = (0 % linePx) - linePx;
+    
+    ctx.save();
+    ctx.scale(cameraZoom, cameraZoom);
+    
+    const maxW = canvas.width / cameraZoom;
+    const maxH = canvas.height / cameraZoom;
+    
+    // 1. Grid Lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1 / cameraZoom;
+    ctx.beginPath();
+    for (let x = startX; x <= maxW + linePx; x += linePx) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, maxH);
+    }
+    for (let y = startY; y <= maxH + linePx; y += linePx) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(maxW, y);
+    }
+    ctx.stroke();
+
+    // 2. Ruler Background Panels
+    const rulerThickTop = 22 / cameraZoom;
+    const rulerThickLeft = 45 / cameraZoom;
+    ctx.fillStyle = 'rgba(20, 25, 35, 0.9)'; 
+    
+    ctx.fillRect(viewLeft, viewTop, parent.clientWidth / cameraZoom, rulerThickTop);
+    ctx.fillRect(viewLeft, viewTop, rulerThickLeft, parent.clientHeight / cameraZoom);
+
+    // 3. Ruler Text
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = (10 / cameraZoom) + 'px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    
+    for (let x = startX; x <= maxW + linePx; x += linePx) {
+        let logicalMm = Math.round(x / currentScale) - 2000;
+        if (Math.abs(logicalMm) % textStepMm === 0 && x > viewLeft + rulerThickLeft) {
+            ctx.fillText(logicalMm, x + 4 / cameraZoom, viewTop + 6 / cameraZoom);
+        }
+    }
+    for (let y = startY; y <= maxH + linePx; y += linePx) {
+        let logicalMm = Math.round(y / currentScale) - 2000;
+        if (Math.abs(logicalMm) % textStepMm === 0 && y > viewTop + rulerThickTop) {
+            ctx.fillText(logicalMm, viewLeft + 4 / cameraZoom, y + 4 / cameraZoom);
+        }
+    }
+    
+    ctx.restore();
+}
+
 // 창고 도면 직접 그리기 (Custom Canvas Drawing) 엔진
 
 const canvas = document.getElementById('drawingCanvas');
@@ -52,10 +116,16 @@ function isDoubleRow() {
 }
 
 function getLogicalPos(e) {
-    return {
-        x: e.offsetX / cameraZoom,
-        y: e.offsetY / cameraZoom
-    };
+    const rawX = e.offsetX / cameraZoom;
+    const rawY = e.offsetY / cameraZoom;
+    if (typeof getGridSnapPx === 'function' && currentScale > 0) {
+        const snapPx = getGridSnapPx();
+        return {
+            x: Math.round(rawX / snapPx) * snapPx,
+            y: Math.round(rawY / snapPx) * snapPx
+        };
+    }
+    return { x: rawX, y: rawY };
 }
 
 // 스냅 가이드 토글 함수
@@ -74,15 +144,84 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 
 window.zoomIn = function() {
-    changeZoom(Math.min(cameraZoom * 1.2, 5));
+    cameraZoom = Math.min(cameraZoom * 1.2, 5);
+    applyZoom();
 };
 
 window.zoomOut = function() {
-    changeZoom(Math.max(cameraZoom / 1.2, 0.5));
+    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
+    applyZoom();
 };
 
 window.resetZoom = function() {
-    changeZoom(1);
+    cameraZoom = 1;
+    applyZoom();
+};
+
+// 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
+window.panCanvas = function(dx, dy) {
+    const parent = canvas.parentElement;
+    if (parent) {
+        parent.scrollLeft = Math.max(0, parent.scrollLeft + dx);
+        parent.scrollTop  = Math.max(0, parent.scrollTop  + dy);
+    }
+};
+
+function applyZoom(oldZoom = null) {
+    if (baseWidth === 0) return;
+    const parent = canvas.parentElement;
+    
+    let viewCenterX = parent.scrollLeft + parent.clientWidth / 2;
+    let viewCenterY = parent.scrollTop + parent.clientHeight / 2;
+    
+    if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
+        viewCenterX = window.lastMouseX;
+        viewCenterY = window.lastMouseY;
+    }
+
+    // Remember screen position of the target point
+    let screenMouseX = viewCenterX - parent.scrollLeft;
+    let screenMouseY = viewCenterY - parent.scrollTop;
+
+    canvas.width = baseWidth * cameraZoom;
+    canvas.height = baseHeight * cameraZoom;
+    
+    if (points.length >= 3 && currentScale > 0) {
+        alignAndScalePolygon();
+    }
+    draw();
+    
+    if (oldZoom && oldZoom > 0) {
+        const zoomRatio = cameraZoom / oldZoom;
+        parent.scrollLeft = (viewCenterX * zoomRatio) - screenMouseX;
+        parent.scrollTop = (viewCenterY * zoomRatio) - screenMouseY;
+    } else {
+        if (cameraZoom > 1) {
+            parent.scrollLeft = (canvas.width - parent.clientWidth) / 2;
+            parent.scrollTop = (canvas.height - parent.clientHeight) / 2;
+        } else {
+            parent.scrollLeft = 0;
+            parent.scrollTop = 0;
+        }
+    }
+}
+
+// 전역 함수로 노출
+window.zoomIn = function() {
+    const oldZoom = cameraZoom;
+    cameraZoom = Math.min(cameraZoom * 1.2, 5);
+    applyZoom(oldZoom);
+};
+
+window.zoomOut = function() {
+    const oldZoom = cameraZoom;
+    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
+    applyZoom(oldZoom);
+};
+
+window.resetZoom = function() {
+    cameraZoom = 1;
+    applyZoom();
 };
 
 // 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
@@ -95,7 +234,6 @@ window.panCanvas = function(dx, dy) {
 };
 
 function applyZoom() {
-    // resize 등에서 단순 적용할 때
     if (baseWidth === 0) return;
     canvas.width = baseWidth * cameraZoom;
     canvas.height = baseHeight * cameraZoom;
@@ -103,24 +241,16 @@ function applyZoom() {
         alignAndScalePolygon();
     }
     draw();
-}
-
-function changeZoom(newZoom) {
-    if (baseWidth === 0) return;
+    
+    // 중앙 스크롤 유지
     const parent = canvas.parentElement;
-    
-    // 현재 뷰포트 정중앙의 원래 배율(1배) 기준 좌표
-    const cx = parent.scrollLeft + parent.clientWidth / 2;
-    const cy = parent.scrollTop + parent.clientHeight / 2;
-    const unzoomedX = cx / cameraZoom;
-    const unzoomedY = cy / cameraZoom;
-    
-    cameraZoom = newZoom;
-    applyZoom();
-    
-    // 새 줌에서 해당 좌표가 다시 정중앙에 오도록 스크롤 조정
-    parent.scrollLeft = (unzoomedX * cameraZoom) - parent.clientWidth / 2;
-    parent.scrollTop = (unzoomedY * cameraZoom) - parent.clientHeight / 2;
+    if (cameraZoom > 1) {
+        parent.scrollLeft = (canvas.width - parent.clientWidth) / 2;
+        parent.scrollTop = (canvas.height - parent.clientHeight) / 2;
+    } else {
+        parent.scrollLeft = 0;
+        parent.scrollTop = 0;
+    }
 }
 
 // 전역 함수로 노출
@@ -302,10 +432,12 @@ function alignAndScalePolygon() {
     currentScale = Math.min(viewWidth / (maxX - minX || 1), viewHeight / (maxY - minY || 1));
     window.currentScale = currentScale;
 
-    window.worldOriginX = 50; // 좌측 상단 여백 (px)
-    window.worldOriginY = 50;
-    const offsetX = window.worldOriginX - minX * currentScale;
-    const offsetY = window.worldOriginY - minY * currentScale;
+    const centerX = baseWidth / 2;
+    const centerY = baseHeight / 2;
+    let offsetX = (-minX + 2000) * currentScale;
+    let offsetY = (-minY + 2000) * currentScale;
+    window.globalPolyMinX = 2000;
+    window.globalPolyMinY = 2000;
 
     for(let i = 0; i <= numEdges; i++) {
         points[i].x = mathPoints[i].x * currentScale + offsetX;
@@ -371,35 +503,38 @@ canvas.addEventListener('contextmenu', (e) => {
             let maxY = r.isHoriz ? (r.y + depthPx/2) : (r.dir > 0 ? r.y + r.totalLengthPx : r.y);
             
             if (clickX >= minX && clickX <= maxX && clickY >= minY && clickY <= maxY) {
-                // 90도 회전
-                r.isHoriz = !r.isHoriz;
-                r.angle = r.isHoriz ? 0 : Math.PI/2;
-                r.isValid = checkRackValidPlacement(r);
-                updateRackFormCounts();
-                draw();
-                return;
-            }
-        }
-    }
-});
-
-// 더블클릭 시 랙 삭제 기능 추가
-canvas.addEventListener('dblclick', (e) => {
-    const {x: clickX, y: clickY} = getLogicalPos(e);
-    if (!isDrawingMode && currentScale > 0) {
-        for (let i = racks.length - 1; i >= 0; i--) {
-            const r = racks[i];
-            const depthPx = (r.rackDepth || 1000) * currentScale;
-            let minX = r.isHoriz ? (r.dir > 0 ? r.x : r.x - r.totalLengthPx) : (r.x - depthPx/2);
-            let maxX = r.isHoriz ? (r.dir > 0 ? r.x + r.totalLengthPx : r.x) : (r.x + depthPx/2);
-            let minY = r.isHoriz ? (r.y - depthPx/2) : (r.dir > 0 ? r.y : r.y - r.totalLengthPx);
-            let maxY = r.isHoriz ? (r.y + depthPx/2) : (r.dir > 0 ? r.y + r.totalLengthPx : r.y);
-            
-            if (clickX >= minX && clickX <= maxX && clickY >= minY && clickY <= maxY) {
-                racks.splice(i, 1);
-                updateRackFormCounts();
-                draw();
-                return;
+                let distFromStart = 0;
+                if (r.isHoriz) {
+                    distFromStart = r.dir > 0 ? (clickX - r.x) : (r.x - clickX);
+                } else {
+                    distFromStart = r.dir > 0 ? (clickY - r.y) : (r.y - clickY);
+                }
+                
+                let spans = r.independent + r.connected + r.smallConnected;
+                let frameMarginPx = (85 * currentScale) / (spans + 1); 
+                let beamPx = r.beamLength * currentScale;
+                let smallBeamPx = r.smallBeamLength * currentScale;
+                
+                let currentLen = 0;
+                let spanIndex = -1;
+                
+                for(let j = 0; j < r.independent + r.connected; j++) {
+                    let nextLen = currentLen + frameMarginPx + beamPx;
+                    if (distFromStart >= currentLen && distFromStart <= nextLen + (frameMarginPx/2)) {
+                        spanIndex = j;
+                        break;
+                    }
+                    currentLen = nextLen;
+                }
+                
+                if (spanIndex === -1 && r.smallConnected > 0) {
+                    spanIndex = r.independent + r.connected;
+                }
+                
+                if (spanIndex !== -1) {
+                    splitRackGroup(i, spanIndex);
+                    return;
+                }
             }
         }
     }
@@ -492,7 +627,6 @@ function splitRackGroup(rackIndex, spanIndex) {
 let isExtendingRack = false;
 let extendingRackIndex = -1;
 let extendInitialBays = 0;
-let extendInitialSmall = 0;
 let extendStartPos = { x: 0, y: 0 };
 
 function getRackAngle(r) {
@@ -563,9 +697,9 @@ canvas.addEventListener('mousedown', (e) => {
                     if (handles.extend && Math.hypot(handles.extend.x - clickX, handles.extend.y - clickY) <= 15) {
                         isExtendingRack = true;
                         extendingRackIndex = i;
-                        extendInitialSmall = r.smallConnected || 0;
+                        r.smallConnected = 0;
                         extendInitialBays = (r.independent || 1) + (r.connected || 0);
-                        r.totalLengthPx = (85 + (extendInitialBays * r.beamLength) + (extendInitialSmall * (r.smallBeamLength || getSmallBeamLength(r.beamLength)))) * currentScale;
+                        r.totalLengthPx = (85 + (extendInitialBays * r.beamLength)) * currentScale;
                         extendStartPos = { x: clickX, y: clickY };
                         updateRackFormCounts();
                         draw();
@@ -591,9 +725,9 @@ canvas.addEventListener('mousedown', (e) => {
                 if (Math.hypot(tail.x - clickX, tail.y - clickY) <= 20) {
                     isExtendingRack = true;
                     extendingRackIndex = i;
-                    extendInitialSmall = r.smallConnected || 0;
+                    r.smallConnected = 0;
                     extendInitialBays = (r.independent || 1) + (r.connected || 0);
-                    r.totalLengthPx = (85 + (extendInitialBays * r.beamLength) + (extendInitialSmall * (r.smallBeamLength || getSmallBeamLength(r.beamLength)))) * currentScale;
+                    r.totalLengthPx = (85 + (extendInitialBays * r.beamLength)) * currentScale;
                     extendStartPos = { x: clickX, y: clickY };
                     updateRackFormCounts();
                     draw();
@@ -702,42 +836,38 @@ canvas.addEventListener('mousemove', (e) => {
         } else {
             window.activeMergePreview = null;
             
-            // 2. 스마트 장애물 및 충돌 검사 (작은 연결 포함 확장/축소)
-            const initialMm = 85 + (extendInitialBays * r.beamLength) + (extendInitialSmall * smallBeamLength);
-            const newTotalLengthMm = initialMm + deltaMm;
+            let bayDelta = Math.round(deltaMm / r.beamLength);
+            let newTotalBays = Math.max(1, extendInitialBays + bayDelta);
             
-            let availableMmForBeams = Math.max(r.beamLength, newTotalLengthMm - 85);
-            let standardBays = Math.floor(availableMmForBeams / r.beamLength);
-            let remainderMm = availableMmForBeams - (standardBays * r.beamLength);
-            
-            let smallConn = (remainderMm >= smallBeamLength) ? 1 : 0;
-            
+            // 2. 스마트 장애물 및 충돌 검사 (순수 표준 빔 단위로만 확장/축소)
             r.independent = 1;
-            r.connected = Math.max(0, standardBays - 1);
-            r.smallConnected = smallConn;
-            r.totalLengthPx = (85 + (standardBays * r.beamLength) + (smallConn * smallBeamLength)) * currentScale;
+            r.connected = Math.max(0, newTotalBays - 1);
+            r.smallConnected = 0;
+            r.totalLengthPx = (85 + (newTotalBays * r.beamLength)) * currentScale;
             
             let isValid = checkRackValidPlacement(r);
-            if (!isValid) {
-                // 일반/작은 연결이 장애물에 닿아 들어갈 수 없으면, 유효한 한도 내로 축소
-                let found = false;
-                for (let b = standardBays; b >= 1; b--) {
-                    if (b < standardBays || smallConn === 1) {
-                        r.connected = Math.max(0, b - 1);
-                        r.smallConnected = 1;
-                        r.totalLengthPx = (85 + (b * r.beamLength) + smallBeamLength) * currentScale;
-                        if (checkRackValidPlacement(r)) { found = true; break; }
-                    }
-                    
+            if (!isValid && newTotalBays > extendInitialBays) {
+                let foundSafeBays = extendInitialBays;
+                for (let b = newTotalBays - 1; b >= extendInitialBays; b--) {
                     r.connected = Math.max(0, b - 1);
                     r.smallConnected = 0;
                     r.totalLengthPx = (85 + (b * r.beamLength)) * currentScale;
-                    if (checkRackValidPlacement(r)) { found = true; break; }
+                    if (checkRackValidPlacement(r)) {
+                        foundSafeBays = b;
+                        break;
+                    }
                 }
-                if (!found) {
-                    r.connected = Math.max(0, extendInitialBays - 1);
-                    r.smallConnected = extendInitialSmall;
-                    r.totalLengthPx = initialMm * currentScale;
+                
+                // Try small connection
+                r.connected = Math.max(0, foundSafeBays - 1);
+                r.smallConnected = 1;
+                r.smallBeamLength = smallBeamLength;
+                r.totalLengthPx = (85 + (foundSafeBays * r.beamLength) + smallBeamLength) * currentScale;
+                
+                if (!checkRackValidPlacement(r)) {
+                    r.smallConnected = 0;
+                    r.smallBeamLength = 0;
+                    r.totalLengthPx = (85 + (foundSafeBays * r.beamLength)) * currentScale;
                 }
             }
         }
@@ -1105,79 +1235,6 @@ function finishDrawing() {
     }
 }
 
-// ==========================================
-// 📐 랙 자동 간격 정렬 (Auto Align)
-// ==========================================
-window.autoAlignRacks = function() {
-    if (!racks || racks.length < 3) return;
-    
-    const horizRacks = racks.filter(r => r.isHoriz).sort((a, b) => a.y - b.y);
-    const vertRacks = racks.filter(r => !r.isHoriz).sort((a, b) => a.x - b.x);
-    
-    function distribute(list, isHoriz) {
-        if (list.length < 3) return;
-        const first = list[0];
-        const last = list[list.length - 1];
-        
-        const totalDistance = isHoriz ? (last.y - first.y) : (last.x - first.x);
-        const step = totalDistance / (list.length - 1);
-        
-        for (let i = 1; i < list.length - 1; i++) {
-            if (isHoriz) {
-                list[i].y = first.y + step * i;
-            } else {
-                list[i].x = first.x + step * i;
-            }
-            list[i].isValid = checkRackValidPlacement(list[i]);
-        }
-    }
-    
-    function groupAndDistribute(list, isHoriz) {
-        let groups = [];
-        list.forEach(r => {
-            let placed = false;
-            for (let g of groups) {
-                let ref = g[0];
-                let centerMatch = false;
-                
-                let getBounds = (rack) => {
-                    let lenMm = rack.totalLengthPx / currentScale;
-                    let depMm = rack.rackDepth || 1000;
-                    return {
-                        minX: rack.isHoriz ? (rack.dir > 0 ? rack.x : rack.x - lenMm) : (rack.x - depMm/2),
-                        maxX: rack.isHoriz ? (rack.dir > 0 ? rack.x + lenMm : rack.x) : (rack.x + depMm/2),
-                        minY: rack.isHoriz ? (rack.y - depMm/2) : (rack.dir > 0 ? rack.y : rack.y - lenMm),
-                        maxY: rack.isHoriz ? (rack.y + depMm/2) : (rack.dir > 0 ? rack.y + lenMm : rack.y)
-                    };
-                };
-                
-                let myB = getBounds(r);
-                let refB = getBounds(ref);
-                
-                if (isHoriz) {
-                    centerMatch = (myB.minX <= refB.maxX && myB.maxX >= refB.minX);
-                } else {
-                    centerMatch = (myB.minY <= refB.maxY && myB.maxY >= refB.minY);
-                }
-                
-                if (centerMatch) {
-                    g.push(r);
-                    placed = true;
-                    break;
-                }
-            }
-            if (!placed) groups.push([r]);
-        });
-        
-        groups.forEach(g => distribute(g, isHoriz));
-    }
-    
-    groupAndDistribute(horizRacks, true);
-    groupAndDistribute(vertRacks, false);
-    
-    draw();
-};
-
 function getEdgeClearance(p1, p2) {
     let maxPillarDepth = 0;
     const cornerDeadZonePx = 1200 * currentScale; // 코너 데드스페이스 영역
@@ -1498,24 +1555,6 @@ function calculateRackSnap(targetX, targetY, r) {
                 snappedX = centerSpaceX;
             }
         }
-    }
-    
-    // 🧲 자석 스냅 (Grid Snapping) - 벽에 안 붙었을 때 500mm 또는 100mm 간격으로 스냅
-    if (snappedX === targetX && snappedY === targetY && window.currentScale > 0) {
-        const pxPer100mm = 100 * window.currentScale * cameraZoom;
-        const snapMm = (pxPer100mm >= 5) ? 100 : 500;
-        const snapPx = snapMm * window.currentScale;
-        const originX = window.worldOriginX || 0;
-        const originY = window.worldOriginY || 0;
-        
-        let relX = targetX - originX;
-        let relY = targetY - originY;
-        
-        relX = Math.round(relX / snapPx) * snapPx;
-        relY = Math.round(relY / snapPx) * snapPx;
-        
-        snappedX = relX + originX;
-        snappedY = relY + originY;
     }
     
     return { x: snappedX, y: snappedY };
@@ -1935,14 +1974,17 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
         drawDimensionArrow(ctx, -20, -depthPx/2, -20, depthPx/2, totalDepthMm.toLocaleString(), '#f87171', true, isFlipped);
 
         // 4-2. 가로 정규 로드빔 내측 치수선 (2,585 등) - 첫 번째 베이 하단에 표기
+        const isFlippedArrow = (r.dir < 0);
+        const dimY = isDouble ? 0 : (depthPx/2 + 15);
+        
         if (regularSpans > 0) {
-            drawDimensionArrow(ctx, colSizePx, depthPx/2 + 15, colSizePx + beamPx, depthPx/2 + 15, Math.round(r.beamLength).toLocaleString(), '#f87171', !r.isHoriz, isFlipped);
+            drawDimensionArrow(ctx, colSizePx, dimY, colSizePx + beamPx, dimY, Math.round(r.beamLength).toLocaleString(), '#f87171', !r.isHoriz, isFlippedArrow);
         }
 
         // 4-3. 작은연결 치수선 (1,385 등) 표기 (작은연결이 있을 때 항상 명확히 표시)
         if (r.smallConnected > 0) {
-            const smallStartPx = colSizePx + (regularSpans * (colSizePx + beamPx));
-            drawDimensionArrow(ctx, smallStartPx, depthPx/2 + 15, smallStartPx + smallBeamPx, depthPx/2 + 15, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', !r.isHoriz, isFlipped);
+            const smallStartPx = colSizePx + (regularSpans * beamPx);
+            drawDimensionArrow(ctx, smallStartPx, dimY, smallStartPx + smallBeamPx, dimY, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', !r.isHoriz, isFlippedArrow);
         }
 
         // 5. 랙 끝단 드래그 확장 핸들 (인터랙티브 모드에 따라 활성화된 모드의 아이콘 하나만 렌더링)
@@ -1959,6 +2001,19 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
                 drawCopyHandleIcon(ctx, handleX, 0);
             }
             ctx.restore();
+        }
+        
+        // 호버 아웃라인 (선택/오류 상태)
+        if (!isPreview) {
+            if (!r.isValid) {
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                ctx.lineWidth = 4 / cameraZoom;
+                ctx.strokeRect(0, -depthPx/2, r.totalLengthPx, depthPx);
+            } else if (r === window.hoveredRack || r === window.selectedRack) {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+                ctx.lineWidth = 3 / cameraZoom;
+                ctx.strokeRect(0, -depthPx/2, r.totalLengthPx, depthPx);
+            }
         }
     }
 
@@ -2027,12 +2082,7 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
 function draw() {
     applyAiRackSpecs();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 0. 배경 그리드 그리기 (Ruler 기준점과 연동)
-    if (typeof drawGrid === 'function') {
-        drawGrid();
-    }
-
+    drawGridBackground();
     ctx.save();
     ctx.scale(cameraZoom, cameraZoom);
 
@@ -2267,11 +2317,6 @@ function draw() {
     drawDimensions();
     
     ctx.restore();
-
-    // 눈금자(Ruler) 그리기 (ctx.restore() 이후에 호출하여 스케일/이동 무시)
-    if (typeof drawRuler === 'function') {
-        drawRuler();
-    }
 }
 
 // 랙 간 거리(Dimension) 실시간 표시
@@ -2577,6 +2622,20 @@ window.updateRackFormCounts = function() {
 
     totalBypass = bypassRegularBays + bypassSmallBays;
     
+    // 바이패스 수량만큼 연결 대수에서 차감 (DB 및 화면 표기용)
+    if (bypassRegularBays > 0) {
+        if (bypassRegularBays <= totalConn) {
+            totalConn -= bypassRegularBays;
+        } else {
+            let rem = bypassRegularBays - totalConn;
+            totalConn = 0;
+            totalIndep = Math.max(0, totalIndep - rem);
+        }
+    }
+    if (bypassSmallBays > 0) {
+        totalSmallConn = Math.max(0, totalSmallConn - bypassSmallBays);
+    }
+    
     // 총 적재 파렛트 수량: (일반 정규베이 * 2 + 일반 작은연결베이 * 1) * levels + (바이패스 정규베이 * 2 + 바이패스 작은연결베이 * 1) * (levels - 1)
     const bypassLevels = Math.max(1, levels - 1);
     const totalPallets = ((totalRegularBays * 2 + totalSmallBays * 1) * levels) +
@@ -2657,19 +2716,19 @@ window.updateRackFormCounts = function() {
     if (summaryBadge) {
         // 첫 번째 줄 빌드
         let html = `<div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">${specTagText}</span>
+            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">${specTagText}</span>
             <span class="text-secondary">|</span>
-            <span>독립 <strong class="text-primary">${totalIndep}</strong>대</span>
+            <span>독립 <strong id="top-badge-indep" class="text-primary">${totalIndep}</strong>대</span>
             <span class="text-secondary">|</span>
-            <span>연결 <strong class="text-primary">${totalConn}</strong>대</span>`;
+            <span>연결 <strong id="top-badge-conn" class="text-primary">${totalConn}</strong>대</span>`;
         
         if (totalSmallConn > 0) {
-            html += ` <span class="text-secondary">|</span> <span class="text-info">작은연결 <strong class="text-info">${totalSmallConn}</strong>대</span>`;
+            html += ` <span class="text-secondary">|</span> <span class="text-info">작은연결 <strong id="top-badge-small-conn" class="text-info">${totalSmallConn}</strong>대</span>`;
         }
         
-        html += ` <span class="text-secondary">|</span> <span class="text-warning">🔗 <strong class="text-warning">${totalTieHolders}</strong>홀더</span>
+        html += ` <span class="text-secondary">|</span> <span class="text-warning">🔗 <strong id="top-badge-holders" class="text-warning">${totalTieHolders}</strong>홀더</span>
             <span class="text-secondary">|</span>
-            <span class="text-success">📦 <strong class="text-success">${totalPallets.toLocaleString()}</strong> PLT</span>
+            <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">${totalPallets.toLocaleString()}</strong> PLT</span>
         </div>`;
         
         // 두 번째 줄 빌드 (바이패스가 있을 때만)
@@ -2680,8 +2739,7 @@ window.updateRackFormCounts = function() {
             
             html += `<div class="d-flex align-items-center gap-2 flex-wrap mt-1 pt-1 border-top border-secondary w-100" style="font-size:0.78rem;">
                 <span class="badge bg-danger text-white" style="font-size:0.7rem; font-weight:600; padding:3px 6px;">${bpSpec}</span>
-                <span class="text-secondary">|</span>
-                <span class="text-danger fw-bold">바이패스 <strong class="text-danger">${totalBypass}</strong>대</span>
+                <span class="text-danger fw-bold ms-2">연결 <strong id="top-badge-bypass" class="text-danger">${totalBypass}</strong>대 (바이패스)</span>
             </div>`;
         }
         
@@ -3149,9 +3207,14 @@ function applyAiRackSpecs() {
                                     totalLengthPx: groupLenMm * currentScale,
                                     rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                                 };
-                                if (checkRackValidPlacement(centerRack)) {
-                                    racks.push(centerRack);
-                                }
+                                let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                                 centerBaysInGroup = 0;
                             }
                             continue;
@@ -3189,9 +3252,14 @@ function applyAiRackSpecs() {
                                     totalLengthPx: groupLenMm * currentScale,
                                     rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                                 };
-                                if (checkRackValidPlacement(centerRack)) {
-                                    racks.push(centerRack);
-                                }
+                                let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                                 centerBaysInGroup = 0;
                             }
                         }
@@ -3207,9 +3275,14 @@ function applyAiRackSpecs() {
                             totalLengthPx: groupLenMm * currentScale,
                             rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                         };
-                        if (checkRackValidPlacement(centerRack)) {
-                            racks.push(centerRack);
-                        }
+                        let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                     }
                 }
             }
@@ -3267,9 +3340,14 @@ function applyAiRackSpecs() {
                                     totalLengthPx: groupLenMm * currentScale,
                                     rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                                 };
-                                if (checkRackValidPlacement(centerRack)) {
-                                    racks.push(centerRack);
-                                }
+                                let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                                 centerBaysInGroup = 0;
                             }
                             continue;
@@ -3307,9 +3385,14 @@ function applyAiRackSpecs() {
                                     totalLengthPx: groupLenMm * currentScale,
                                     rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                                 };
-                                if (checkRackValidPlacement(centerRack)) {
-                                    racks.push(centerRack);
-                                }
+                                let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                                 centerBaysInGroup = 0;
                             }
                         }
@@ -3325,9 +3408,14 @@ function applyAiRackSpecs() {
                             totalLengthPx: groupLenMm * currentScale,
                             rackDepth: rackDepth, holderSize: holderSizeMm, isDouble: true, isValid: true
                         };
-                        if (checkRackValidPlacement(centerRack)) {
-                            racks.push(centerRack);
-                        }
+                        let testRack = Object.assign({}, centerRack);
+                                  testRack.smallConnected = 1;
+                                  testRack.totalLengthPx = (centerRack.totalLengthPx / currentScale + smallBeamLength) * currentScale;
+                                  if (checkRackValidPlacement(testRack)) {
+                                      racks.push(testRack);
+                                  } else if (checkRackValidPlacement(centerRack)) {
+                                      racks.push(centerRack);
+                                  }
                     }
                 }
             }
@@ -3403,200 +3491,147 @@ window.spawnInitialRacks = function() {
     draw();
 };
 
-// ==========================================
-// 🔲 배경 그리드 (Background Grid) 렌더링 로직
-// ==========================================
-function drawGrid() {
-    if (!window.currentScale || window.currentScale <= 0) return;
-    
-    const parent = canvas.parentElement;
-    const scrollX = parent ? parent.scrollLeft : 0;
-    const scrollY = parent ? parent.scrollTop : 0;
-    const vw = parent ? parent.clientWidth : canvas.width;
-    const vh = parent ? parent.clientHeight : canvas.height;
-    
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // 절대 좌표계
-    
-    const pxPer100mm = 100 * window.currentScale * cameraZoom;
-    let unitMm = 1000;
-    if (pxPer100mm >= 5) {
-        unitMm = 100;
-    }
-    const pxPerUnit = unitMm * window.currentScale * cameraZoom;
-    
-    if (pxPerUnit <= 4) { ctx.restore(); return; } // 너무 촘촘하면 생략
 
-    const originPxX = (window.worldOriginX || 0) * cameraZoom;
-    const originPxY = (window.worldOriginY || 0) * cameraZoom;
+window.autoAlignRacks = function() {
+    if (racks.length === 0 || points.length === 0) return;
+    let pMinX = Infinity, pMinY = Infinity, pMaxX = -Infinity, pMaxY = -Infinity;
+    points.forEach(p => {
+        if (p.x < pMinX) pMinX = p.x;
+        if (p.y < pMinY) pMinY = p.y;
+        if (p.x > pMaxX) pMaxX = p.x;
+        if (p.y > pMaxY) pMaxY = p.y;
+    });
 
-    // 수직선 (X축 격자)
-    const startX = Math.floor((scrollX - originPxX) / pxPerUnit) * pxPerUnit + originPxX;
-    for (let x = startX; x < scrollX + vw; x += pxPerUnit) {
-        if (x < scrollX) continue;
-        ctx.beginPath();
-        ctx.moveTo(x, scrollY);
-        ctx.lineTo(x, scrollY + vh);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // 보조선 (절반 간격)
-        const subX = x + pxPerUnit / 2;
-        if (subX < scrollX + vw) {
-            ctx.beginPath();
-            ctx.moveTo(subX, scrollY);
-            ctx.lineTo(subX, scrollY + vh);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
-            ctx.stroke();
-        }
-    }
+    let horizCount = 0;
+    racks.forEach(r => { if(r.isHoriz) horizCount++; });
+    const alignHoriz = horizCount >= racks.length / 2;
 
-    // 수평선 (Y축 격자)
-    const startY = Math.floor((scrollY - originPxY) / pxPerUnit) * pxPerUnit + originPxY;
-    for (let y = startY; y < scrollY + vh; y += pxPerUnit) {
-        if (y < scrollY) continue;
-        ctx.beginPath();
-        ctx.moveTo(scrollX, y);
-        ctx.lineTo(scrollX + vw, y);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // 보조선 (절반 간격)
-        const subY = y + pxPerUnit / 2;
-        if (subY < scrollY + vh) {
-            ctx.beginPath();
-            ctx.moveTo(scrollX, subY);
-            ctx.lineTo(scrollX + vw, subY);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
-            ctx.stroke();
-        }
-    }
-    
-    ctx.restore();
-}
+    let singleRacks = racks.filter(r => !r.isDouble && r.isHoriz === alignHoriz);
+    let topY = pMinY + 100 * currentScale;
+    let bottomY = pMaxY - 100 * currentScale;
+    let leftX = pMinX + 100 * currentScale;
+    let rightX = pMaxX - 100 * currentScale;
 
-// ==========================================
-// 📏 눈금자 (Ruler) UI 렌더링 로직
-// ==========================================
-function drawRuler() {
-    if (!window.currentScale || window.currentScale <= 0) return;
-    
-    const parent = canvas.parentElement;
-    const scrollX = parent ? parent.scrollLeft : 0;
-    const scrollY = parent ? parent.scrollTop : 0;
-    const vw = parent ? parent.clientWidth : canvas.width;
-    const vh = parent ? parent.clientHeight : canvas.height;
-    
-    const rulerSize = 25; // 눈금자 두께 (픽셀)
-    
-    ctx.save();
-    // 캔버스 기본 변환 초기화 (절대 좌표계)
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    
-    // 배경 (Top, Left)
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'; // 짙은 네이비 반투명
-    ctx.fillRect(scrollX, scrollY, vw, rulerSize); // Top
-    ctx.fillRect(scrollX, scrollY, rulerSize, vh); // Left
-    
-    // 외곽선
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(scrollX, scrollY + rulerSize);
-    ctx.lineTo(scrollX + vw, scrollY + rulerSize);
-    ctx.moveTo(scrollX + rulerSize, scrollY);
-    ctx.lineTo(scrollX + rulerSize, scrollY + vh);
-    ctx.stroke();
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '10px Inter';
-    
-    // 눈금 간격 설정 (실제 1000mm 당 픽셀 거리)
-    const pxPer100mm = 100 * window.currentScale * cameraZoom;
-    let unitMm = 1000;
-    if (pxPer100mm >= 5) {
-        unitMm = 100;
-    }
-    const pxPerUnit = unitMm * window.currentScale * cameraZoom;
-    
-    const originPxX = (window.worldOriginX || 0) * cameraZoom;
-    const originPxY = (window.worldOriginY || 0) * cameraZoom;
-    
-    if (pxPerUnit > 4) { // 너무 촘촘하면 생략
-        // --- X축 (Top Ruler) ---
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        const startX = Math.floor((scrollX - originPxX) / pxPerUnit) * pxPerUnit + originPxX;
-        for (let x = startX; x < scrollX + vw; x += pxPerUnit) {
-            const val = Math.round((x - originPxX) / (window.currentScale * cameraZoom));
-            // 주 눈금
-            ctx.beginPath();
-            ctx.moveTo(x, scrollY + 15);
-            ctx.lineTo(x, scrollY + rulerSize);
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.stroke();
-            // 숫자 표시
-            ctx.fillText(val, x, scrollY + 2);
-            
-            // 보조 눈금 (절반 간격)
-            const subX = x + pxPerUnit / 2;
-            if (subX < scrollX + vw) {
-                ctx.beginPath();
-                ctx.moveTo(subX, scrollY + 20);
-                ctx.lineTo(subX, scrollY + rulerSize);
-                ctx.strokeStyle = '#64748b';
-                ctx.stroke();
+    if (alignHoriz) {
+        singleRacks.forEach(r => {
+            const depth = (r.rackDepth || 1000) * currentScale;
+            if (r.y < (pMinY + pMaxY) / 2) {
+                if (r.y + depth > topY) topY = r.y + depth;
+            } else {
+                if (r.y < bottomY) bottomY = r.y;
             }
-        }
-        
-        // --- Y축 (Left Ruler) ---
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        const startY = Math.floor((scrollY - originPxY) / pxPerUnit) * pxPerUnit + originPxY;
-        for (let y = startY; y < scrollY + vh; y += pxPerUnit) {
-            const val = Math.round((y - originPxY) / (window.currentScale * cameraZoom));
-            // 주 눈금
-            ctx.beginPath();
-            ctx.moveTo(scrollX + 15, y);
-            ctx.lineTo(scrollX + rulerSize, y);
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.stroke();
-            
-            ctx.save();
-            ctx.translate(scrollX + 12, y);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText(val, 0, 0);
-            ctx.restore();
-            
-            // 보조 눈금 (절반 간격)
-            const subY = y + pxPerUnit / 2;
-            if (subY < scrollY + vh) {
-                ctx.beginPath();
-                ctx.moveTo(scrollX + 20, subY);
-                ctx.lineTo(scrollX + rulerSize, subY);
-                ctx.strokeStyle = '#64748b';
-                ctx.stroke();
+        });
+    } else {
+        singleRacks.forEach(r => {
+            const depth = (r.rackDepth || 1000) * currentScale;
+            if (r.x < (pMinX + pMaxX) / 2) {
+                if (r.x + depth > leftX) leftX = r.x + depth;
+            } else {
+                if (r.x < rightX) rightX = r.x;
             }
-        }
-    }
-    
-    // 교차점(좌측 상단 25x25 큐브) 가리기
-    ctx.fillStyle = 'rgba(2, 6, 23, 1)';
-    ctx.fillRect(scrollX, scrollY, rulerSize, rulerSize);
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
-    ctx.strokeRect(scrollX, scrollY, rulerSize, rulerSize);
-    
-    ctx.restore();
-}
-
-// 스크롤 이벤트 감지 -> 눈금자 재렌더링
-window.addEventListener('DOMContentLoaded', () => {
-    const parent = canvas.parentElement;
-    if (parent) {
-        parent.addEventListener('scroll', () => {
-            requestAnimationFrame(draw);
         });
     }
+
+    let doubleRacks = racks.filter(r => r.isDouble && r.isHoriz === alignHoriz);
+    if (doubleRacks.length > 0) {
+        if (alignHoriz) {
+            doubleRacks.sort((a, b) => a.y - b.y);
+            let rows = [];
+            let currentRow = [doubleRacks[0]];
+            for(let i = 1; i < doubleRacks.length; i++) {
+                if (Math.abs(doubleRacks[i].y - currentRow[0].y) < 200 * currentScale) {
+                    currentRow.push(doubleRacks[i]);
+                } else {
+                    rows.push(currentRow);
+                    currentRow = [doubleRacks[i]];
+                }
+            }
+            rows.push(currentRow);
+
+            let maxDepthBottom = 0;
+            rows[rows.length-1].forEach(r => {
+                const depth = ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale;
+                if(depth > maxDepthBottom) maxDepthBottom = depth;
+            });
+            bottomY -= maxDepthBottom;
+            const wCenter = (pMinX + pMaxX)/2;
+
+            if (rows.length === 1) {
+                rows[0].forEach(r => {
+                    r.y = (topY + bottomY) / 2;
+                    r.x = wCenter - r.totalLengthPx/2;
+                });
+            } else {
+                const gap = (bottomY - topY) / (rows.length + 1);
+                rows.forEach((row, idx) => {
+                    let targetY = topY + gap * (idx + 1);
+                    for(let i=0; i<idx; i++) {
+                        let d = 0;
+                        rows[i].forEach(r => d = Math.max(d, ((r.rackDepth||1000)*2 + (r.holderSize||200))*currentScale));
+                        targetY += d;
+                    }
+                    row.forEach(r => {
+                        r.y = targetY;
+                        r.x = wCenter - r.totalLengthPx/2;
+                    });
+                });
+            }
+        } else {
+            doubleRacks.sort((a, b) => a.x - b.x);
+            let cols = [];
+            let currentCol = [doubleRacks[0]];
+            for(let i = 1; i < doubleRacks.length; i++) {
+                if (Math.abs(doubleRacks[i].x - currentCol[0].x) < 200 * currentScale) {
+                    currentCol.push(doubleRacks[i]);
+                } else {
+                    cols.push(currentCol);
+                    currentCol = [doubleRacks[i]];
+                }
+            }
+            cols.push(currentCol);
+
+            let maxDepthRight = 0;
+            cols[cols.length-1].forEach(r => {
+                const depth = ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale;
+                if(depth > maxDepthRight) maxDepthRight = depth;
+            });
+            rightX -= maxDepthRight;
+            const wCenterY = (pMinY + pMaxY)/2;
+
+            if (cols.length === 1) {
+                cols[0].forEach(r => {
+                    r.x = (leftX + rightX) / 2;
+                    r.y = wCenterY - r.totalLengthPx/2;
+                });
+            } else {
+                const gap = (rightX - leftX) / (cols.length + 1);
+                cols.forEach((col, idx) => {
+                    let targetX = leftX + gap * (idx + 1);
+                    for(let i=0; i<idx; i++) {
+                        let d = 0;
+                        cols[i].forEach(r => d = Math.max(d, ((r.rackDepth||1000)*2 + (r.holderSize||200))*currentScale));
+                        targetX += d;
+                    }
+                    col.forEach(r => {
+                        r.x = targetX;
+                        r.y = wCenterY - r.totalLengthPx/2;
+                    });
+                });
+            }
+        }
+    }
+    
+    draw();
+};
+
+
+window.getGridSnapPx = function() {
+    if (currentScale <= 0) return 1;
+    const snapMm = cameraZoom >= 1.5 ? 100 : 500;
+    return snapMm * currentScale;
+};
+
+canvas.addEventListener('mousemove', e => {
+    window.lastMouseX = e.offsetX;
+    window.lastMouseY = e.offsetY;
 });
