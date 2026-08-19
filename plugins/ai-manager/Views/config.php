@@ -85,6 +85,15 @@
                 </div>
             </div>
 
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label class="form-label d-flex align-items-center">
+                        <i class="fa-brands fa-meta me-2 text-primary"></i> Meta AI API Key
+                    </label>
+                    <input type="password" name="meta_key" class="form-control" value="<?= $config['meta_key'] ?? '' ?>" placeholder="meta_...">
+                    <div class="form-text">Meta Llama API 등</div>
+                </div>
+            </div>
             
         </div>
 

@@ -118,18 +118,18 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
   
 
   <!-- ============ MAIN QUOTE TABLE ============ -->
-  <table class="quote-table">
+  <table class="quote-table" style="table-layout: fixed;">
     <colgroup>
-      <col class="no-col">
-      <col class="name-col">
-      <col class="spec-col">
-      <col class="qty-col">
-      <col class="unit-col">
-      <col class="price-col">
-      <col class="amount-col">
-      <col class="remark-col">
+      <col style="width: 50px;">
+      <col style="width: 120px;">
+      <col style="width: 180px;">
+      <col style="width: 60px;">
+      <col style="width: 50px;">
+      <col style="width: 120px;">
+      <col style="width: 120px;">
+      <col style="width: 150px;">
     </colgroup>
-    <tr>
+    <tr style="background-color: #FFFFCC;">
       <th>NO.</th>
       <th>품 명</th>
       <th>규 격</th>
@@ -140,39 +140,80 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <th>비 고</th>
     </tr>
 
+    <tr><td colspan="8" class="section-title-red">〈 <?= htmlspecialchars($quote['rack_type'] ?? '일반 파렛트랙') ?> 〉</td></tr>
 
-    <tr>
-      <td class="center">1</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">1</td>
+<?php 
+      if (isset($modules) && is_array($modules)) {
+          $index = 1;
+          foreach ($modules as $modIndex => $mod) {
+?>
+    <!-- 모듈 요약 행 (클릭 시 토글) -->
+    <tr style="cursor: pointer; background-color: #f8fafc;" data-bs-toggle="collapse" data-bs-target="#collapseBom<?= $modIndex ?>" aria-expanded="false">
+      <td class="center fw-bold"><?= $index++ ?></td>
+      <td class="center fw-bold text-primary"><?= htmlspecialchars($mod['name']) ?></td>
+      <td class="center"><?= htmlspecialchars($mod['spec']) ?></td>
+      <td class="center fw-bold text-danger"><?= number_format($mod['qty']) ?></td>
       <td class="center">대</td>
-      <td class="right">200,157</td>
-      <td class="right">200,157</td>
-      <td class="center">1s2단 독립</td>
+      <td class="right fw-bold"><?= number_format($mod['unit_price']) ?></td>
+      <td class="right fw-bold"><?= number_format($mod['total_price']) ?></td>
+      <td class="center"><?= htmlspecialchars($mod['remark']) ?> <i class="fa-solid fa-chevron-down ms-1 text-muted" style="font-size: 0.8rem;"></i></td>
     </tr>
-    <tr>
-      <td class="center">2</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">5</td>
-      <td class="center">대</td>
-      <td class="right">144,741</td>
-      <td class="right">723,705</td>
-      <td class="center">1s2단 연결</td>
-    </tr>
-
-    <tr><td colspan="8" class="section-title-red">〈파렛트당 1000kg, 로드빔 125바 24plt 적재〉</td></tr>
     
-    <tr class="sum-row">
-      <td colspan="2" class="center">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
-      <td class="center">6</td>
-      <td colspan="2" class="center">대</td>
-      <td colspan="2" class="right">1,485,000</td>
-      <td class="center">원</td>
+    <!-- 모듈 상세 BOM (토글 영역) -->
+    <tr>
+      <td colspan="8" class="p-0 border-0">
+        <div class="collapse" id="collapseBom<?= $modIndex ?>">
+          <div class="p-3" style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+            <div class="small fw-bold mb-2 text-secondary"><i class="fa-solid fa-cube me-1"></i> [<?= htmlspecialchars($mod['remark']) ?>] 1대당 구성 부품 (단가에 이윤/네고 선반영됨)</div>
+            <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem; background-color: white;">
+              <thead>
+                <tr>
+                  <th style="background-color: #FFFFCC !important;">부품명</th>
+                  <th style="background-color: #FFFFCC !important;">규격</th>
+                  <th class="text-center" style="background-color: #FFFFCC !important;">수량</th>
+                  <th class="text-end" style="background-color: #FFFFCC !important;">단가</th>
+                  <th class="text-end" style="background-color: #FFFFCC !important;">합계금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach($mod['bom'] as $b): ?>
+                <tr>
+                  <td><?= htmlspecialchars($b['name']) ?></td>
+                  <td><?= htmlspecialchars($b['spec']) ?></td>
+                  <td class="text-center"><?= is_numeric($b['qty']) ? number_format($b['qty']) : $b['qty'] ?></td>
+                  <td class="text-end"><?= is_numeric($b['unit_amount']) ? number_format($b['unit_amount']) : $b['unit_amount'] ?></td>
+                  <td class="text-end"><?= is_numeric($b['total']) ? number_format($b['total']) : $b['total'] ?></td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
     </tr>
-
-   
+<?php
+          }
+      }
+      
+      $totalRackQty = 0;
+      if (isset($modules) && is_array($modules)) {
+          foreach ($modules as $mod) {
+              if (trim($mod['name']) === '파렛트랙') {
+                  $totalRackQty += (int)$mod['qty'];
+              }
+          }
+      }
+?>
+    
+    <tr class="sum-row" style="background-color: #FFFFCC;">
+      <td colspan="2" class="center fw-bold">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
+      <td class="center"></td>
+      <td class="center fw-bold text-danger"><?= $totalRackQty > 0 ? number_format($totalRackQty) : '' ?></td>
+      <td class="center fw-bold"><?= $totalRackQty > 0 ? '대' : '' ?></td>
+      <td class="center"></td>
+      <td class="right fw-bold" style="color: #ef4444; font-size: 1.1rem;"><?= number_format($overallTotal ?? 0) ?></td>
+      <td class="center fw-bold">원 (네고 10% 포함)</td>
+    </tr>
   </table>
 
  

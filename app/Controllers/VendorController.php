@@ -59,10 +59,16 @@ class VendorController extends BaseController {
                     
                     try {
                         // AI-driven Excel Parsing
-                        $geminiService = new \App\Services\GeminiService();
-                        $excelText = $geminiService->extractTextFromExcel($fullExcelPath);
-                        $extractedPricing = $geminiService->extractPricingFromJson($excelText);
+                        $aiService = \App\Services\AI\AIExtractorFactory::create();
+                        $excelText = $aiService->extractTextFromExcel($fullExcelPath);
+                        $extractedPricing = $aiService->extractPricingFromJson($excelText);
                         
+                        // 검증 로직 추가 (AI가 일부 값을 찾지 못했거나 실패한 경우 방어)
+                        if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
+                            $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
+                            throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
+                        }
+
                         $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
 
                         // Save to vendor_pricing_rules (Versioning)
@@ -218,124 +224,199 @@ class VendorController extends BaseController {
         $beamL = ($entryW * 2) + 385;
         $depth = $nonEntryW - 100;
 
-        // 수량 계산
-        $totalFrames = ($indep * 2) + $conn + $small; // 프레임 단위
-        $totalColumns = $totalFrames * 2;
-        $totalBeams = ($indep + $conn) * $beamLevels * 2;
-        $totalSmallBeams = $small * $beamLevels * 2;
-        $tieCountPerFrame = ($rackH >= 3000) ? 4 : 2;
-        
-        $bom = [];
-        $totalWeight = 0;
-        
-        if ($totalColumns > 0) {
-            $col = \App\Services\SehwaPriceCalculator::calcColumn([
-                'type' => '85바', 'height' => $rackH, 'thickness' => 1.8, 'qty' => $totalColumns
-            ]);
-            $bom[] = $col;
-            $totalWeight += $col['weight'] * $totalColumns;
+        // 모듈별 단위 BOM 계산 클로저
+        $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
+            $bom = [];
+            $totalWeight = 0;
+            $columns = $frames * 2;
+            $beams = $beamLevels * 2;
+            $tieBeams = ($beams > 0) ? ($beams / 2) * $tiePerLevel : 0;
 
-            $base = \App\Services\SehwaPriceCalculator::calcColumnBase([
-                'w' => 173, 'd' => 101, 'thickness' => 4, 'qty' => $totalColumns
-            ]);
-            $bom[] = $base;
-            $totalWeight += $base['weight'] * $totalColumns;
+            if ($columns > 0) {
+                $col = \App\Services\SehwaPriceCalculator::calcColumn(['type' => '85바', 'height' => $rackH, 'thickness' => 1.8, 'qty' => $columns]);
+                $bom[] = $col;
+                $totalWeight += $col['weight'] * $columns;
 
-            // 타이빔(서포트바) 수량 계산: 프레임 기준이 아니라 로드빔 한 쌍당 W길이에 따라 결정 (일반적으로 2585면 단당 4개)
-            $tiePerLevel = ($rackW ?? 2585) >= 2785 ? 4 : (($rackW ?? 2585) >= 2585 ? 4 : 2); // 기본 2S면 단당 4개
-            // 타이빔은 로드빔 쌍(Level)의 수에 비례. totalBeams / 2 가 로드빔 쌍의 수.
-            $totalTieBeams = ($totalBeams > 0) ? ($totalBeams / 2) * $tiePerLevel : 0;
-            // 작은 로드빔도 고려
-            $totalSmallTieBeams = ($totalSmallBeams > 0) ? ($totalSmallBeams / 2) * 2 : 0; // 1385는 단당 2개
+                $base = \App\Services\SehwaPriceCalculator::calcColumnBase(['w' => 173, 'd' => 101, 'thickness' => 4, 'qty' => $columns]);
+                $bom[] = $base;
+                $totalWeight += $base['weight'] * $columns;
+
+                $tie = \App\Services\SehwaPriceCalculator::calcTieBeam(['size' => '75*30', 'length' => $depth + 42, 'thickness' => 1.5, 'material' => '아연도', 'depth' => $depth, 'qty' => $tieBeams]);
+                $bom[] = $tie;
+                $totalWeight += $tie['weight'] * $tieBeams;
+
+                $x6 = floor(($rackH - 400) / 750);
+                $straightCount = $frames * 2;
+                $diagonalCount = $frames * $x6;
+
+                $strB = \App\Services\SehwaPriceCalculator::calcBracing(['type' => '직선', 'length' => $depth - 75, 'thickness' => 1.5, 'qty' => $straightCount]);
+                $bom[] = $strB;
+                $totalWeight += $strB['weight'] * $straightCount;
+
+                $diaLength = sqrt(pow($depth - 125, 2) + pow(750, 2)) + 50;
+                $diaB = \App\Services\SehwaPriceCalculator::calcBracing(['type' => '경사', 'length' => $diaLength, 'thickness' => 1.5, 'qty' => $diagonalCount]);
+                $bom[] = $diaB;
+                $totalWeight += $diaB['weight'] * $diagonalCount;
+
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-001', $columns);
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-002', $columns * 2);
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', $columns * 2);
+                
+                $bolt65Qty = floor(($columns / 2) * ($x6 + 3));
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-005', $bolt65Qty);
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-006', $columns);
+            }
+
+            if ($beams > 0) {
+                $beam = \App\Services\SehwaPriceCalculator::calcLoadBeam(['length' => $beamL, 'bar_type' => $barType, 'thickness' => $beamThick, 'qty' => $beams]);
+                $bom[] = $beam;
+                $totalWeight += $beam['weight'] * $beams;
+
+                $bkt = \App\Services\SehwaPriceCalculator::calcLoadBeamBracket(['w' => 101, 'd' => 200, 'thickness' => 4.0, 'qty' => $beams * 2]);
+                $bom[] = $bkt;
+                $totalWeight += $bkt['weight'] * ($beams * 2);
+
+                $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-003', $beams * 2);
+            }
+
+            $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($totalWeight);
+            if ($lossTotal > 0) {
+                $bom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
+            }
+
+            $sumRaw = 0;
+            foreach ($bom as $item) {
+                $sumRaw += $item['total'];
+            }
+            $finalPrice = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
+
+            return [
+                'bom' => $bom,
+                'weight' => $totalWeight,
+                'raw_price' => $sumRaw,
+                'final_price' => $finalPrice
+            ];
+        };
+
+        $tiePerLevel = intval($quote['rack_tie_per_level'] ?? 4);
+        $modules = [];
+        $overallTotal = 0;
+
+        if ($indep > 0) {
+            $unit = $buildUnitBom(2, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick);
+            $sName = ($beamL >= 2585 ? "2S" : "1S") . " {$levels}단 독립";
+            $modules[] = [
+                'type' => '독립',
+                'name' => '파렛트랙',
+                'spec' => "{$beamL}*{$depth}*{$rackH}",
+                'remark' => $sName,
+                'qty' => $indep,
+                'unit_price' => $unit['final_price'],
+                'total_price' => $unit['final_price'] * $indep,
+                'bom' => $unit['bom']
+            ];
+            $overallTotal += $unit['final_price'] * $indep;
+        }
+
+        if ($conn > 0) {
+            $unit = $buildUnitBom(1, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick);
+            $sName = ($beamL >= 2585 ? "2S" : "1S") . " {$levels}단 연결";
+            $modules[] = [
+                'type' => '연결',
+                'name' => '파렛트랙',
+                'spec' => "{$beamL}*{$depth}*{$rackH}",
+                'remark' => $sName,
+                'qty' => $conn,
+                'unit_price' => $unit['final_price'],
+                'total_price' => $unit['final_price'] * $conn,
+                'bom' => $unit['bom']
+            ];
+            $overallTotal += $unit['final_price'] * $conn;
+        }
+
+        if ($small > 0) {
+            $unit = $buildUnitBom(1, $beamLevels, 2, $rackH, $depth, 1385, $barType, $beamThick);
+            $sNameSmall = ($beamL >= 2585 ? "2S" : "1S") . " {$levels}단 작은연결";
+            $modules[] = [
+                'type' => '작은연결',
+                'name' => '파렛트랙',
+                'spec' => "1385*{$depth}*{$rackH}",
+                'remark' => $sNameSmall,
+                'qty' => $small,
+                'unit_price' => $unit['final_price'],
+                'total_price' => $unit['final_price'] * $small,
+                'bom' => $unit['bom']
+            ];
+            $overallTotal += $unit['final_price'] * $small;
+        }
+
+        // 바이패스(Bypass)
+        $bypass = intval($quote['rack_bypass'] ?? 0);
+        if ($bypass > 0) {
+            $bpLevels = max(1, $levels - 1);
+            $bpBeamLevels = max(1, $beamLevels - 1);
             
-            $tie = \App\Services\SehwaPriceCalculator::calcTieBeam([
-                'size' => '75*30', 'length' => $depth + 42, 'thickness' => 1.5, 'material' => '아연도', 'depth' => $depth, 'qty' => $totalTieBeams + $totalSmallTieBeams
-            ]);
-            $bom[] = $tie;
-            $totalWeight += $tie['weight'] * ($totalTieBeams + $totalSmallTieBeams);
-
-            // 브레싱 계산
-            $straightCount = $totalFrames * 2; // 프레임당 직선 2개
-            $diagonalCount = $totalFrames * 6; // 프레임당 경사 대략 6개 (단수에 따라 다름)
-            $strB = \App\Services\SehwaPriceCalculator::calcBracing([
-                'type' => '직선', 'length' => 925, 'thickness' => 1.5, 'qty' => $straightCount
-            ]);
-            $bom[] = $strB;
-            $totalWeight += $strB['weight'] * $straightCount;
-
-            $diaB = \App\Services\SehwaPriceCalculator::calcBracing([
-                'type' => '경사', 'length' => 1202, 'thickness' => 1.5, 'qty' => $diagonalCount
-            ]);
-            $bom[] = $diaB;
-            $totalWeight += $diaB['weight'] * $diagonalCount;
-
-            // 부자재
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-001', $totalColumns); // 부싱
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-002', $totalColumns * 2); // 라이너 2ea/col
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', $totalColumns * 2); // 볼트너트 25L
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-005', $totalColumns * 4.5); // 볼트너트 65L (대략)
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-006', $totalColumns); // 앙카 (기둥당 1개)
-        }
-        if ($totalBeams > 0) {
-            $beam = \App\Services\SehwaPriceCalculator::calcLoadBeam([
-                'length' => $beamL, 'bar_type' => $barType, 'thickness' => $beamThick, 'qty' => $totalBeams
-            ]);
-            $bom[] = $beam;
-            $totalWeight += $beam['weight'] * $totalBeams;
-
-            $bkt = \App\Services\SehwaPriceCalculator::calcLoadBeamBracket([
-                'w' => 101, 'd' => 200, 'thickness' => 4.0, 'qty' => $totalBeams * 2
-            ]);
-            $bom[] = $bkt;
-            $totalWeight += $bkt['weight'] * ($totalBeams * 2);
-
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-003', $totalBeams * 2); // 안전핀
-        }
-        if ($totalSmallBeams > 0) {
-            $sBeam = \App\Services\SehwaPriceCalculator::calcLoadBeam([
-                'length' => 1385, 'bar_type' => $barType, 'thickness' => $beamThick, 'qty' => $totalSmallBeams
-            ]);
-            $bom[] = $sBeam;
-            $totalWeight += $sBeam['weight'] * $totalSmallBeams;
-
-            $sBkt = \App\Services\SehwaPriceCalculator::calcLoadBeamBracket([
-                'w' => 101, 'd' => 200, 'thickness' => 4.0, 'qty' => $totalSmallBeams * 2
-            ]);
-            $bom[] = $sBkt;
-            $totalWeight += $sBkt['weight'] * ($totalSmallBeams * 2);
-
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-003', $totalSmallBeams * 2); // 안전핀
+            // 바이패스: 프레임 1개, 로드빔 쌍은 일반보다 1단 적음
+            $unit = $buildUnitBom(1, $bpBeamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick);
+            
+            $bpType = $quote['rack_bypass_type'] ?? "1S {$bpLevels}단 연결";
+            
+            $modules[] = [
+                'type' => '바이패스',
+                'name' => '파렛트랙',
+                'spec' => "{$beamL}*{$depth}*{$rackH}",
+                'remark' => $bpType . " (바이패스)",
+                'qty' => $bypass,
+                'unit_price' => $unit['final_price'],
+                'total_price' => $unit['final_price'] * $bypass,
+                'bom' => $unit['bom']
+            ];
+            $overallTotal += $unit['final_price'] * $bypass;
         }
 
-        // 복렬 홀더(Holder) 추가
+        // 복렬 홀더(Holder)
         $holders = intval($quote['rack_holders'] ?? 0);
         if ($holders > 0) {
-            $h = \App\Services\SehwaPriceCalculator::calcHolder([
-                'length' => 200, 'thickness' => 2.0, 'qty' => $holders
-            ]);
-            $bom[] = $h;
-            $totalWeight += $h['weight'] * $holders;
+            $hBom = [];
+            $hWeight = 0;
+            
+            $h = \App\Services\SehwaPriceCalculator::calcHolder(['length' => 200, 'thickness' => 2.0, 'qty' => 1]);
+            $hBom[] = $h;
+            $hWeight += $h['weight'];
 
-            // 홀더용 볼트너트 (홀더 1개당 4개)
-            $bom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', $holders * 4);
-        }
+            $hBom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', 4);
+            
+            $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($hWeight);
+            if ($lossTotal > 0) {
+                $hBom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
+            }
+            
+            $sumRaw = 0;
+            foreach ($hBom as $item) { $sumRaw += $item['total']; }
+            $hFinal = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
 
-        // Loss (동적 엔진 연동: DB의 loss_rate 및 base_steel_price 적용)
-        $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($totalWeight);
-        if ($lossTotal > 0) {
-            $bom[] = [
-                'name' => 'Loss',
-                'spec' => '-',
-                'qty' => '',
-                'unit_amount' => '',
-                'total' => $lossTotal
+            $modules[] = [
+                'type' => '홀더',
+                'name' => '복렬 홀더',
+                'spec' => '200L',
+                'remark' => '복식/상하체결',
+                'qty' => $holders,
+                'unit_price' => $hFinal,
+                'total_price' => $hFinal * $holders,
+                'bom' => $hBom
             ];
+            $overallTotal += $hFinal * $holders;
         }
 
-        $this->view('vendor/quote_price', ['quote' => $quote, 'settings' => $settings, 'bom' => $bom]);
+        $this->view('vendor/quote_price', [
+            'quote' => $quote, 
+            'settings' => $settings, 
+            'modules' => $modules,
+            'overallTotal' => $overallTotal
+        ]);
     }
 
-    public function quoteDocument($vars) {
+        public function quoteDocument($vars) {
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;

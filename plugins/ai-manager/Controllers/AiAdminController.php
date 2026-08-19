@@ -26,10 +26,11 @@ class AiAdminController
         $claude_key = $_POST['claude_key'] ?? '';
         $gemini_key = $_POST['gemini_key'] ?? '';
         $groq_key   = $_POST['groq_key'] ?? '';
+        $meta_key   = $_POST['meta_key'] ?? '';
         $default_model = $_POST['default_model'] ?? 'gpt-4o';
 
-        $stmt = $db->prepare("UPDATE `ai_config` SET openai_key = ?, claude_key = ?, gemini_key = ?, groq_key = ?, default_model = ? WHERE id = 1");
-        $stmt->execute([$openai_key, $claude_key, $gemini_key, $groq_key, $default_model]);
+        $stmt = $db->prepare("UPDATE `ai_config` SET openai_key = ?, claude_key = ?, gemini_key = ?, groq_key = ?, meta_key = ?, default_model = ? WHERE id = 1");
+        $stmt->execute([$openai_key, $claude_key, $gemini_key, $groq_key, $meta_key, $default_model]);
 
         // Trigger hooks for other plugins to save their settings
         do_action('ai_config_update', $_POST);

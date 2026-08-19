@@ -7,7 +7,7 @@ use PDO;
 /**
  * 벤더 단가 계산 로직 엔진
  * - AI가 추출하여 DB에 저장한 엑셀 단가(vendor_pricing_rules)를 동적으로 로드하여 계산.
- * - 엑셀과 동일한 결과 도출을 위해 중량은 소수점 3자리, 단가는 정수로 반올림.
+ * - 엑셀과 100% 동일한 결과 도출을 위해 모든 중간 계산은 15자리 정밀도를 유지하며, 최종 금액 산출 시에만 10원 단위 반올림 적용.
  */
 class SehwaPriceCalculator
 {
@@ -84,12 +84,12 @@ class SehwaPriceCalculator
         $qty       = $params['qty'] ?? 1;
 
         $factor = ($type === '85바') ? 243 : 265;
-        $weight = round($factor * $height * $thickness * 7.85 / 1000000, 3); // kg (소수점 3자리 반올림)
+        $weight = $factor * $height * $thickness * 7.85 / 1000000; // kg (전체 정밀도 유지)
 
         $steelPrice = self::getSteelUnitPrice($thickness);
 
         $paintT = max($thickness, 1.8);
-        $paintWeight = round($factor * $height * $paintT * 7.85 / 1000000, 3);
+        $paintWeight = $factor * $height * $paintT * 7.85 / 1000000;
         $paintPerKg = self::$config['process_fees']['column_paint_per_kg'] ?? 150;
         $paintCost = $paintPerKg * $paintWeight;
 
@@ -104,7 +104,7 @@ class SehwaPriceCalculator
         }
         $processCost = ($height / 1000) * $processPerM;
 
-        $unitAmount = round(($weight * $steelPrice) + $paintCost + $processCost, 0); // 원단위 반올림
+        $unitAmount = ($weight * $steelPrice) + $paintCost + $processCost; // 정밀도 유지
         $total = $unitAmount * $qty;
 
         return [
@@ -113,8 +113,8 @@ class SehwaPriceCalculator
             'weight'      => $weight,
             'qty'         => $qty,
             'steel_price' => $steelPrice,
-            'paint'       => round($paintCost, 0),
-            'process'     => round($processCost, 0),
+            'paint'       => $paintCost,
+            'process'     => $processCost,
             'unit_amount' => $unitAmount,
             'total'       => $total,
         ];
@@ -132,12 +132,12 @@ class SehwaPriceCalculator
         $t = $params['thickness'] ?? 4;
         $qty = $params['qty'] ?? 1;
 
-        $weight = round($w * $d * $t * 7.85 / 1000000, 3);
+        $weight = $w * $d * $t * 7.85 / 1000000;
         
         $baseSteelKg = self::$config['process_fees']['column_base_steel_per_kg'] ?? 1100;
         $baseEa = self::$config['process_fees']['column_base_ea'] ?? 300;
         
-        $unitAmount = round(($weight * $baseSteelKg) + $baseEa, 0);
+        $unitAmount = ($weight * $baseSteelKg) + $baseEa;
 
         return [
             'name'        => "기둥 베이스(아연도)",
@@ -161,12 +161,12 @@ class SehwaPriceCalculator
         $t = $params['thickness'] ?? 4.0;
         $qty = $params['qty'] ?? 1;
 
-        $weight = round($w * $d * $t * 7.85 / 1000000, 3);
+        $weight = $w * $d * $t * 7.85 / 1000000;
         
         $bktSteelKg = self::$config['process_fees']['load_beam_bkt_steel_per_kg'] ?? 1020;
         $bktEa = self::$config['process_fees']['load_beam_bkt_ea'] ?? 350;
         
-        $unitAmount = round(($weight * $bktSteelKg) + $bktEa, 0);   
+        $unitAmount = ($weight * $bktSteelKg) + $bktEa;   
 
         return [
             'name'        => "로드빔 B.K.T",
@@ -208,21 +208,30 @@ class SehwaPriceCalculator
             }
         }
 
-        $weight = round($cutLength * $section * 2 * $thickness * 7.85 / 1000000, 3);
+        $weight = $cutLength * $section * 2 * $thickness * 7.85 / 1000000;
         $steelPrice = self::getSteelUnitPrice($thickness);
+
+        // 엑셀 핵심 로직: 가공비 계산 시 J9<=1.6 일 때는 무조건 1.6t 기준으로 무게를 잡음
+        $innerWeight = $cutLength * $section * 2 * 1.6 * 7.85 / 1000000;
+        if ($thickness > 1.6) {
+            $innerWeight = $weight;
+        }
 
         // load_beam_process_kg 가 빈값이거나 누락된 경우 기본값 160
         $processKg = self::$config['process_fees']['load_beam_process_kg'] ?? 160; 
         if (empty($processKg)) $processKg = 160;
+        
+        $innerCost = $innerWeight * $processKg;
 
+        // 엑셀 R9 로직: VLOOKUP 가격($processBase) + (D9+100)*1100/1000 (도장비)
         $processPerEa = ($cutLength < 2990) ? $processBase : ($processBase + 500);
-        $extraPerMm = self::$config['process_fees']['load_beam_extra_per_mm'] ?? 1.1;
-        $extra = ($cutLength + 100) * $extraPerMm; 
+        $paintCostPerM = self::$config['process_fees']['load_beam_paint_per_m'] ?? 1100;
+        $paintCost = ($cutLength + 100) * ($paintCostPerM / 1000);
 
-        $unitAmount = round(($weight * $steelPrice)
-                    + ($weight * $processKg)
+        $unitAmount = ($weight * $steelPrice)
+                    + $innerCost
                     + $processPerEa
-                    + $extra, 0);
+                    + $paintCost;
 
         return [
             'name'        => "일반 로드빔 {$barType}바",
@@ -250,7 +259,7 @@ class SehwaPriceCalculator
         $qty        = $params['qty'] ?? 1;
 
         $factor = ($size === '75*30') ? 135 : 173;
-        $weight = round($factor * $length * $thickness * 7.85 / 1000000, 3);
+        $weight = $factor * $length * $thickness * 7.85 / 1000000;
 
         $isGalv = ($material === '아연도');
         $steelPrice = self::getSteelUnitPrice($thickness, $isGalv);
@@ -264,10 +273,10 @@ class SehwaPriceCalculator
             $extra = ($depth / 1000) * $hrPaint;
         }
 
-        $unitAmount = round(($weight * $steelPrice)
+        $unitAmount = ($weight * $steelPrice)
                     + ($weight * $processKg)
                     + $processEa
-                    + $extra, 0);
+                    + $extra;
 
         return [
             'name'        => "타이빔({$material})",
@@ -293,7 +302,7 @@ class SehwaPriceCalculator
         $material  = $params['material'] ?? '아연도'; 
         $qty       = $params['qty'] ?? 1;
 
-        $weight = round(93 * $length * $thickness * 7.85 / 1000000, 3);
+        $weight = 93 * $length * $thickness * 7.85 / 1000000;
 
         $isGalv = ($material === '아연도');
         $steelPrice = self::getSteelUnitPrice($thickness, $isGalv);
@@ -305,7 +314,7 @@ class SehwaPriceCalculator
             $extra = ($length / 1000) * $hrPaint; 
         }
 
-        $unitAmount = round(($weight * $steelPrice) + ($weight * $processKg) + $extra, 0);
+        $unitAmount = ($weight * $steelPrice) + ($weight * $processKg) + $extra;
 
         return [
             'name'        => "{$type} 브레싱({$material})",
@@ -329,12 +338,12 @@ class SehwaPriceCalculator
         $qty       = $params['qty'] ?? 1;
 
         // 중량: 118 * (H+70) * t * 7.85 / 10^6
-        $weight = round(118 * ($h + 70) * $thickness * 7.85 / 1000000, 3);
+        $weight = 118 * ($h + 70) * $thickness * 7.85 / 1000000;
         $steelPrice = self::getSteelUnitPrice($thickness, true);
 
         $processEa = self::$config['holder_fees']['c_holder_ea'] ?? 1200;
 
-        $unitAmount = round(($weight * $steelPrice) + $processEa, 0);
+        $unitAmount = ($weight * $steelPrice) + $processEa;
 
         return [
             'name'        => "홀더 (아연도 ㄷ절곡)",
@@ -378,7 +387,7 @@ class SehwaPriceCalculator
             $p = $parts[$code] ?? ['name' => '알수없음', 'spec' => '', 'price' => 0];
         }
         
-        $unitAmount = round($p['price'], 0);
+        $unitAmount = $p['price'];
 
         return [
             'name'        => $p['name'],
@@ -396,7 +405,7 @@ class SehwaPriceCalculator
     {
         self::loadConfig();
         $lossRate = self::$config['loss_rate'] ?? 0.03;
-        return round($totalWeightKg * $lossRate * self::getBaseSteelPrice(), 0);
+        return $totalWeightKg * $lossRate * self::getBaseSteelPrice();
     }
 
     // --------------------------------------------------
