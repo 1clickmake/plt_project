@@ -25,6 +25,7 @@ class VendorController extends BaseController {
             $headquartersAddress = $_POST['headquarters_address'] ?? '';
             $faxNumber = $_POST['fax_number'] ?? '';
             $managerName = $_POST['manager_name'] ?? '';
+            $bankAccount = $_POST['bank_account'] ?? '';
             $managerEmail = $_POST['manager_email'] ?? '';
             $factoryAddress = $_POST['factory_address'] ?? '';
             $factoryContact = $_POST['factory_contact'] ?? '';
@@ -90,7 +91,7 @@ class VendorController extends BaseController {
 
             try {
                 if ($settings) {
-                    $updateStmt = $db->prepare("UPDATE vendor_settings SET company_name = :cn, url_slug = :us, contact_number = :cnm, company_logo = :logo, price_excel_path = :pep, prices_data = :pd, headquarters_address = :hq, fax_number = :fax, manager_name = :mgr, manager_email = :email, factory_address = :faddr, factory_contact = :fcont WHERE user_id = :uid");
+                    $updateStmt = $db->prepare("UPDATE vendor_settings SET company_name = :cn, url_slug = :us, contact_number = :cnm, company_logo = :logo, price_excel_path = :pep, prices_data = :pd, headquarters_address = :hq, fax_number = :fax, manager_name = :mgr, manager_email = :email, factory_address = :faddr, factory_contact = :fcont, bank_account = :bank WHERE user_id = :uid");
                     $updateStmt->execute([
                         'cn' => $companyName,
                         'us' => $urlSlug,
@@ -102,12 +103,13 @@ class VendorController extends BaseController {
                         'fax' => $faxNumber,
                         'mgr' => $managerName,
                         'email' => $managerEmail,
+                        'bank' => $bankAccount,
                         'faddr' => $factoryAddress,
                         'fcont' => $factoryContact,
                         'uid' => $userId
                     ]);
                 } else {
-                    $insertStmt = $db->prepare("INSERT INTO vendor_settings (user_id, company_name, url_slug, contact_number, company_logo, price_excel_path, prices_data, headquarters_address, fax_number, manager_name, manager_email, factory_address, factory_contact) VALUES (:uid, :cn, :us, :cnm, :logo, :pep, :pd, :hq, :fax, :mgr, :email, :faddr, :fcont)");
+                    $insertStmt = $db->prepare("INSERT INTO vendor_settings (user_id, company_name, url_slug, contact_number, company_logo, price_excel_path, prices_data, headquarters_address, fax_number, manager_name, manager_email, factory_address, factory_contact, bank_account) VALUES (:uid, :cn, :us, :cnm, :logo, :pep, :pd, :hq, :fax, :mgr, :email, :faddr, :fcont, :bank)");
                     $insertStmt->execute([
                         'uid' => $userId,
                         'cn' => $companyName,
@@ -120,6 +122,7 @@ class VendorController extends BaseController {
                         'fax' => $faxNumber,
                         'mgr' => $managerName,
                         'email' => $managerEmail,
+                        'bank' => $bankAccount,
                         'faddr' => $factoryAddress,
                         'fcont' => $factoryContact
                     ]);
@@ -195,6 +198,19 @@ class VendorController extends BaseController {
         $stmt->execute(['uid' => $userId]);
         $settings = $stmt->fetch() ?: [];
 
+        $result = $this->buildQuoteModules($quote);
+        $modules = $result['modules'];
+        $overallTotal = $result['overallTotal'];
+
+                $this->view('vendor/quote_price', [
+            'quote' => $quote, 
+            'settings' => $settings, 
+            'modules' => $modules,
+            'overallTotal' => $overallTotal
+        ]);
+    }
+
+        private function buildQuoteModules($quote) {
         // BOM 계산 로직 (동적 산출)
         require_once __DIR__ . '/../Services/SehwaPriceCalculator.php';
         
@@ -312,6 +328,7 @@ class VendorController extends BaseController {
                 'remark' => $sName,
                 'qty' => $indep,
                 'unit_price' => $unit['final_price'],
+                'raw_price' => $unit['raw_price'],
                 'total_price' => $unit['final_price'] * $indep,
                 'bom' => $unit['bom']
             ];
@@ -328,6 +345,7 @@ class VendorController extends BaseController {
                 'remark' => $sName,
                 'qty' => $conn,
                 'unit_price' => $unit['final_price'],
+                'raw_price' => $unit['raw_price'],
                 'total_price' => $unit['final_price'] * $conn,
                 'bom' => $unit['bom']
             ];
@@ -344,6 +362,7 @@ class VendorController extends BaseController {
                 'remark' => $sNameSmall,
                 'qty' => $small,
                 'unit_price' => $unit['final_price'],
+                'raw_price' => $unit['raw_price'],
                 'total_price' => $unit['final_price'] * $small,
                 'bom' => $unit['bom']
             ];
@@ -368,6 +387,7 @@ class VendorController extends BaseController {
                 'remark' => $bpType . " (바이패스)",
                 'qty' => $bypass,
                 'unit_price' => $unit['final_price'],
+                'raw_price' => $unit['raw_price'],
                 'total_price' => $unit['final_price'] * $bypass,
                 'bom' => $unit['bom']
             ];
@@ -402,21 +422,20 @@ class VendorController extends BaseController {
                 'remark' => '복식/상하체결',
                 'qty' => $holders,
                 'unit_price' => $hFinal,
+                'raw_price' => $sumRaw,
                 'total_price' => $hFinal * $holders,
                 'bom' => $hBom
             ];
             $overallTotal += $hFinal * $holders;
         }
 
-        $this->view('vendor/quote_price', [
-            'quote' => $quote, 
-            'settings' => $settings, 
+        return [
             'modules' => $modules,
             'overallTotal' => $overallTotal
-        ]);
+        ];
     }
 
-        public function quoteDocument($vars) {
+    public function quoteDocument($vars) {
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
@@ -439,6 +458,62 @@ class VendorController extends BaseController {
         $stmt->execute(['uid' => $userId]);
         $settings = $stmt->fetch() ?: [];
 
-        $this->view('vendor/quote_document', ['quote' => $quote, 'settings' => $settings]);
+        $result = $this->buildQuoteModules($quote);
+        $modules = $result['modules'];
+
+        $this->view('vendor/quote_document', ['quote' => $quote, 'settings' => $settings, 'modules' => $modules]);
+    }
+
+    public function sendEmail(array $vars) {
+        $id = $vars['id'];
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        
+        $to = $_POST['to'] ?? '';
+        $subject = $_POST['subject'] ?? '';
+        $body = $_POST['body'] ?? '';
+        
+        if (empty($to) || empty($subject)) {
+            echo json_encode(['success' => false, 'message' => '필수 항목이 누락되었습니다.']);
+            return;
+        }
+        
+        $attachments = [];
+        
+        // Handle PDF Quote
+        if (isset($_FILES['quote_pdf']) && $_FILES['quote_pdf']['error'] === UPLOAD_ERR_OK) {
+            $tmpPath = $_FILES['quote_pdf']['tmp_name'];
+            $name = '견적서_' . date('Ymd_His') . '.pdf';
+            $attachments[] = [$tmpPath, $name];
+        } else {
+            echo json_encode(['success' => false, 'message' => 'PDF 변환 파일이 수신되지 않았습니다.']);
+            return;
+        }
+        
+        // Handle Extra Files
+        if (isset($_FILES['extra_files'])) {
+            $files = $_FILES['extra_files'];
+            for ($i = 0; $i < count($files['name']); $i++) {
+                if ($files['error'][$i] === UPLOAD_ERR_OK) {
+                    $attachments[] = [$files['tmp_name'][$i], $files['name'][$i]];
+                }
+            }
+        }
+        
+        // Send Email using existing Mailer
+        require_once __DIR__ . '/../../lib/mailer.lib.php';
+        $result = \Mailer::send($to, $subject, $body, $attachments, false);
+        
+        if ($result['success']) {
+            echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => '발송 실패: ' . $result['message']]);
+        }
     }
 }

@@ -157,74 +157,75 @@
 }
 
 .quote-template-wrapper * { box-sizing: border-box; }
-.quote-template-wrapper .sheet {
+.sheet {
   width: 1000px;
   margin: 0 auto;
   background: #fff;
   padding: 20px;
   box-shadow: 0 0 8px rgba(0,0,0,0.25);
+  color: #111; /* Add explicit color for html2canvas */
 }
-.quote-template-wrapper table {
+.sheet table {
 width: 100%;
 border-collapse: collapse;
 table-layout: fixed;
 }
-.quote-template-wrapper td, .quote-template-wrapper th {
+.sheet td, .sheet th {
 border: 1.5px solid #333;
 padding: 6px 8px;
 font-size: 13px;
 vertical-align: middle;
 }
-.quote-template-wrapper .green-bg { background: #b7d99b; font-weight: bold; text-align: center; }
-.quote-template-wrapper .label-cell { background: #b7d99b; font-weight: bold; text-align: center; }
-.quote-template-wrapper .center { text-align: center; }
-.quote-template-wrapper .right { text-align: right; }
-.quote-template-wrapper .red { color: #d21f1f; }
-.quote-template-wrapper .blue-link { color: #1155cc; text-decoration: underline; }
+.sheet .green-bg { background: #b7d99b; font-weight: bold; text-align: center; }
+.sheet .label-cell { background: #b7d99b; font-weight: bold; text-align: center; }
+.sheet .center { text-align: center; }
+.sheet .right { text-align: right; }
+.sheet .red { color: #d21f1f; }
+.sheet .blue-link { color: #1155cc; text-decoration: underline; }
 
 /* ---- Header info block ---- */
-.quote-template-wrapper .header-table { margin-bottom: 14px; }
-.quote-template-wrapper .header-table td { font-size: 13px; }
-.quote-template-wrapper .header-table .label-cell { width: 70px; }
+.sheet .header-table { margin-bottom: 14px; }
+.sheet .header-table td { font-size: 13px; }
+.sheet .header-table .label-cell { width: 70px; }
 
 /* ---- Notice line ---- */
-.quote-template-wrapper .notice { text-align: center; font-weight: bold; margin: 10px 0 8px; font-size: 14px; }
+.sheet .notice { text-align: center; font-weight: bold; margin: 10px 0 8px; font-size: 14px; }
 
 /* ---- Main quotation table ---- */
-.quote-template-wrapper .quote-table { margin-bottom: 4px; }
-.quote-template-wrapper .quote-table th {
+.sheet .quote-table { margin-bottom: 4px; }
+.sheet .quote-table th {
 background: #b7d99b;
 font-weight: bold;
 text-align: center;
 }
-.quote-template-wrapper .section-title-yellow {
+.sheet .section-title-yellow {
 background: #f6e600;
 text-align: center;
 font-weight: bold;
 }
-.quote-template-wrapper .section-title-gray {
+.sheet .section-title-gray {
 background: #cdd6e8;
 text-align: center;
 font-weight: bold;
 }
-.quote-template-wrapper .section-title-red {
+.sheet .section-title-red {
 text-align: center;
 color: #d21f1f;
 font-weight: bold;
 }
-.quote-template-wrapper .sum-row td { background: #b7d99b; font-weight: bold; }
-.quote-template-wrapper .empty-row td { height: 22px; }
-.quote-template-wrapper .no-col { width: 34px; text-align:center; }
-.quote-template-wrapper .name-col { width: 100px; text-align:center; }
-.quote-template-wrapper .spec-col { width: 190px; text-align:center; }
-.quote-template-wrapper .qty-col { width: 45px; text-align:center; }
-.quote-template-wrapper .unit-col { width: 34px; text-align:center; }
-.quote-template-wrapper .price-col { width: 100px; text-align:right; }
-.quote-template-wrapper .amount-col { width: 100px; text-align:right; }
-.quote-template-wrapper .remark-col { width: 110px; text-align:center; }
+.sheet .sum-row td { background: #b7d99b; font-weight: bold; }
+.sheet .empty-row td { height: 22px; }
+.sheet .no-col { width: 34px; text-align:center; }
+.sheet .name-col { width: 100px; text-align:center; }
+.sheet .spec-col { width: 190px; text-align:center; }
+.sheet .qty-col { width: 45px; text-align:center; }
+.sheet .unit-col { width: 34px; text-align:center; }
+.sheet .price-col { width: 100px; text-align:right; }
+.sheet .amount-col { width: 100px; text-align:right; }
+.sheet .remark-col { width: 110px; text-align:center; }
 
 /* ---- Project info block ---- */
-.quote-template-wrapper .project-title {
+.sheet .project-title {
 background: #b7d99b;
 text-align: center;
 font-weight: bold;
@@ -233,32 +234,30 @@ padding: 6px;
 border: 1.5px solid #333;
 border-bottom: none;
 }
-.quote-template-wrapper .project-table td {
+.sheet .project-table td {
 font-size: 13px;
 }
-.quote-template-wrapper .project-table .label {
+.sheet .project-table .label {
 font-weight: bold;
 }
 
 /* ---- Info block ---- */
-.quote-template-wrapper .info-title {
+.sheet .info-title {
 background: #b7d99b;
 text-align: center;
 font-weight: bold;
 border: 1.5px solid #333;
 }
-.quote-template-wrapper .info-sub-title {
+.sheet .info-sub-title {
 background: #b7d99b;
 text-align: center;
 font-weight: bold;
 }
-.quote-template-wrapper .info-table td { vertical-align: top; }
-.quote-template-wrapper .rack-img {
+.sheet .info-table td { vertical-align: top; }
+.sheet .rack-img {
 text-align: center;
 padding: 10px;
 }
-.quote-template-wrapper .rack-img svg { display:block; margin: 0 auto; }
-.quote-template-wrapper .memo-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.9; }
 .quote-template-wrapper .caution {
 background: #b7d99b;
 text-align: center;

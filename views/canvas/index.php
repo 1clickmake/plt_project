@@ -186,9 +186,6 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
 <div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
     <div class="text-center mb-3 flex-shrink-0">
         <?php if (!empty($vendor)): ?>
-            <?php if (!empty($vendor['company_logo'])): ?>
-                <img src="<?= htmlspecialchars($vendor['company_logo']) ?>" alt="Logo" style="max-height: 50px; margin-bottom: 5px;">
-            <?php endif; ?>
             <h4 class="fw-bold text-light mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h4>
         <?php endif; ?>
         <h2 class="fw-bold" style="background: -webkit-linear-gradient(#38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
@@ -364,6 +361,30 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                         🚀 파렛트랙 배치 실행
                     </button>
                 </div>
+
+                <!-- 하단 회사 정보 -->
+                <?php if (!empty($vendor)): ?>
+                <div class="mt-4 pt-3 border-top border-secondary text-center" style="opacity: 0.8;">
+                    <?php if (!empty($vendor['company_logo'])): ?>
+                        <img src="<?= htmlspecialchars($vendor['company_logo']) ?>" alt="Logo" class="mb-2" style="max-height: 40px; border-radius: 4px;">
+                    <?php endif; ?>
+                    <h6 class="text-info fw-bold mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h6>
+                    <?php if(!empty($vendor['contact_number'])): ?>
+                        <p class="text-muted small mb-1">
+                            <i class="fa-solid fa-phone me-1"></i> <?= htmlspecialchars($vendor['contact_number']) ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php if(!empty($vendor['manager_name']) || !empty($vendor['manager_email'])): ?>
+                        <p class="text-muted small mb-0" style="font-size: 0.75rem;">
+                            <?= htmlspecialchars($vendor['manager_name'] ?? '') ?> 
+                            <?= !empty($vendor['manager_email']) ? '(' . htmlspecialchars($vendor['manager_email']) . ')' : '' ?>
+                        </p>
+                    <?php endif; ?>
+                    <div class="mt-3 text-secondary" style="font-size: 0.65rem; letter-spacing: 1px;">
+                        POWERED BY ASAMIYA SAAS
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -393,7 +414,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                 </div>
 
                 <!-- 캔버스 영역 (리모컨 패널 포함, position:relative) -->
-                <div class="canvas-container flex-grow-1 position-relative" id="canvas-wrapper">
+                <div class="canvas-container flex-grow-1 position-relative" id="canvas-wrapper" style="overflow: auto; scrollbar-width: thin; min-height: 0;">
 
 
                     <!-- 기본 가이드 텍스트 -->

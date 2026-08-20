@@ -66,7 +66,9 @@
         </div>
 
         <div class="content-body">
+          
             <div class="row g-4"><div class="col-12"><div class="quote-template-wrapper"><div class="sheet">
+              <h2 class="text-center pb-3 fw-bold">실자재 단가확인</h2>
 
   <!-- ============ HEADER INFO ============ -->
 <?php
@@ -195,6 +197,15 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
           }
       }
       
+      $indep = intval($quote['rack_indep'] ?? 0);
+      $conn = intval($quote['rack_conn'] ?? 0);
+      $bypass = intval($quote['rack_bypass'] ?? 0);
+      $small = intval($quote['rack_small_conn'] ?? 0);
+      $totalFrames = ($indep * 2) + ($bypass * 2) + $conn + $small;
+      $linerQty = $totalFrames * 2;
+      $linerUnitPrice = 500;
+      $linerTotal = $linerQty * $linerUnitPrice;
+      
       $totalRackQty = 0;
       if (isset($modules) && is_array($modules)) {
           foreach ($modules as $mod) {
@@ -205,6 +216,20 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       }
 ?>
     
+    <!-- 바닥수평라이너 행 -->
+    <?php if ($linerQty > 0): ?>
+    <tr style="background-color: #f8fafc;">
+      <td class="center fw-bold text-muted"><?= isset($index) ? $index++ : '-' ?></td>
+      <td class="center fw-bold text-secondary">바닥수평라이너</td>
+      <td class="center">130×100mm 1.2t</td>
+      <td class="center fw-bold text-secondary"><?= number_format($linerQty) ?></td>
+      <td class="center">개</td>
+      <td class="right fw-bold"><?= number_format($linerUnitPrice) ?></td>
+      <td class="right fw-bold text-secondary"><?= number_format($linerTotal) ?></td>
+      <td class="center text-muted" style="font-size: 0.85rem;">기둥 수량과 동일</td>
+    </tr>
+    <?php endif; ?>
+
     <tr class="sum-row" style="background-color: #FFFFCC;">
       <td colspan="2" class="center fw-bold">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
       <td class="center"></td>

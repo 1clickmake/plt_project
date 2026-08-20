@@ -13,6 +13,14 @@
     
     <!-- External Vendor Dashboard CSS -->
     <link href="/css/vendor_dashboard.css" rel="stylesheet">
+
+<style>
+.print-input { border: none; background: transparent; width: 100%; outline: none; }
+.print-input.text-right { text-align: right; }
+.print-input.text-center { text-align: center; }
+.print-input:focus { border-bottom: 1px dashed #999; }
+@media print { .print-input { border: none !important; } }
+</style>
 </head>
 <body>
 
@@ -70,12 +78,73 @@
 
   <!-- ============ HEADER INFO ============ -->
 <?php
+$conditionType = $quote['condition_type'] ?? 'both';
+$palletWeight = intval($quote['pallet_weight'] ?? 1000);
+if ($palletWeight == 0) $palletWeight = 1000;
+$beamThickness = intval($quote['beam_thickness'] ?? 125);
+
+$indep = intval($quote['rack_indep'] ?? 0);
+$conn = intval($quote['rack_conn'] ?? 0);
+$bypass = intval($quote['rack_bypass'] ?? 0);
+$small = intval($quote['rack_small_conn'] ?? 0);
+$levels = intval($quote['rack_levels'] ?? 2);
+
+$totalFrames = ($indep * 2) + ($bypass * 2) + $conn + $small;
+$totalColumns = $totalFrames * 2;
+$linerQty = $totalColumns;
+$linerTotal = $linerQty * 500;
+
+$w = intval($quote['pallet_w'] ?? 1100);
+$d = intval($quote['pallet_d'] ?? 1100);
+if ($w == 0) $w = 1100;
+if ($d == 0) $d = 1100;
+
+$entryW = (strpos($quote['fork_direction'] ?? '', 'W') !== false) ? $w : $d;
+$beamL = ($entryW * 2) + 385;
+$palletsPerCell = ($beamL >= 2585) ? 2 : 1;
+$totalPalletsPerLevel = (($indep + $conn + $bypass) * $palletsPerCell) + ($small * 1);
+$totalPallets = $totalPalletsPerLevel * $levels;
+
+$sumQty = 0;
+$sumPrice = 0;
+$sumRawPrice = 0;
+if (!empty($modules)) {
+    foreach ($modules as $m) {
+        if (strpos($m['name'], '파렛트랙') !== false) {
+            $sumQty += intval($m['qty']);
+        }
+        $sumPrice += intval($m['total_price']);
+        $sumRawPrice += intval($m['raw_price'] ?? 0) * intval($m['qty']);
+    }
+}
+$supplyPrice = $sumPrice; 
+$vat = floor($supplyPrice * 0.1);
+$grandTotal = $supplyPrice + $vat;
+?>
+<?php
 $days = array('일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일');
 $quoteDate = strtotime($quote['created_at'] ?? 'now');
 $quoteDateStr = date('Y년 m월 d일 ', $quoteDate) . $days[date('w', $quoteDate)];
 $addrParts = explode(' ', trim($quote['address'] ?? ''));
 $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
 ?>
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; margin-top: 10px;">
+    <!-- 좌측 로고 -->
+    <div style="width: 250px;">
+      <?php if (!empty($settings['company_logo'])): ?>
+        <img src="<?= htmlspecialchars($settings['company_logo']) ?>" alt="Logo" style="max-height: 45px;">
+      <?php endif; ?>
+    </div>
+    <!-- 가운데 타이틀 -->
+    <div style="flex-grow: 1; text-align: center;">
+      <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: 15px; color: #111;">견 적 서</h1>
+    </div>
+    <!-- 우측 문서번호 -->
+    <div style="width: 250px; text-align: right; font-size: 13px; color: #333; font-weight: bold;">
+      문서번호: <?= date('Ymd', strtotime($quote['created_at'] ?? 'now')) ?>-<?= str_pad($quote['id'] ?? 0, 4, '0', STR_PAD_LEFT) ?>
+    </div>
+  </div>
+
   <table class="header-table">
     <tr>
       <td class="label-cell">상 호</td>
@@ -140,49 +209,62 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     </tr>
 
     <!-- 신규랙 -->
+    <?php if ($conditionType === 'new' || $conditionType === 'both'): ?>
     <tr><td colspan="8" class="section-title-yellow">〈신규랙〉</td></tr>
-    <tr>
-      <td class="center">1</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">1</td>
-      <td class="center">대</td>
-      <td class="right">200,157</td>
-      <td class="right">200,157</td>
-      <td class="center">1s2단 독립</td>
-    </tr>
-    <tr>
-      <td class="center">2</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">5</td>
-      <td class="center">대</td>
-      <td class="right">144,741</td>
-      <td class="right">723,705</td>
-      <td class="center">1s2단 연결</td>
-    </tr>
-    <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-    <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <?php if(!empty($modules)): ?>
+        <?php foreach($modules as $idx => $mod): ?>
+        <tr>
+          <td class="center"><?= $idx + 1 ?></td>
+          <td class="center"><?= htmlspecialchars($mod['name']) ?></td>
+          <td class="center"><?= htmlspecialchars($mod['spec']) ?></td>
+          <td class="center"><?= number_format($mod['qty']) ?></td>
+          <td class="center">대</td>
 
-    <tr><td colspan="8" class="section-title-red">〈파렛트당 1000kg, 로드빔 125바 24plt 적재〉</td></tr>
+          <td class="right">
+              <?php if(strpos($mod['name'], '파렛트랙') !== false): ?>
+                  <span class="calc-rack-unit rack-new" data-raw="<?= intval($mod['raw_price'] ?? 0) ?>" data-qty="<?= intval($mod['qty']) ?>">
+                      <?= number_format($mod['raw_price'] ?? 0) ?>
+                  </span>
+              <?php else: ?>
+                  <input type="text" class="print-input text-right text-danger calc-other-unit other-new" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
+              <?php endif; ?>
+          </td>
+          <td class="right">
+              <?php if(strpos($mod['name'], '파렛트랙') !== false): ?>
+                  <span class="calc-rack-total rack-new-total">
+                      <?= number_format(intval($mod['raw_price'] ?? 0) * intval($mod['qty'])) ?>
+                  </span>
+              <?php else: ?>
+                  <span class="calc-other-total other-new-total">
+                      <?= number_format($mod['total_price']) ?>
+                  </span>
+              <?php endif; ?>
+          </td>
+
+          <td class="center"><?= htmlspecialchars($mod['remark']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <tr><td colspan="8" class="section-title-red">〈파렛트당 <?= $palletWeight ?>kg, 로드빔 <?= $beamThickness ?>바 <?= $totalPallets ?>plt 적재〉</td></tr>
     <tr>
       <td></td>
       <td class="center">운반비</td>
-      <td class="center red">1t 경기 양주</td>
-      <td class="center">1</td>
+      <td class="center red"><input type="text" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
+      <td class="center"><input type="number" id="transport-qty-new" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">대</td>
-      <td class="right">80,000</td>
-      <td class="right">80,000</td>
+      <td class="right"><input type="text" id="transport-unit-new" class="print-input text-right calc-bottom-input" value="0"></td>
+      <td class="right" id="transport-total-new">0</td>
       <td></td>
     </tr>
     <tr>
       <td></td>
       <td class="center">설치비</td>
-      <td></td>
-      <td class="center">1</td>
+      <td class="center"><input type="text" class="print-input text-center text-danger" value=""></td>
+      <td class="center"><input type="number" id="install-qty-new" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">식</td>
-      <td class="right">350,000</td>
-      <td class="right">350,000</td>
+      <td class="right"><input type="text" id="install-unit-new" class="print-input text-right calc-bottom-input" value="0"></td>
+      <td class="right" id="install-total-new">0</td>
       <td></td>
     </tr>
     <tr>
@@ -191,72 +273,86 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td></td>
       <td></td>
       <td></td>
-      <td class="right red">천단위결사</td>
-      <td class="right red">-3,862</td>
+      <td class="right red"><input type="text" class="print-input text-right text-danger" value="천단위절사"></td>
+      <td class="right red"><input type="text" id="truncate-amount-new" class="print-input text-right text-danger calc-bottom-input" value="0"></td>
       <td class="center red">최저가</td>
     </tr>
     <tr>
       <td colspan="2" class="center">공 급 가 액</td>
       <td colspan="3" class="center">(귀사 지게차 지원조건)</td>
-      <td colspan="2" class="right">1,350,000</td>
+      <td colspan="2" class="right" id="final-supply-price-new"><?= number_format($supplyPrice) ?></td>
       <td class="center red">(V.A.T 별도)</td>
     </tr>
     <tr>
       <td colspan="5" class="center">부 가 가 치 세</td>
-      <td colspan="2" class="right">135,000</td>
+      <td colspan="2" class="right" id="final-vat-new"><?= number_format($vat) ?></td>
       <td></td>
     </tr>
     <tr class="sum-row">
       <td colspan="2" class="center">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
-      <td class="center">6</td>
+      <td class="center"><?= number_format($sumQty) ?></td>
       <td colspan="2" class="center">대</td>
-      <td colspan="2" class="right">1,485,000</td>
-      <td class="center">원</td>
+      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">\ <span id="final-grand-total-new"><?= number_format($grandTotal) ?></span></td>
+      <td></td>
     </tr>
+    <?php endif; ?>
 
     <!-- 중고랙 -->
+    <?php if ($conditionType === 'used' || $conditionType === 'both'): ?>
     <tr><td colspan="8" class="section-title-gray">〈중고랙〉</td></tr>
-    <tr>
-      <td class="center">1</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">1</td>
-      <td class="center">대</td>
-      <td class="right">156,327</td>
-      <td class="right">156,327</td>
-      <td class="center">1s2단 독립</td>
-    </tr>
-    <tr>
-      <td class="center">2</td>
-      <td class="center">파렛트랙</td>
-      <td class="center">2585*1000*2500</td>
-      <td class="center">5</td>
-      <td class="center">대</td>
-      <td class="right">113,046</td>
-      <td class="right">565,228</td>
-      <td class="center">1s2단 연결</td>
-    </tr>
-    <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <?php if(!empty($modules)): ?>
+        <?php foreach($modules as $idx => $mod): ?>
+        <tr>
+          <td class="center"><?= $idx + 1 ?></td>
+          <td class="center">중고 <?= htmlspecialchars($mod['name']) ?></td>
+          <td class="center"><?= htmlspecialchars($mod['spec']) ?></td>
+          <td class="center"><?= number_format($mod['qty']) ?></td>
+          <td class="center">대</td>
 
-    <tr><td colspan="8" class="section-title-red">〈파렛트당 1000kg, 로드빔 125바 24plt 적재〉</td></tr>
+          <td class="right">
+              <?php if(strpos($mod['name'], '파렛트랙') !== false): ?>
+                  <span class="calc-rack-unit rack-used" data-raw="<?= intval($mod['raw_price'] ?? 0) ?>" data-qty="<?= intval($mod['qty']) ?>">
+                      <?= number_format($mod['raw_price'] ?? 0) ?>
+                  </span>
+              <?php else: ?>
+                  <input type="text" class="print-input text-right text-danger calc-other-unit other-used" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
+              <?php endif; ?>
+          </td>
+          <td class="right">
+              <?php if(strpos($mod['name'], '파렛트랙') !== false): ?>
+                  <span class="calc-rack-total rack-used-total">
+                      <?= number_format(intval($mod['raw_price'] ?? 0) * intval($mod['qty'])) ?>
+                  </span>
+              <?php else: ?>
+                  <span class="calc-other-total other-used-total">
+                      <?= number_format($mod['total_price']) ?>
+                  </span>
+              <?php endif; ?>
+          </td>
+
+          <td class="center"><?= htmlspecialchars($mod['remark']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+    <tr><td colspan="8" class="section-title-red">〈파렛트당 <?= $palletWeight ?>kg, 로드빔 <?= $beamThickness ?>바 <?= $totalPallets ?>plt 적재〉</td></tr>
     <tr>
       <td></td>
       <td class="center">운반비</td>
-      <td class="center red">경기 양주</td>
-      <td class="center">1</td>
+      <td class="center red"><input type="text" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
+      <td class="center"><input type="number" id="transport-qty-used" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">대</td>
-      <td class="right">80,000</td>
-      <td class="right">80,000</td>
+      <td class="right"><input type="text" id="transport-unit-used" class="print-input text-right calc-bottom-input" value="0"></td>
+      <td class="right" id="transport-total-used">0</td>
       <td></td>
     </tr>
     <tr>
       <td></td>
       <td class="center">설치비</td>
-      <td></td>
-      <td class="center">1</td>
+      <td class="center"><input type="text" class="print-input text-center text-danger" value=""></td>
+      <td class="center"><input type="number" id="install-qty-used" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">식</td>
-      <td class="right">350,000</td>
-      <td class="right">350,000</td>
+      <td class="right"><input type="text" id="install-unit-used" class="print-input text-right calc-bottom-input" value="0"></td>
+      <td class="right" id="install-total-used">0</td>
       <td></td>
     </tr>
     <tr>
@@ -265,28 +361,29 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td></td>
       <td></td>
       <td></td>
-      <td class="right red">천단위결사</td>
-      <td class="right red">-1,555</td>
+      <td class="right red"><input type="text" class="print-input text-right text-danger" value="천단위절사"></td>
+      <td class="right red"><input type="text" id="truncate-amount-used" class="print-input text-right text-danger calc-bottom-input" value="0"></td>
       <td class="center red">최저가</td>
     </tr>
     <tr>
       <td colspan="2" class="center">공 급 가 액</td>
       <td colspan="3" class="center">(귀사 지게차 지원조건)</td>
-      <td colspan="2" class="right">1,150,000</td>
+      <td colspan="2" class="right" id="final-supply-price-used"><?= number_format($supplyPrice) ?></td>
       <td class="center red">(V.A.T 별도)</td>
     </tr>
     <tr>
       <td colspan="5" class="center">부 가 가 치 세</td>
-      <td colspan="2" class="right">115,000</td>
+      <td colspan="2" class="right" id="final-vat-used"><?= number_format($vat) ?></td>
       <td></td>
     </tr>
     <tr class="sum-row">
       <td colspan="2" class="center">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
-      <td class="center">6</td>
+      <td class="center"><?= number_format($sumQty) ?></td>
       <td colspan="2" class="center">대</td>
-      <td colspan="2" class="right">1,265,000</td>
-      <td class="center">원</td>
+      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">\ <span id="final-grand-total-used"><?= number_format($grandTotal) ?></span></td>
+      <td></td>
     </tr>
+    <?php endif; ?>
   </table>
 
   <!-- ============ PROJECT BLOCK ============ -->
@@ -295,7 +392,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <table class="project-table">
       <tr>
         <td class="label" style="width:170px;">·납품 가능 일자 : 추후 협의</td>
-        <td>·결제계좌: <span class="red" style="font-weight:bold;">국민은행 910-5738-0591</span> &nbsp;&nbsp;<b>김홍선(성진시스템)</b></td>
+        <td>·결제계좌: <span class="red" style="font-weight:bold;"><?= htmlspecialchars($settings['bank_account'] ?? '') ?></span></td>
       </tr>
       <tr>
         <td class="label">·설치장소 : 귀사지정장소</td>
@@ -323,8 +420,25 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <tr>
         <td>
           <div class="rack-img">
+            <?php
+              $stages = max(1, $levels - 1); // 1S 2단 => 로드빔 1단, 2S 3단 => 로드빔 2단
+              
+              $levelYs = [];
+              if ($stages > 0) {
+                  $startY = 25;
+                  $endY = 80; // 가장 아래 로드빔 위치 상향 조정 (기존 95)
+                  if ($stages == 1) {
+                      $levelYs[] = 55; // 1단일때 중앙에 하나
+                  } else {
+                      $spacing = ($endY - $startY) / ($stages - 1);
+                      for ($i = 0; $i < $stages; $i++) {
+                          $levelYs[] = $startY + ($i * $spacing);
+                      }
+                  }
+              }
+            ?>
             <div style="font-size:12px; font-weight:bold; margin-bottom:2px;">파렛트랙</div>
-            <div style="font-size:11px; margin-bottom:6px;">예시(1s2단 기준)</div>
+            <div style="font-size:11px; margin-bottom:6px;">예시(<?= $stages ?>S <?= $levels ?>단 기준)</div>
             <svg width="260" height="130" viewBox="0 0 260 130">
               <!-- 독립 rack -->
               <g stroke="#2255aa" stroke-width="4" fill="none">
@@ -332,8 +446,9 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
                 <line x1="90" y1="15" x2="90" y2="115"/>
               </g>
               <g stroke="#c0392b" stroke-width="6">
-                <line x1="20" y1="25" x2="100" y2="25"/>
-                <line x1="20" y1="45" x2="100" y2="45"/>
+                <?php foreach($levelYs as $y): ?>
+                <line x1="20" y1="<?= $y ?>" x2="100" y2="<?= $y ?>"/>
+                <?php endforeach; ?>
               </g>
               <text x="60" y="128" font-size="11" text-anchor="middle" fill="#000">독립</text>
 
@@ -344,10 +459,10 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
                 <line x1="255" y1="15" x2="255" y2="115"/>
               </g>
               <g stroke="#c0392b" stroke-width="6">
-                <line x1="140" y1="25" x2="215" y2="25"/>
-                <line x1="140" y1="45" x2="215" y2="45"/>
-                <line x1="195" y1="25" x2="260" y2="25"/>
-                <line x1="195" y1="45" x2="260" y2="45"/>
+                <?php foreach($levelYs as $y): ?>
+                <line x1="140" y1="<?= $y ?>" x2="215" y2="<?= $y ?>"/>
+                <line x1="195" y1="<?= $y ?>" x2="260" y2="<?= $y ?>"/>
+                <?php endforeach; ?>
               </g>
               <text x="200" y="128" font-size="11" text-anchor="middle" fill="#000">연결</text>
             </svg>
@@ -362,20 +477,535 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
             <li>설치시 현장 지게차 지원조건</li>
           </ol>
           <div class="contact-line">
-            대표자 연락처: 010-5738-0591&nbsp;&nbsp;대표자 : 김홍선
-            <span class="seal">代表印</span>
+            대표자 연락처: <?= htmlspecialchars($settings['contact_number'] ?? '') ?>&nbsp;&nbsp;대표자 : <?= htmlspecialchars($settings['manager_name'] ?? '') ?>
           </div>
         </td>
       </tr>
     </table>
   </div>
 
-  <div class="footer-bar">SUNGJIN SYSTEM</div>
+  <div class="footer-bar"><?= strtoupper(htmlspecialchars($settings['company_name'] ?? '')) ?></div>
 
 </div></div></div></div></div></main>
 
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ============ MARGIN CALCULATOR (FIXED) ============ -->
+<style>
+.margin-calculator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 4px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    width: 290px;
+    z-index: 1050;
+    font-size: 13px;
+    color: #333;
+}
+.margin-calculator-header {
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+}
+.margin-calculator table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.margin-calculator th, .margin-calculator td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    text-align: right;
+    vertical-align: middle;
+}
+.margin-calculator th {
+    background-color: #ffeb3b;
+    text-align: center;
+    font-weight: bold;
+    color: #333;
+}
+.margin-calculator .label-cell {
+    background-color: #f8f9fa;
+    text-align: left;
+    font-weight: 600;
+    width: 40%;
+}
+.margin-calculator input {
+    width: 100%;
+    border: 1px solid #aaa;
+    text-align: right;
+    padding: 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.margin-calculator input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13,110,253,.25);
+}
+@media print {
+    .margin-calculator {
+        display: none !important;
+    }
+}
+</style>
+
+<div class="margin-calculator">
+    <div class="margin-calculator-header">💡 단가/마진 시뮬레이터</div>
+    
+    <!-- TABS -->
+    <ul class="nav nav-tabs nav-fill" style="margin-top:0; border-bottom:1px solid #dee2e6; font-size:12px;">
+      <?php if ($conditionType === 'new' || $conditionType === 'both'): ?>
+      <li class="nav-item">
+        <a class="nav-link <?= ($conditionType !== 'used') ? 'active' : '' ?> py-1 rounded-0" href="#calc-tab-new" data-bs-toggle="tab" style="color:#333; font-weight:bold;">신규랙</a>
+      </li>
+      <?php endif; ?>
+      <?php if ($conditionType === 'used' || $conditionType === 'both'): ?>
+      <li class="nav-item">
+        <a class="nav-link <?= ($conditionType === 'used') ? 'active' : '' ?> py-1 rounded-0" href="#calc-tab-used" data-bs-toggle="tab" style="color:#666; font-weight:bold;">중고랙</a>
+      </li>
+      <?php endif; ?>
+    </ul>
+
+    <!-- TAB CONTENT -->
+    <div class="tab-content" style="padding: 10px;">
+        <!-- NEW RACK TAB -->
+        <?php if ($conditionType === 'new' || $conditionType === 'both'): ?>
+        <div class="tab-pane fade <?= ($conditionType !== 'used') ? 'show active' : '' ?>" id="calc-tab-new">
+            <table>
+                <tbody>
+                    <tr>
+                        <td class="label-cell">원가총액</td>
+                        <td id="calc-new-raw" style="font-weight:bold; color:#198754;">0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">수평라이너</td>
+                        <td style="color:#666; font-size:12px;">
+                            <div style="display:flex; align-items:center;">
+                                <?= $linerQty ?>개 × 
+                                <input type="number" id="liner-price-new" class="calc-bottom-input" value="500" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
+                                <span id="liner-total-new-display" style="display:none;">(-<?= number_format($linerTotal) ?>)</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">목표마진</td>
+                        <td><input type="number" id="calc-new-target" value="0"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">현재마진</td>
+                        <td id="calc-new-current" style="font-weight:bold; color:#dc3545;">0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">마진(%)</td>
+                        <td>
+                            <div style="display:flex; align-items:center;">
+                                <input type="number" id="calc-new-percent" value="0" style="flex:1;">
+                                <span style="margin-left:4px; font-weight:bold;">%</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+        
+        <!-- USED RACK TAB -->
+        <?php if ($conditionType === 'used' || $conditionType === 'both'): ?>
+        <div class="tab-pane fade <?= ($conditionType === 'used') ? 'show active' : '' ?>" id="calc-tab-used">
+            <table>
+                <tbody>
+                    <tr>
+                        <td class="label-cell">원가총액</td>
+                        <td id="calc-used-raw" style="font-weight:bold; color:#198754;">0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">수평라이너</td>
+                        <td style="color:#666; font-size:12px;">
+                            <div style="display:flex; align-items:center;">
+                                <?= $linerQty ?>개 × 
+                                <input type="number" id="liner-price-used" class="calc-bottom-input" value="500" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
+                                <span id="liner-total-used-display" style="display:none;">(-<?= number_format($linerTotal) ?>)</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">목표마진</td>
+                        <td><input type="number" id="calc-used-target" value="0"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">현재마진</td>
+                        <td id="calc-used-current" style="font-weight:bold; color:#dc3545;">0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">마진(%)</td>
+                        <td>
+                            <div style="display:flex; align-items:center;">
+                                <input type="number" id="calc-used-percent" value="0" style="flex:1;">
+                                <span style="margin-left:4px; font-weight:bold;">%</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div style="padding: 10px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;">
+        <button type="button" class="btn btn-sm btn-outline-secondary" style="flex:1; font-weight:bold;" onclick="window.print();">
+            <i class="fa-solid fa-print"></i> 프린트
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" style="flex:1; font-weight:bold;" data-bs-toggle="modal" data-bs-target="#emailModal">
+            <i class="fa-solid fa-envelope"></i> 메일 보내기
+        </button>
+    </div>
+</div>
+<!-- ============ END MARGIN CALCULATOR ============ -->
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="emailModalLabel"><i class="fa-solid fa-envelope"></i> 견적서 메일 전송</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2" style="font-size: 13px;">
+            <i class="fa-solid fa-circle-info"></i> 현재 화면의 견적서가 <b>PDF 파일로 자동 첨부</b>되어 발송됩니다.
+        </div>
+        <form id="emailSendForm">
+          <div class="mb-3">
+            <label for="emailTo" class="form-label fw-bold text-dark">수신자 메일 주소</label>
+            <input type="email" class="form-control" id="emailTo" value="<?= htmlspecialchars($quote['email'] ?? '') ?>" placeholder="고객 이메일 입력" required>
+          </div>
+          <div class="mb-3">
+            <label for="emailSubject" class="form-label fw-bold text-dark">메일 제목</label>
+            <input type="text" class="form-control" id="emailSubject" value="[견적서] <?= htmlspecialchars($settings['company_name'] ?? '아사미야') ?>에서 요청하신 견적서를 보내드립니다." required>
+          </div>
+          <div class="mb-3">
+            <label for="emailBody" class="form-label fw-bold text-dark">메일 내용</label>
+            <textarea class="form-control" id="emailBody" rows="4" required>안녕하세요, 
+요청하신 견적서를 첨부 파일로 보내드립니다.
+검토해 보시고 문의 사항이 있으시면 언제든 연락 주시기 바랍니다.
+
+감사합니다.</textarea>
+          </div>
+          <div class="mb-3">
+            <label for="emailExtraFiles" class="form-label fw-bold text-dark">추가 첨부파일 <span class="text-muted fw-normal">(선택)</span></label>
+            <input class="form-control" type="file" id="emailExtraFiles" multiple>
+            <div class="form-text">PDF 견적서 외에 추가로 보낼 도면이나 자료가 있다면 첨부하세요.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+        <button type="button" id="btnSubmitEmail" class="btn btn-primary" onclick="submitEmailForm();"><i class="fa-solid fa-paper-plane"></i> 발송하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+async function submitEmailForm() {
+    const to = document.getElementById('emailTo').value;
+    const subject = document.getElementById('emailSubject').value;
+    const body = document.getElementById('emailBody').value;
+    const extraFilesInput = document.getElementById('emailExtraFiles');
+    
+    if(!to || !subject) {
+        alert('이메일 주소와 제목을 입력해주세요.');
+        return;
+    }
+    
+    const sendBtn = document.getElementById('btnSubmitEmail');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 발송 중...';
+    
+    // 임시로 계산기 숨기기 (PDF 캡처용)
+    const marginCalc = document.querySelector('.margin-calculator');
+    if(marginCalc) marginCalc.style.display = 'none';
+    
+    const element = document.querySelector('.sheet');
+    
+    // 캡처 전 렌더링 오차 방지를 위해 임시 스타일 적용
+    const originalMargin = element.style.margin;
+    const originalTransform = element.style.transform;
+    element.style.margin = '0';
+    element.style.transform = 'none';
+    
+    const opt = {
+      margin:       0,
+      filename:     '견적서.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+          scale: 2, 
+          useCORS: true, 
+          scrollY: 0, 
+          scrollX: 0,
+          windowWidth: 1000,
+          x: 0,
+          y: 0
+      },
+      jsPDF:        { unit: 'px', format: [1000, element.offsetHeight], orientation: 'portrait' }
+    };
+    
+    try {
+        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        
+        // 스타일 원상 복구
+        element.style.margin = originalMargin;
+        element.style.transform = originalTransform;
+        
+        const formData = new FormData();
+        formData.append('to', to);
+        formData.append('subject', subject);
+        formData.append('body', body);
+        formData.append('quote_pdf', pdfBlob, 'quote.pdf');
+        
+        if (extraFilesInput.files.length > 0) {
+            for(let i=0; i<extraFilesInput.files.length; i++) {
+                formData.append('extra_files[]', extraFilesInput.files[i]);
+            }
+        }
+        
+        const response = await fetch('/vendor/quotes/<?= $quote['id'] ?>/send_email', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const resData = await response.json();
+        if(resData.success) {
+            alert('메일이 성공적으로 발송되었습니다!');
+            const modalEl = document.getElementById('emailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+        } else {
+            alert('발송 실패: ' + resData.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('오류가 발생했습니다: ' + err.message);
+    } finally {
+        if(marginCalc) marginCalc.style.display = 'block';
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 발송하기';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Number formatting helper
+    const formatNum = (num) => Math.round(num).toLocaleString('ko-KR');
+    const parseNum = (str) => parseInt(str.replace(/,/g, '')) || 0;
+
+    // Elements
+    const inputNewPercent = document.getElementById('calc-new-percent');
+    const inputUsedPercent = document.getElementById('calc-used-percent');
+    const inputNewTarget = document.getElementById('calc-new-target');
+    const inputUsedTarget = document.getElementById('calc-used-target');
+    
+    // We only have one table of items currently, so we'll apply the ACTIVE tab's margin.
+    // Ideally, New Racks and Used Racks would be separated in the HTML.
+    // For now, we apply the logic to all .calc-rack-unit elements based on the active tab.
+    
+    function calculateMargin() {
+        // Calculate New Racks
+        calcSectionMargin('new', parseFloat(inputNewPercent.value) || 0);
+        // Calculate Used Racks
+        calcSectionMargin('used', parseFloat(inputUsedPercent.value) || 0);
+    }
+    
+    function calcSectionMargin(type, marginPercent) {
+        let sumRaw = 0;
+        let sumSell = 0;
+        
+        document.querySelectorAll('.rack-' + type).forEach(el => {
+            let rawUnit = parseInt(el.getAttribute('data-raw')) || 0;
+            let qty = parseInt(el.getAttribute('data-qty')) || 0;
+            
+            let sellUnit = rawUnit + (rawUnit * (marginPercent / 100));
+            let rawTotal = rawUnit * qty;
+            let sellTotal = sellUnit * qty;
+            
+            sumRaw += rawTotal;
+            sumSell += sellTotal;
+            
+            el.innerText = formatNum(sellUnit);
+            el.closest('tr').querySelector('.rack-' + type + '-total').innerText = formatNum(sellTotal);
+        });
+        
+        // Update grand totals for this section
+        updateGrandTotals(type);
+    }
+    
+    function updateGrandTotals(type) {
+        let totalAmount = 0;
+        
+        let sumRaw = 0;
+        let sumSell = 0;
+        
+        // Sum Pallet Racks
+        document.querySelectorAll('.rack-' + type + '-total').forEach(el => {
+            let sellTotal = parseNum(el.innerText);
+            totalAmount += sellTotal;
+            sumSell += sellTotal;
+        });
+        
+        // Calculate Raw Racks for margin
+        document.querySelectorAll('.rack-' + type).forEach(el => {
+            let rawUnit = parseInt(el.getAttribute('data-raw')) || 0;
+            let qty = parseInt(el.getAttribute('data-qty')) || 0;
+            sumRaw += rawUnit * qty;
+        });
+        
+        // Sum Other items
+        document.querySelectorAll('.other-' + type).forEach(el => {
+            let unit = parseNum(el.value);
+            let qty = parseInt(el.getAttribute('data-qty')) || 0;
+            let total = unit * qty;
+            el.closest('tr').querySelector('.other-' + type + '-total').innerText = formatNum(total);
+            totalAmount += total;
+        });
+        
+        // Transport
+        let transUnit = parseNum(document.getElementById('transport-unit-' + type).value);
+        let transQty = parseNum(document.getElementById('transport-qty-' + type).value);
+        let transTotal = transUnit * transQty;
+        document.getElementById('transport-total-' + type).innerText = formatNum(transTotal);
+        totalAmount += transTotal;
+        
+        // Install
+        let instUnit = parseNum(document.getElementById('install-unit-' + type).value);
+        let instQty = parseNum(document.getElementById('install-qty-' + type).value);
+        let instTotal = instUnit * instQty;
+        document.getElementById('install-total-' + type).innerText = formatNum(instTotal);
+        totalAmount += instTotal;
+        
+        // Truncate (always negative)
+        let truncInput = document.getElementById('truncate-amount-' + type);
+        let truncVal = parseNum(truncInput.value);
+        if (truncVal > 0) {
+            truncVal = -truncVal;
+            truncInput.value = formatNum(truncVal);
+        } else if (truncVal !== 0 && truncInput.value !== formatNum(truncVal)) {
+            truncInput.value = formatNum(truncVal);
+        }
+        totalAmount += truncVal;
+        
+        // Update margin UI here to include truncate deduction
+        let linerPriceInput = document.getElementById('liner-price-' + type);
+        let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : 500;
+        let linerQty = <?= $linerQty ?>;
+        let linerTotal = linerQty * linerUnitPrice;
+        
+        let linerTotalDisplay = document.getElementById('liner-total-' + type + '-display');
+        if (linerTotalDisplay) {
+            linerTotalDisplay.innerText = '(-' + formatNum(linerTotal) + ')';
+        }
+        
+        let currentMargin = (sumSell - sumRaw) + truncVal - linerTotal;
+        
+        let rawEl = document.getElementById('calc-' + type + '-raw');
+        if (rawEl) rawEl.innerText = formatNum(sumRaw);
+        
+        document.getElementById('calc-' + type + '-current').innerText = formatNum(currentMargin);
+        
+        // Supply Price
+        let supplyPrice = totalAmount;
+        document.getElementById('final-supply-price-' + type).innerText = formatNum(supplyPrice);
+        
+        // VAT
+        let vat = Math.floor(supplyPrice * 0.1);
+        document.getElementById('final-vat-' + type).innerText = formatNum(vat);
+        
+        // Grand Total
+        document.getElementById('final-grand-total-' + type).innerText = formatNum(supplyPrice + vat);
+    }
+    
+    // Setup inputs listener
+    document.querySelectorAll('.calc-bottom-input').forEach(input => {
+        input.addEventListener('input', function() {
+            // Check if this is new or used section
+            let type = this.id.endsWith('-used') ? 'used' : 'new';
+            updateGrandTotals(type);
+        });
+    });
+    
+    document.querySelectorAll('.calc-other-unit').forEach(input => {
+        input.addEventListener('input', function() {
+            let type = this.classList.contains('other-used') ? 'used' : 'new';
+            updateGrandTotals(type);
+        });
+    });
+
+
+    // Event Listeners
+    if (inputNewPercent) inputNewPercent.addEventListener('input', calculateMargin);
+    if (inputUsedPercent) inputUsedPercent.addEventListener('input', calculateMargin);
+    if (inputNewTarget) inputNewTarget.addEventListener('input', calculateMargin);
+    if (inputUsedTarget) inputUsedTarget.addEventListener('input', calculateMargin);
+    
+    // Listen to tab changes to recalculate
+    document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', calculateMargin);
+    });
+    
+
+
+    // Select text on focus for all inputs
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.select();
+        });
+    });
+
+    // Initial calc
+    calculateMargin();
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calc = document.querySelector('.margin-calculator');
+    const header = document.querySelector('.margin-calculator-header');
+    
+    if (calc && header) {
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.style.cursor = 'move';
+        header.title = "마우스로 드래그해서 이동할 수 있습니다";
+
+        header.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            const rect = calc.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            calc.style.right = 'auto'; // Right 속성 해제 (Left로 움직이기 위해)
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            calc.style.left = (e.clientX - offsetX) + 'px';
+            calc.style.top = (e.clientY - offsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+    }
+});
+</script>
+
 </body>
 </html>

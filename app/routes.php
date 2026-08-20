@@ -124,6 +124,7 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/price', ['App\Controllers\VendorController', 'quotePrice']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/document', ['App\Controllers\VendorController', 'quoteDocument']);
+    $r->addRoute('POST', '/vendor/quotes/{id:\d+}/send_email', ['App\Controllers\VendorController', 'sendEmail']);
     $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
     $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);

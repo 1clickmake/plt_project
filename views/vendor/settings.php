@@ -13,6 +13,13 @@
     
     <!-- External Vendor Dashboard CSS -->
     <link href="/css/vendor_dashboard.css" rel="stylesheet">
+
+    <style>
+        .form-control::placeholder {
+            color: #adb5bd !important;
+            opacity: 0.7;
+        }
+    </style>
 </head>
 <body>
 
@@ -89,7 +96,7 @@
 
                         <!-- 담당자 -->
                         <div class="col-md-6">
-                            <label class="form-label text-light small fw-bold mb-1">Manager Name (담당자)</label>
+                            <label class="form-label text-light small fw-bold mb-1">대표자명 등록</label>
                             <input type="text" name="manager_name" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 우재욱 사원" value="<?= htmlspecialchars($settings['manager_name'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
@@ -109,6 +116,12 @@
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Factory Contact (공장 연락처)</label>
                             <input type="text" name="factory_contact" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 010-7351-2736" value="<?= htmlspecialchars($settings['factory_contact'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                        </div>
+                        
+                        <!-- 계좌 정보 -->
+                        <div class="col-md-6 mt-3">
+                            <label class="form-label text-light small fw-bold mb-1">Account Info (계좌 정보)</label>
+                            <input type="text" name="bank_account" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="국민 123456-789 예금주" value="<?= htmlspecialchars($settings['bank_account'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
                         
                         <!-- URL 슬러그 설정 -->
