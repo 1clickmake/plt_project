@@ -25,31 +25,7 @@
 <body>
 
     <!-- 🧭 좌측 네비게이션 사이드바 -->
-    <aside class="sidebar">
-        <a href="/" class="sidebar-brand">
-            <span>⚙️</span>
-            <span>ASAMIYA SAAS</span>
-        </a>
-        <div class="sidebar-menu">
-            <a href="/vendor/settings" class="menu-item">
-                <i class="fa-solid fa-sliders"></i>
-                <span>공급사 설정 관리</span>
-            </a>
-            <a href="/vendor/quotes" class="menu-item active">
-                <i class="fa-solid fa-envelope-open-text"></i>
-                <span>견적요청 수신함</span>
-            </a>
-            <hr style="border-color: rgba(255,255,255,0.08); margin: 15px 0;">
-            <a href="/" class="menu-item">
-                <i class="fa-solid fa-house"></i>
-                <span>홈페이지 메인</span>
-            </a>
-            <a href="/logout" class="menu-item" style="color: #f87171;">
-                <i class="fa-solid fa-power-off"></i>
-                <span>로그아웃</span>
-            </a>
-        </div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <!-- 💻 우측 메인 대시보드 영역 -->
     <main class="main-content">
@@ -78,6 +54,40 @@
 
   <!-- ============ HEADER INFO ============ -->
 <?php
+// 완료된 견적서인 경우, 처리한 직원의 정보 사용. 아니면 현재 접속한 세션의 직원 정보 사용
+$isCompleted = !empty($quote['processed_by']);
+
+$empColor = ($isCompleted && !empty($quote['employee_color'])) 
+    ? $quote['employee_color'] 
+    : (!empty($_SESSION['employee_color']) ? $_SESSION['employee_color'] : '#b7d99b');
+
+$empName = ($isCompleted && !empty($quote['employee_name'])) 
+    ? $quote['employee_name'] . ' ' . ($quote['employee_title'] ?? '')
+    : (!empty($_SESSION['employee_name']) ? $_SESSION['employee_name'] . ' ' . ($_SESSION['employee_title'] ?? '') : ($settings['manager_name'] ?? ''));
+
+$empPhone = ($isCompleted && !empty($quote['employee_phone'])) 
+    ? $quote['employee_phone'] 
+    : (!empty($_SESSION['employee_phone']) ? $_SESSION['employee_phone'] : ($settings['contact_number'] ?? ''));
+?>
+<style>
+.sheet .green-bg,
+.sheet .label-cell,
+.sheet .quote-table th,
+.sheet .sum-row td,
+.sheet .project-title,
+.sheet .info-title,
+.sheet .info-sub-title,
+.quote-template-wrapper .caution {
+    background-color: color-mix(in srgb, <?= $empColor ?> 30%, white) !important;
+}
+.quote-template-wrapper .footer-bar {
+    background-color: <?= $empColor ?> !important;
+}
+</style>
+<?php
+$empName = !empty($_SESSION['employee_name']) ? $_SESSION['employee_name'] . ' ' . ($_SESSION['employee_title'] ?? '') : ($settings['manager_name'] ?? '');
+$empPhone = !empty($_SESSION['employee_phone']) ? $_SESSION['employee_phone'] : ($settings['contact_number'] ?? '');
+
 $conditionType = $quote['condition_type'] ?? 'both';
 $palletWeight = intval($quote['pallet_weight'] ?? 1000);
 if ($palletWeight == 0) $palletWeight = 1000;
@@ -160,7 +170,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     </tr>
     <tr>
       <td class="label-cell">T E L</td>
-      <td style="width:150px;"><?= htmlspecialchars($settings['contact_number'] ?? '') ?></td>
+      <td style="width:150px;"><?= htmlspecialchars($empPhone) ?></td>
       <td class="label-cell" style="width:50px;">F A X</td>
       <td><?= htmlspecialchars($settings['fax_number'] ?? '') ?></td>
       <td class="label-cell">담 당 자</td>
@@ -168,7 +178,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     </tr>
     <tr>
       <td class="label-cell">담당자</td>
-      <td><?= htmlspecialchars($settings['manager_name'] ?? '') ?></td>
+      <td><?= htmlspecialchars($empName) ?></td>
       <td class="label-cell">E-MAIL</td>
       <td><span class="blue-link"><?= htmlspecialchars($settings['manager_email'] ?? '') ?></span></td>
       <td class="label-cell">E-MAIL</td>
@@ -467,7 +477,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
               <text x="200" y="128" font-size="11" text-anchor="middle" fill="#000">연결</text>
             </svg>
           </div>
-          <div class="caution">중고 자재 특성상 출고시 도장색상이 변동 될수 있습니다.</div>
+          <div class="caution">자재 특성상 출고시 도장색상이 변동 될수 있습니다.</div>
         </td>
         <td style="padding:12px;">
           <ol class="memo-list">

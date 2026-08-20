@@ -1,0 +1,210 @@
+diff --git a/app/Controllers/VendorController.php b/app/Controllers/VendorController.php
+index e3e6a0d..b1029c0 100644
+--- a/app/Controllers/VendorController.php
++++ b/app/Controllers/VendorController.php
+@@ -107,6 +107,7 @@ class VendorController extends BaseController {
+                         // 두목님 요청: 원본 파일명을 기억하기 위해 JSON meta 데이터에 주입!
+                         if (!isset($extractedPricing['meta'])) {
+                             $extractedPricing['meta'] = [];
+                         }
+                         $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
++
+                         $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
+ 
+                         // Save to vendor_pricing_rules
+@@ -131,24 +132,60 @@ class VendorController extends BaseController {
+         ]);
+     }
+ 
++    public function pricing() {
++        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
++            $this->redirect('/login');
++            return;
++        }
++        if (!isset($_SESSION['employee_id'])) {
++            $this->redirect('/vendor/profiles');
++            return;
++        }
++
++        $userId = $_SESSION['user']['user_id'];
++        $db = Database::getInstance();
++        
++        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
++        $limit = 20;
++        $offset = ($page - 1) * $limit;
++
++        $stmtTotal = $db->prepare("SELECT COUNT(*) FROM vendor_pricing_rules WHERE vendor_id = :vuid");
++        $stmtTotal->execute(['vuid' => $userId]);
++        $totalCount = $stmtTotal->fetchColumn();
++        $totalPages = ceil($totalCount / $limit);
++
++        $stmt = $db->prepare("SELECT * FROM vendor_pricing_rules WHERE vendor_id = :vuid ORDER BY id DESC LIMIT :limit OFFSET :offset");
++        $stmt->bindValue(':vuid', $userId, \PDO::PARAM_INT);
++        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
++        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
++        $stmt->execute();
++        $rules = $stmt->fetchAll();
++
++        // Also fetch current settings for displaying latest uploaded file
++        $stmtSettings = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :uid");
++        $stmtSettings->execute(['uid' => $userId]);
++        $settings = $stmtSettings->fetch();
++
++        $this->view('vendor/pricing', [
++            'rules' => $rules,
++            'page' => $page,
++            'totalPages' => $totalPages,
++            'settings' => $settings
++        ]);
++    }
++
+     public function quotes() {
+         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+             $this->redirect('/login');
++            return;
++        }
++        if (!isset($_SESSION['employee_id'])) {
++            $this->redirect('/vendor/profiles');
++            return;
+         }
+ 
+         $userId = $_SESSION['user']['user_id'];
+         $db = Database::getInstance();
+ 
+-        $stmt = $db->prepare("SELECT * FROM quote_requests WHERE vendor_user_id = :vuid ORDER BY created_at DESC");
++        $stmt = $db->prepare("
++            SELECT q.*, e.name as employee_name, e.color_code as employee_color 
++            FROM quote_requests q 
++            LEFT JOIN vendor_employees e ON q.processed_by = e.id 
++            WHERE q.vendor_user_id = :vuid 
++            ORDER BY q.created_at DESC
++            LIMIT 20
++        ");
+         $stmt->execute(['vuid' => $userId]);
+         $quotes = $stmt->fetchAll();
+ 
+-        $this->view('vendor/quotes', ['quotes' => $quotes]);
++        // Split quotes into completed and pending
++        $completed_quotes = array_filter($quotes, function($q) { return !empty($q['processed_by']); });
++        $pending_quotes = array_filter($quotes, function($q) { return empty($q['processed_by']); });
++
++        $this->view('vendor/quotes', [
++            'quotes' => $quotes,
++            'completed_quotes' => $completed_quotes,
++            'pending_quotes' => $pending_quotes,
++            'page' => 1,
++            'totalPages' => 1
++        ]);
+     }
+ 
+     public function quoteDetail($vars) {
+         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+             $this->redirect('/login');
++            return;
++        }
++        if (!isset($_SESSION['employee_id'])) {
++            $this->redirect('/vendor/profiles');
++            return;
+         }
+ 
+         $userId = $_SESSION['user']['user_id'];
+         $quoteId = intval($vars['id'] ?? 0);
+         $db = Database::getInstance();
+ 
+-        $stmt = $db->prepare("SELECT * FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
++        $stmt = $db->prepare("
++            SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
++            FROM quote_requests q 
++            LEFT JOIN vendor_employees e ON q.processed_by = e.id 
++            WHERE q.id = :qid AND q.vendor_user_id = :vuid
++        ");
+         $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+         $quote = $stmt->fetch();
+ 
+@@ -180,12 +217,21 @@ class VendorController extends BaseController {
+             $this->redirect('/login');
+             return;
+         }
++        if (!isset($_SESSION['employee_id'])) {
++            $this->redirect('/vendor/profiles');
++            return;
++        }
+ 
+         $userId = $_SESSION['user']['user_id'];
+         $quoteId = intval($vars['id'] ?? 0);
+         $db = Database::getInstance();
+ 
+-        $stmt = $db->prepare("SELECT * FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
++        $stmt = $db->prepare("
++            SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
++            FROM quote_requests q 
++            LEFT JOIN vendor_employees e ON q.processed_by = e.id 
++            WHERE q.id = :qid AND q.vendor_user_id = :vuid
++        ");
+         $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+         $quote = $stmt->fetch();
+ 
+@@ -198,6 +244,11 @@ class VendorController extends BaseController {
+         $stmt->execute(['uid' => $userId]);
+         $settings = $stmt->fetch() ?: [];
+ 
+         $result = $this->buildQuoteModules($quote);
+         $modules = $result['modules'];
+         $overallTotal = $result['overallTotal'];
+ 
+         $this->view('vendor/quote_price', [
+             'quote' => $quote, 
+             'settings' => $settings, 
+             'modules' => $modules,
+             'overallTotal' => $overallTotal
+         ]);
+     }
+ 
+     private function buildQuoteModules($quote) {
+         // BOM 계산 로직 (동적 산출)
+         require_once __DIR__ . '/../Services/SehwaPriceCalculator.php';
+         
++        // 견적 당시의 단가표(Rule)를 주입하여 과거 단가 고정
++        $vendorId = $quote['vendor_user_id'] ?? 1;
++        $ruleId = $quote['pricing_rule_id'] ?? null;
++        \App\Services\SehwaPriceCalculator::setRuleContext($vendorId, $ruleId);
++
+         $indep = intval($quote['rack_indep']);
+         $conn = intval($quote['rack_conn']);
+         $small = intval($quote['rack_small_conn']);
+@@ -440,12 +491,21 @@ class VendorController extends BaseController {
+             $this->redirect('/login');
+             return;
+         }
++        if (!isset($_SESSION['employee_id'])) {
++            $this->redirect('/vendor/profiles');
++            return;
++        }
+ 
+         $userId = $_SESSION['user']['user_id'];
+         $quoteId = intval($vars['id'] ?? 0);
+         $db = Database::getInstance();
+ 
+-        $stmt = $db->prepare("SELECT * FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
++        $stmt = $db->prepare("
++            SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
++            FROM quote_requests q 
++            LEFT JOIN vendor_employees e ON q.processed_by = e.id 
++            WHERE q.id = :qid AND q.vendor_user_id = :vuid
++        ");
+         $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+         $quote = $stmt->fetch();
+ 
+@@ -511,6 +571,12 @@ class VendorController extends BaseController {
+         $result = \Mailer::send($to, $subject, $body, $attachments, false);
+         
+         if ($result['success']) {
++            $db = \App\Core\Database::getInstance();
++            $employeeId = $_SESSION['employee_id'] ?? null;
++            if ($employeeId) {
++                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW() WHERE id = ?");
++                $stmt->execute([$employeeId, $id]);
++            }
+             echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
+         } else {
+             echo json_encode(['success' => false, 'message' => '발송 실패: ' . $result['message']]);

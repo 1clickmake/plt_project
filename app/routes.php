@@ -119,7 +119,14 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/payment/confirm-order', ['App\Controllers\PaymentController', 'confirmOrder']);
 
     // SaaS Vendor Routes
+    $r->addRoute('GET', '/vendor/profiles', ['App\Controllers\VendorEmployeeController', 'profiles']);
+    $r->addRoute('POST', '/vendor/profiles/login', ['App\Controllers\VendorEmployeeController', 'profileLogin']);
+    $r->addRoute(['GET', 'POST'], '/vendor/employees', ['App\Controllers\VendorEmployeeController', 'index']);
+    $r->addRoute('POST', '/vendor/employees/create', ['App\Controllers\VendorEmployeeController', 'create']);
+    $r->addRoute('POST', '/vendor/employees/update', ['App\Controllers\VendorEmployeeController', 'update']);
+    $r->addRoute('POST', '/vendor/employees/delete', ['App\Controllers\VendorEmployeeController', 'delete']);
     $r->addRoute(['GET', 'POST'], '/vendor/settings', ['App\Controllers\VendorController', 'settings']);
+    $r->addRoute(['GET', 'POST'], '/vendor/pricing', ['App\Controllers\VendorController', 'pricing']);
     $r->addRoute('GET',  '/vendor/quotes',        ['App\Controllers\VendorController', 'quotes']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/price', ['App\Controllers\VendorController', 'quotePrice']);

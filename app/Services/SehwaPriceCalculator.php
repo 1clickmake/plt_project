@@ -12,11 +12,22 @@ use PDO;
 class SehwaPriceCalculator
 {
     private static $config = null;
+    private static $currentVendorId = null;
+    private static $currentRuleId = null;
 
-    // 데이터베이스에서 최신 추출 단가표 JSON을 로드
-    public static function loadConfig(int $vendorId = 1)
+    public static function setRuleContext(int $vendorId, ?int $ruleId) {
+        self::$currentVendorId = $vendorId;
+        self::$currentRuleId = $ruleId;
+        self::$config = null; // force reload with new context
+    }
+
+    // 데이터베이스에서 단가표 JSON을 로드
+    public static function loadConfig()
     {
         if (self::$config !== null) return;
+        
+        $vendorId = self::$currentVendorId ?? 1;
+        $ruleId = self::$currentRuleId;
         
         try {
             $db = Database::getInstance();
@@ -24,8 +35,15 @@ class SehwaPriceCalculator
                 // CLI나 특정 환경 대비
                 $db = new PDO("mysql:host=localhost;dbname=asamiya;charset=utf8mb4", "root", "");
             }
-            $stmt = $db->prepare("SELECT pricing_data FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
-            $stmt->execute(['vid' => $vendorId]);
+
+            if ($ruleId) {
+                $stmt = $db->prepare("SELECT pricing_data FROM vendor_pricing_rules WHERE id = :rid");
+                $stmt->execute(['rid' => $ruleId]);
+            } else {
+                $stmt = $db->prepare("SELECT pricing_data FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
+                $stmt->execute(['vid' => $vendorId]);
+            }
+            
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($row && !empty($row['pricing_data'])) {

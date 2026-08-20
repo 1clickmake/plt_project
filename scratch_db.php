@@ -1,7 +1,12 @@
 <?php
-$db = new PDO("mysql:host=localhost;dbname=asamiya;charset=utf8mb4", "root", "");
-$stmt = $db->query("SELECT id, created_at, pricing_data FROM vendor_pricing_rules ORDER BY created_at DESC LIMIT 1");
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
-echo "ID: " . $row['id'] . "\n";
-echo "Created: " . $row['created_at'] . "\n";
-echo "Data: " . substr($row['pricing_data'], 0, 200) . "...\n";
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/config/config.php';
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$db = App\Core\Database::getInstance();
+$stmt = $db->query("DESCRIBE quote_requests");
+$rows = $stmt->fetchAll();
+foreach ($rows as $row) {
+    echo $row['Field'] . " - " . $row['Type'] . "\n";
+}

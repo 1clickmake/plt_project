@@ -24,31 +24,7 @@
 <body>
 
     <!-- 🧭 좌측 네비게이션 사이드바 -->
-    <aside class="sidebar">
-        <a href="/" class="sidebar-brand">
-            <span>⚙️</span>
-            <span>ASAMIYA SAAS</span>
-        </a>
-        <div class="sidebar-menu">
-            <a href="/vendor/settings" class="menu-item active">
-                <i class="fa-solid fa-sliders"></i>
-                <span>공급사 설정 관리</span>
-            </a>
-            <a href="/vendor/quotes" class="menu-item">
-                <i class="fa-solid fa-envelope-open-text"></i>
-                <span>견적요청 수신함</span>
-            </a>
-            <hr style="border-color: rgba(255,255,255,0.08); margin: 15px 0;">
-            <a href="/" class="menu-item">
-                <i class="fa-solid fa-house"></i>
-                <span>홈페이지 메인</span>
-            </a>
-            <a href="/logout" class="menu-item" style="color: #f87171;">
-                <i class="fa-solid fa-power-off"></i>
-                <span>로그아웃</span>
-            </a>
-        </div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <!-- 💻 우측 메인 대시보드 영역 -->
     <main class="main-content">
@@ -146,24 +122,7 @@
                             <input type="file" name="company_logo" class="form-control bg-dark bg-opacity-50 text-light border-secondary" accept="image/*" style="border-radius: 8px;">
                         </div>
 
-                        <!-- 단가표 엑셀 업로드 -->
-                        <div class="col-12">
-                            <label class="form-label text-light small fw-bold mb-1">Price List Excel (단가표 엑셀 업로드)</label>
-                            <?php if(!empty($settings['price_excel_path'])): ?>
-                                <div class="mb-3 p-3 bg-dark bg-opacity-25 rounded border border-secondary d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span style="font-size:1.5rem;">📊</span>
-                                        <div>
-                                            <span class="badge bg-success small"><i class="fa-solid fa-file-excel"></i> 엑셀 파일 파싱 완료</span>
-                                            <div class="text-light small mt-1 font-monospace"><?= htmlspecialchars(basename($settings['price_excel_path'])) ?></div>
-                                        </div>
-                                    </div>
-                                    <a href="<?= htmlspecialchars($settings['price_excel_path']) ?>" class="btn btn-outline-secondary btn-sm rounded" download>다운로드</a>
-                                </div>
-                            <?php endif; ?>
-                            <input type="file" name="price_excel" class="form-control bg-dark bg-opacity-50 text-light border-secondary" accept=".xlsx,.xls" style="border-radius: 8px;">
-                            <small class="text-info mt-1 d-block">💡 업로드된 엑셀에서 단가 데이터를 추출하여 파렛트랙 견적 산출에 활용합니다.</small>
-                        </div>
+
                     </div>
 
                     <div class="d-grid mt-5">

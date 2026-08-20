@@ -358,14 +358,20 @@ class CanvasController extends BaseController {
             }
 
             $db = Database::getInstance();
+
+            // 현재 벤더의 가장 최신 단가표 ID 조회
+            $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
+            $ruleStmt->execute(['vid' => $vendorUserId]);
+            $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
+
             $sql = "INSERT INTO quote_requests (
-                        vendor_user_id, company, name, phone, email, address, canvas_data, image_path, summary,
+                        vendor_user_id, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, summary,
                         edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
                         forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
                         rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
                         condition_type, self_install
                     ) VALUES (
-                        :vuid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :summary,
+                        :vuid, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :summary,
                         :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
                         :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
                         :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
@@ -375,6 +381,7 @@ class CanvasController extends BaseController {
             $stmt = $db->prepare($sql);
             $stmt->execute([
                 'vuid'    => $vendorUserId,
+                'prid'    => $pricingRuleId,
                 'company' => $company,
                 'name'    => $name,
                 'phone'   => $phone,

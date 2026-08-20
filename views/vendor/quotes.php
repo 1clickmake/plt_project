@@ -17,31 +17,7 @@
 <body>
 
     <!-- 🧭 좌측 네비게이션 사이드바 -->
-    <aside class="sidebar">
-        <a href="/" class="sidebar-brand">
-            <span>⚙️</span>
-            <span>ASAMIYA SAAS</span>
-        </a>
-        <div class="sidebar-menu">
-            <a href="/vendor/settings" class="menu-item">
-                <i class="fa-solid fa-sliders"></i>
-                <span>공급사 설정 관리</span>
-            </a>
-            <a href="/vendor/quotes" class="menu-item active">
-                <i class="fa-solid fa-envelope-open-text"></i>
-                <span>견적요청 수신함</span>
-            </a>
-            <hr style="border-color: rgba(255,255,255,0.08); margin: 15px 0;">
-            <a href="/" class="menu-item">
-                <i class="fa-solid fa-house"></i>
-                <span>홈페이지 메인</span>
-            </a>
-            <a href="/logout" class="menu-item" style="color: #f87171;">
-                <i class="fa-solid fa-power-off"></i>
-                <span>로그아웃</span>
-            </a>
-        </div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <!-- 💻 우측 메인 대시보드 영역 -->
     <main class="main-content">
@@ -64,51 +40,138 @@
                     <span class="badge bg-warning text-dark font-monospace fw-bold">총 <?= count($quotes) ?>건</span>
                 </div>
                 
-                <div class="p-4">
-                    <?php if (empty($quotes)): ?>
-                        <div class="text-center py-5">
-                            <span style="font-size: 3rem;">📭</span>
-                            <h5 class="text-light mt-3 fw-bold">아직 도착한 견적 요청이 없습니다.</h5>
-                            <p class="text-light opacity-75 small">고객이 도면 배치 완료 후 '견적 요청' 버튼을 누르면 여기에 수신됩니다.</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03);">
-                                <thead>
-                                    <tr class="text-light opacity-75 small uppercase" style="border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 600;">
-                                        <th class="py-3 ps-3" style="width: 80px;">번호</th>
-                                        <th class="py-3">회사명</th>
-                                        <th class="py-3">담당자</th>
-                                        <th class="py-3">연락처</th>
-                                        <th class="py-3">현장 주소</th>
-                                        <th class="py-3">요청 일시</th>
-                                        <th class="py-3 pe-3 text-end" style="width: 120px;">상세</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($quotes as $i => $q): ?>
-                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $q['id'] ?>'">
-                                            <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= count($quotes) - $i ?></td>
-                                            <td class="py-3 fw-bold text-light"><?= htmlspecialchars($q['company']) ?></td>
-                                            <td class="py-3 text-light"><?= htmlspecialchars($q['name']) ?></td>
-                                            <td class="py-3 text-info font-monospace fw-semibold"><?= htmlspecialchars($q['phone']) ?></td>
-                                            <td class="py-3 text-light opacity-75 small"><?= htmlspecialchars($q['address']) ?></td>
-                                            <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['created_at'])) ?></td>
-                                            <td class="py-3 pe-3 text-end">
-                                                <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-warning btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
-                                            </td>
+<div class="p-4">
+                <ul class="nav nav-tabs mb-4 border-secondary" id="quoteTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active text-light bg-transparent border-0 border-bottom border-warning" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">미완료 (<?= count($pending_quotes) ?>)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-light bg-transparent border-0" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">완료됨 (<?= count($completed_quotes) ?>)</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="quoteTabsContent">
+                    <!-- 미완료 탭 -->
+                    <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                        <?php if (empty($pending_quotes)): ?>
+                            <div class="text-center py-5">
+                                <span style="font-size: 3rem;">📭</span>
+                                <h5 class="text-light mt-3 fw-bold">미완료된 견적 요청이 없습니다.</h5>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03);">
+                                    <thead>
+                                        <tr class="text-light opacity-75 small uppercase" style="border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 600;">
+                                            <th class="py-3 ps-3">번호</th>
+                                            <th class="py-3">회사명</th>
+                                            <th class="py-3">담당자</th>
+                                            <th class="py-3">연락처</th>
+                                            <th class="py-3">현장 주소</th>
+                                            <th class="py-3">요청 일시</th>
+                                            <th class="py-3 pe-3 text-end">상세</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($pending_quotes as $i => $q): ?>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $q['id'] ?>'">
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $q['id'] ?></td>
+                                                <td class="py-3 fw-bold text-light"><?= htmlspecialchars($q['company']) ?></td>
+                                                <td class="py-3 text-light"><?= htmlspecialchars($q['name']) ?></td>
+                                                <td class="py-3 text-info font-monospace fw-semibold"><?= htmlspecialchars($q['phone']) ?></td>
+                                                <td class="py-3 text-light opacity-75 small"><?= htmlspecialchars($q['address']) ?></td>
+                                                <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['created_at'])) ?></td>
+                                                <td class="py-3 pe-3 text-end">
+                                                    <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-warning btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- 완료됨 탭 -->
+                    <div class="tab-pane fade" id="completed" role="tabpanel">
+                        <?php if (empty($completed_quotes)): ?>
+                            <div class="text-center py-5">
+                                <span style="font-size: 3rem;">📭</span>
+                                <h5 class="text-light mt-3 fw-bold">처리 완료된 견적 요청이 없습니다.</h5>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03);">
+                                    <thead>
+                                        <tr class="text-light opacity-75 small uppercase" style="border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 600;">
+                                            <th class="py-3 ps-3">번호</th>
+                                            <th class="py-3">회사명</th>
+                                            <th class="py-3">처리한 직원</th>
+                                            <th class="py-3">현장 주소</th>
+                                            <th class="py-3">요청 일시</th>
+                                            <th class="py-3">처리 일시</th>
+                                            <th class="py-3 pe-3 text-end">상세</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($completed_quotes as $i => $q): ?>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $q['id'] ?>'">
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $q['id'] ?></td>
+                                                <td class="py-3 fw-bold text-light"><?= htmlspecialchars($q['company']) ?></td>
+                                                <td class="py-3 text-light">
+                                                    <span class="badge" style="background-color: <?= htmlspecialchars($q['employee_color'] ?? '#333') ?>;">
+                                                        <?= htmlspecialchars($q['employee_name'] ?? '알 수 없음') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 text-light opacity-75 small"><?= htmlspecialchars($q['address']) ?></td>
+                                                <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['created_at'])) ?></td>
+                                                <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['processed_at'] ?? '')) ?></td>
+                                                <td class="py-3 pe-3 text-end">
+                                                    <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
+
+                <!-- 페이징 UI -->
+                <?php if (isset($totalPages) && $totalPages > 1): ?>
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center pagination-sm">
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link bg-dark text-light border-secondary" href="?page=<?= max(1, $page - 1) ?>">이전</a>
+                        </li>
+                        <?php for($i = 1; $i <= $totalPages; $i++): ?>
+                            <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
+                                <a class="page-link <?= ($page == $i) ? 'bg-warning text-dark border-warning' : 'bg-dark text-light border-secondary' ?>" href="?page=<?= $i ?>"><?= $i ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link bg-dark text-light border-secondary" href="?page=<?= min($totalPages, $page + 1) ?>">다음</a>
+                        </li>
+                    </ul>
+                </nav>
+                <?php endif; ?>
+
+</div>
             </div>
         </div>
     </main>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('#quoteTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('#quoteTabs .nav-link').forEach(t => t.classList.remove('border-bottom', 'border-warning'));
+                this.classList.add('border-bottom', 'border-warning');
+            });
+        });
+    </script>
 </body>
 </html>
