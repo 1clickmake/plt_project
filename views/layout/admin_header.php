@@ -64,6 +64,7 @@
             </a>
 
             <!-- Category 2: 쇼핑몰 (Mall) -->
+			<!--
             <div class="nav-category" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); pt-3">
                 <i class="fa-solid fa-cart-shopping"></i> 쇼핑몰 관리
             </div>
@@ -79,12 +80,21 @@
             <a href="/admin/settlements" id="link-settlements">
                 <i class="fa-solid fa-money-bill-transfer"></i> 정산 승인/관리
             </a>
+			-->
+
+            <!-- Category 3: SaaS 결제/구독 관리 -->
+            <div class="nav-category" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); pt-3">
+                <i class="fa-solid fa-credit-card"></i> SaaS 결제 관리
+            </div>
+            <a href="/admin/payments" id="link-payments">
+                <i class="fa-solid fa-receipt"></i> 전체 결제 내역
+            </a>
 
             <?php 
             $pluginMenuItems = \App\Core\PluginManager::getInstance()->getAdminMenuItems();
             if (!empty($pluginMenuItems)): 
             ?>
-            <div class="nav-category">Plugins</div>
+            <div class="nav-category"  style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); pt-3">Plugins</div>
             <?php foreach ($pluginMenuItems as $item): ?>
                 <a href="<?= $item['url'] ?>" id="<?= $item['id'] ?>">
                     <i class="<?= $item['icon'] ?>"></i> <?= $item['title'] ?>
@@ -92,7 +102,7 @@
             <?php endforeach; ?>
             <?php endif; ?>
 
-            <div class="nav-category">System</div>
+            <div class="nav-category"  style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); pt-3">System</div>
             <a href="/" target="_blank" style="margin-top: auto; background: rgba(255,255,255,0.03);">
                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Live Site
             </a>

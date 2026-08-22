@@ -445,4 +445,31 @@ CREATE TABLE `visitor_logs` (
   KEY `idx_ip_date` (`ip_address`,`visit_date`)
 ) ENGINE=MyISAM AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci COMMENT='접속자 로그 테이블';
 
+DROP TABLE IF EXISTS `payment_subscriptions`;
+CREATE TABLE `payment_subscriptions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `billing_key` varchar(255) NOT NULL COMMENT '부트페이 빌링키',
+  `plan_type` varchar(50) NOT NULL COMMENT '구독 플랜 (예: starter_1m)',
+  `status` varchar(50) NOT NULL DEFAULT 'active' COMMENT '상태 (active, canceled, failed)',
+  `next_payment_date` date NOT NULL COMMENT '다음 자동 결제일',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_user_status` (`user_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='정기구독(빌링키) 관리 테이블';
+
+DROP TABLE IF EXISTS `payment_logs`;
+CREATE TABLE `payment_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `amount` int(11) NOT NULL DEFAULT 0 COMMENT '결제 금액',
+  `receipt_url` varchar(255) DEFAULT NULL COMMENT '부트페이 영수증 URL',
+  `status` varchar(50) NOT NULL DEFAULT 'success' COMMENT '결제 상태 (success, failed 등)',
+  `error_msg` text DEFAULT NULL COMMENT '실패 시 에러 메시지',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='단건 결제 기록 테이블';
+
 SET FOREIGN_KEY_CHECKS = 1;

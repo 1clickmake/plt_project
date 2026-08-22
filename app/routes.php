@@ -95,6 +95,13 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET', '/payment/success', ['App\Controllers\PaymentController', 'success']);
     $r->addRoute('POST', '/payment/webhook', ['App\Controllers\PaymentController', 'webhook']);
 
+    // Payment Routes (Bootpay)
+    $r->addRoute('POST', '/api/bootpay/save-billing', ['App\Controllers\BootpayController', 'saveBillingKey']);
+    $r->addRoute('POST', '/api/bootpay/cancel', ['App\Controllers\BootpayController', 'cancelBilling']);
+    $r->addRoute('GET', '/subscribe', ['App\Controllers\BootpayController', 'subscribeForm']);
+    $r->addRoute('GET', '/vendor/payments', ['App\Controllers\BootpayController', 'mypagePayments']);
+    $r->addRoute('GET', '/admin/payments', ['App\Controllers\AdminController', 'bootpayPayments']);
+
     // Admin Product Management
     $r->addRoute('GET', '/admin/products', ['App\Controllers\AdminController', 'products']);
     $r->addRoute('POST', '/admin/products/create', ['App\Controllers\AdminController', 'createProduct']);

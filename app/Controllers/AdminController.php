@@ -16,6 +16,12 @@ class AdminController extends BaseController {
         }
     }
 
+
+
+    public function bootpayPayments() {
+        include CM_VIEWS_PATH . '/admin/payments.php';
+    }
+
     public function index() {
         $this->view('admin/dashboard');
     }

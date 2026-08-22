@@ -1,0 +1,16 @@
+*.idea
+*.iml
+composer.lock
+tests/RequestSubscribeBillingKey.php
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+vendor/
+
+# Tool runtime dirs
+.omj/
+.phpunit.result.cache

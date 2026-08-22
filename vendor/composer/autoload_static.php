@@ -69,6 +69,10 @@ class ComposerStaticInit7f820ef51ef6df7f2332d6299e5d2ea3
             'Composer\\Pcre\\' => 14,
             'Complex\\' => 8,
         ),
+        'B' =>
+        array (
+            'Bootpay\\ServerPhp\\' => 18,
+        ),
         'A' =>
         array (
             'App\\' => 4,
@@ -164,6 +168,10 @@ class ComposerStaticInit7f820ef51ef6df7f2332d6299e5d2ea3
         'Complex\\' =>
         array (
             0 => __DIR__ . '/..' . '/markbaker/complex/classes/src',
+        ),
+        'Bootpay\\ServerPhp\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/bootpay/server-php/src',
         ),
         'App\\' =>
         array (

@@ -24,6 +24,10 @@ $displayBrand = $companyNameSidebar ?: 'SETTING';
             <i class="fa-solid fa-people-arrows"></i>
             <span>프로필 전환</span>
         </a>
+        <a href="/vendor/payments" class="menu-item <?= (strpos($currentUri, '/vendor/payments') === 0) ? 'active' : '' ?>">
+            <i class="fa-solid fa-credit-card"></i>
+            <span>결제 및 구독 관리</span>
+        </a>
         <hr>
         <a href="/vendor/pricing" class="menu-item <?= (strpos($currentUri, '/vendor/pricing') === 0) ? 'active' : '' ?>">
             <i class="fa-solid fa-file-excel"></i>

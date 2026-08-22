@@ -176,12 +176,12 @@ body { background-color: #0B1120 !important; }
                     </h1>
                     
                     <p class="mt-4 fs-6 text-deep-navy-70 lh-lg" style="max-width: 520px;">
-                        1.5~3시간 걸리던 견적을 <span class="text-deep-navy fw-bold">5분 안에.</span> CAD 없이 브라우저에서 끝내는 2D Canvas 자동설계. 도면·BOM·PDF 견적서 원클릭 발행.
+                        1.5~3시간 걸리던 견적을 <span class="text-brand-orange fw-bold">5분 안에</span> CAD 없이 브라우저에서 끝내는 2D Canvas 자동설계. 도면·BOM·PDF 견적서 원클릭 발행.
                     </p>
                     
                     <div class="mt-5 d-flex flex-wrap gap-3">
                         <a href="#pricing" class="btn-pill btn-orange shadow">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                        <a href="#demo" class="btn-pill badge-glass"><span class="d-flex align-items-center justify-content-center btn-orange rounded-circle" style="width:28px;height:28px;"><i class="fa-solid fa-play fs-8 text-light"></i></span> 2분 소개영상</a>
+                        <a href="https://cmake.work/quote/demo" target="_blank" class="btn-pill badge-glass"><span class="d-flex align-items-center justify-content-center btn-orange rounded-circle" style="width:28px;height:28px;"><i class="fa-solid fa-play fs-8 text-light"></i></span> 견적신청데모</a>
                     </div>
                     
                     <div class="mt-5 d-flex align-items-center gap-4 fs-8 text-deep-navy-50">
@@ -326,7 +326,7 @@ body { background-color: #0B1120 !important; }
                     <i class="fa-solid fa-link"></i> 초간편 연동
                 </div>
                 <h2 class="fw-extrabold tracking-tight text-deep-navy" style="font-size: clamp(24px, 4vw, 36px); line-height: 1.2;">
-                    개발자 없이, 단 <span class="text-brand-orange">3분 만에</span><br>우리 회사 홈페이지에 탑재하세요
+                    개발자 없이, <span class="text-brand-orange">간단하게</span><br>우리 회사 홈페이지에 탑재하세요
                 </h2>
                 <p class="mt-3 fs-6 text-secondary lh-lg">
                     복잡한 설치나 코딩이 전혀 필요 없습니다.<br>발급받은 링크를 기존 홈페이지 버튼에 연결하기만 하면 끝납니다.
@@ -632,7 +632,7 @@ body { background-color: #0B1120 !important; }
                 <!-- FREE -->
                 <div class="col-lg-4">
                     <div class="reveal h-100 rounded-4 border border-white-10 bg-white p-4 p-md-5 d-flex flex-column">
-                        <div class="fs-8 fw-bold tracking-widest text-deep-navy-50">FREE</div>
+                        <div class="fs-8 fw-bold tracking-widest text-deep-navy">FREE</div>
                         <div class="mt-3 d-flex align-items-baseline gap-1">
                             <span class="fs-2 fw-extrabold tracking-tight text-deep-navy">무료</span>
                         </div>
@@ -643,19 +643,19 @@ body { background-color: #0B1120 !important; }
                             <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 1명</div>
                             <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 이메일 지원</div>
                         </div>
-                        <a href="/register?plan=free" class="btn-pill btn-light w-100 justify-content-center fs-7">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-light w-100 justify-content-center fs-7">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
                     </div>
                 </div>
                 
                 <!-- STARTER -->
                 <div class="col-lg-4">
                     <div class="reveal h-100 rounded-4 border p-1 bg-gradient-popular shadow-heavy position-relative" style="transition-delay: 100ms;">
-                        <div class="position-absolute start-50 translate-middle-x rounded-pill bg-navy text-deep-navy px-3 py-1 fs-9 fw-bold shadow" style="top:-12px; z-index:2; width: 140px; text-align: center;">
-                            <i class="fa-solid fa-star text-light-blue"></i> MOST POPULAR
+                        <div class="position-absolute start-50 translate-middle-x rounded-pill bg-brand-orange text-light px-3 py-1 fs-9 fw-bold shadow" style="top:-12px; z-index:2; width: 140px; text-align: center;">
+                            <i class="fa-solid fa-star"></i> MOST POPULAR
                         </div>
                         <div class="h-100 rounded-4 bg-white p-4 p-md-5 d-flex flex-column position-relative z-1">
                             <div class="d-flex align-items-center justify-content-between">
-                                <div class="fs-8 fw-bold tracking-widest text-deep-navy-50">STARTER</div>
+                                <div class="fs-8 fw-bold tracking-widest text-deep-navy">STARTER</div>
                                 <span class="badge rounded-pill badge-soft-primary fs-9">⭐ 추천</span>
                             </div>
                             <div class="mt-3 d-flex align-items-baseline gap-1">
@@ -669,7 +669,7 @@ body { background-color: #0B1120 !important; }
                                 <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 무제한</div>
                                 <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 우선 지원 & 온보딩</div>
                             </div>
-                            <a href="/register?plan=starter" class="btn-pill w-100 justify-content-center fs-7 shadow border-0" style="background: linear-gradient(to right, #2A5BDA, #62D6FF); color: #fff;">STARTER 선택 <i class="fa-solid fa-arrow-right"></i></a>
+                            <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=starter'; ?>" class="btn-pill w-100 justify-content-center fs-7 shadow border-0" style="background: linear-gradient(to right, #2A5BDA, #62D6FF); color: #fff;">STARTER 선택 <i class="fa-solid fa-arrow-right"></i></a>
                         </div>
                     </div>
                 </div>
@@ -677,7 +677,7 @@ body { background-color: #0B1120 !important; }
                 <!-- PRO -->
                 <div class="col-lg-4">
                     <div class="reveal h-100 rounded-4 border border-white-10 bg-white p-4 p-md-5 d-flex flex-column" style="transition-delay: 200ms;">
-                        <div class="fs-8 fw-bold tracking-widest text-deep-navy-50">PRO</div>
+                        <div class="fs-8 fw-bold tracking-widest text-deep-navy">PRO</div>
                         <div class="mt-3 d-flex align-items-baseline gap-1">
                             <span class="fs-2 fw-extrabold tracking-tight text-deep-navy">월 49만원</span>
                             <span class="fs-8 text-deep-navy-50">/ VAT 별도</span>
@@ -689,7 +689,7 @@ body { background-color: #0B1120 !important; }
                             <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 무제한</div>
                             <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 24/7 전담 지원</div>
                         </div>
-                        <a href="/register?plan=pro" class="btn-pill btn-light w-100 justify-content-center fs-7">PRO 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=pro'; ?>" class="btn-pill btn-light w-100 justify-content-center fs-7">PRO 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
@@ -803,8 +803,8 @@ body { background-color: #0B1120 !important; }
             </p>
             
             <div class="reveal mt-5 d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3 pb-4">
-                <a href="/register" class="btn-pill btn-white shadow-heavy" style="height: 52px; font-size: 16px; padding: 0 2rem;">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                <a href="#demo" class="btn-pill badge-glass text-light" style="height: 52px; font-size: 16px; padding: 0 2rem;"><i class="fa-solid fa-play"></i> 2분 소개영상 보기</a>
+                <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-white shadow-heavy" style="height: 52px; font-size: 16px; padding: 0 2rem;">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="https://cmake.work/quote/demo" target="_blank" class="btn-pill badge-glass text-light" style="height: 52px; font-size: 16px; padding: 0 2rem;"><i class="fa-solid fa-play"></i> 견적신청데모</a>
             </div>
             <div class="reveal mt-4 fs-8 text-deep-navy-45 pb-5">
                 평균 온보딩 12분 • PoC 3~5곳 진행 중
