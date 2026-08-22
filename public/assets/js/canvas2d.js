@@ -599,8 +599,9 @@ function splitRackGroup(rackIndex, spanIndex) {
         }
         
         let offsetPx = offsetMm * currentScale;
-        let newX = r.x + (r.isHoriz ? r.dir * offsetPx : 0);
-        let newY = r.y + (!r.isHoriz ? r.dir * offsetPx : 0);
+        const currentAngle = typeof getRackAngle === 'function' ? getRackAngle(r) : (r.angle || 0);
+        let newX = r.x + Math.cos(currentAngle) * offsetPx;
+        let newY = r.y + Math.sin(currentAngle) * offsetPx;
         
         let nSmall = backSpans[backSpans.length-1] === r.smallBeamLength ? 1 : 0;
         let nConn = backSpans.length - 1 - nSmall;
@@ -809,7 +810,8 @@ canvas.addEventListener('mousemove', (e) => {
     // 랙 끝단 드래그 확장/축소 처리 (스마트 장애물 감지 & 랙 자동 병합)
     if (isExtendingRack && extendingRackIndex >= 0 && extendingRackIndex < racks.length) {
         const r = racks[extendingRackIndex];
-        const deltaPx = r.isHoriz ? (currentX - extendStartPos.x) * r.dir : (currentY - extendStartPos.y) * r.dir;
+        const extAngle = getRackAngle(r);
+        const deltaPx = (currentX - extendStartPos.x) * Math.cos(extAngle) + (currentY - extendStartPos.y) * Math.sin(extAngle);
         const deltaMm = deltaPx / currentScale;
         const smallBeamLength = r.smallBeamLength || getSmallBeamLength(r.beamLength);
 
@@ -1129,6 +1131,10 @@ canvas.addEventListener('drop', (e) => {
             });
         } else {
             obstacles.push({ type: draggedItemType, name: typeLabel + dCount, x: dropX, y: dropY, angle: 0, length: 2000, edgeIndex: -1 });
+        }
+    } else if (draggedItemType === 'rack') {
+        if (typeof window.spawnInitialRacks === 'function') {
+            window.spawnInitialRacks(dropX, dropY);
         }
     }
     draggedItemType = null;
@@ -1958,7 +1964,10 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
 
     // 4. CAD 치수선(Dimension Lines) 렌더링
     if (!isPreview) {
-        const isFlipped = (r.dir < 0);
+        // 회전된 랙의 치수 텍스트 가독성 보정
+        const currentAngle = typeof getRackAngle === 'function' ? getRackAngle(r) : (r.angle || 0);
+        const normAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const isFlipped = (normAngle > Math.PI / 2 + 0.01 && normAngle < 3 * Math.PI / 2 + 0.01);
 
         // 연장 보조선 (Extension Lines)
         ctx.strokeStyle = 'rgba(248, 113, 113, 0.6)';
@@ -1974,17 +1983,16 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
         drawDimensionArrow(ctx, -20, -depthPx/2, -20, depthPx/2, totalDepthMm.toLocaleString(), '#f87171', true, isFlipped);
 
         // 4-2. 가로 정규 로드빔 내측 치수선 (2,585 등) - 첫 번째 베이 하단에 표기
-        const isFlippedArrow = (r.dir < 0);
         const dimY = isDouble ? 0 : (depthPx/2 + 15);
         
         if (regularSpans > 0) {
-            drawDimensionArrow(ctx, colSizePx, dimY, colSizePx + beamPx, dimY, Math.round(r.beamLength).toLocaleString(), '#f87171', !r.isHoriz, isFlippedArrow);
+            drawDimensionArrow(ctx, colSizePx, dimY, colSizePx + beamPx, dimY, Math.round(r.beamLength).toLocaleString(), '#f87171', false, isFlipped);
         }
 
         // 4-3. 작은연결 치수선 (1,385 등) 표기 (작은연결이 있을 때 항상 명확히 표시)
         if (r.smallConnected > 0) {
             const smallStartPx = colSizePx + (regularSpans * beamPx);
-            drawDimensionArrow(ctx, smallStartPx, dimY, smallStartPx + smallBeamPx, dimY, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', !r.isHoriz, isFlippedArrow);
+            drawDimensionArrow(ctx, smallStartPx, dimY, smallStartPx + smallBeamPx, dimY, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', false, isFlipped);
         }
 
         // 5. 랙 끝단 드래그 확장 핸들 (인터랙티브 모드에 따라 활성화된 모드의 아이콘 하나만 렌더링)
@@ -2067,7 +2075,19 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
                     }
                     
                     ctx.fillStyle = isActualBypass ? '#ef4444' : '#f43f5e';
-                    ctx.fillText(labelText, bayCenterX, labelY);
+                    
+                    // 글자가 뒤집히지 않도록 보정
+                    const worldAngle = getRackAngle(r);
+                    const isUpsideDown = Math.cos(worldAngle) < -0.1;
+                    
+                    ctx.save();
+                    ctx.translate(bayCenterX, labelY);
+                    if (isUpsideDown) {
+                        ctx.rotate(Math.PI);
+                    }
+                    ctx.fillText(labelText, 0, 0);
+                    ctx.restore();
+                    
                     ctx.restore();
                 }
             }
@@ -2731,15 +2751,19 @@ window.updateRackFormCounts = function() {
             <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">${totalPallets.toLocaleString()}</strong> PLT</span>
         </div>`;
         
-        // 두 번째 줄 빌드 (바이패스가 있을 때만)
-        if (totalBypass > 0) {
+        // 두 번째 줄 빌드 (바이패스가 있을 때만 혹은 바이패스 모드 활성화 시)
+        if (totalBypass > 0 || window.activeInteractMode === 'bypass') {
             const bpS = Math.max(1, spanS - 1);
             const bpLevels = Math.max(1, levels - 1);
             const bpSpec = `${beamLen}×${rackD}×${rackH} (${bpS}S ${bpLevels}단)`;
             
+            let bypassText = totalBypass > 0 
+                ? `연결 <strong id="top-badge-bypass" class="text-danger">${totalBypass}</strong>대 (바이패스)` 
+                : `<span class="text-danger" style="font-size:0.7rem; font-weight:normal; letter-spacing:-0.5px;">바이패스 모드 (도면에서 랙 클릭)</span>`;
+                
             html += `<div class="d-flex align-items-center gap-2 flex-wrap mt-1 pt-1 border-top border-secondary w-100" style="font-size:0.78rem;">
                 <span class="badge bg-danger text-white" style="font-size:0.7rem; font-weight:600; padding:3px 6px;">${bpSpec}</span>
-                <span class="text-danger fw-bold ms-2">연결 <strong id="top-badge-bypass" class="text-danger">${totalBypass}</strong>대 (바이패스)</span>
+                <span class="text-danger fw-bold ms-2">${bypassText}</span>
             </div>`;
         }
         
@@ -2772,7 +2796,7 @@ window.renderObstacleInputs = function() {
                 <span class="${nameColor} fw-bold small" style="min-width:60px;">${obs.name}</span>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-transparent text-secondary border-secondary">길이</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.length}" oninput="updateObstacleData(${index}, 'length', this.value)">
+                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.length}" onclick="this.select()" oninput="updateObstacleData(${index}, 'length', this.value)">
                 </div>
                 <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteObstacle(${index})">✕</button>
             `;
@@ -2781,11 +2805,11 @@ window.renderObstacleInputs = function() {
                 <span class="${nameColor} fw-bold small" style="min-width:60px;">${obs.name}</span>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-transparent text-secondary border-secondary">가로</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.width}" oninput="updateObstacleData(${index}, 'width', this.value)">
+                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.width}" onclick="this.select()" oninput="updateObstacleData(${index}, 'width', this.value)">
                 </div>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-transparent text-secondary border-secondary">세로</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.height}" oninput="updateObstacleData(${index}, 'height', this.value)">
+                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.height}" onclick="this.select()" oninput="updateObstacleData(${index}, 'height', this.value)">
                 </div>
                 <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteObstacle(${index})">✕</button>
             `;
@@ -3559,7 +3583,8 @@ window.autoAlignRacks = function() {
             if (rows.length === 1) {
                 rows[0].forEach(r => {
                     r.y = (topY + bottomY) / 2;
-                    r.x = wCenter - r.totalLengthPx/2;
+                    const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
+                    r.x = isFlipped ? wCenter + r.totalLengthPx/2 : wCenter - r.totalLengthPx/2;
                 });
             } else {
                 const gap = (bottomY - topY) / (rows.length + 1);
@@ -3572,7 +3597,8 @@ window.autoAlignRacks = function() {
                     }
                     row.forEach(r => {
                         r.y = targetY;
-                        r.x = wCenter - r.totalLengthPx/2;
+                        const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
+                        r.x = isFlipped ? wCenter + r.totalLengthPx/2 : wCenter - r.totalLengthPx/2;
                     });
                 });
             }
@@ -3601,7 +3627,8 @@ window.autoAlignRacks = function() {
             if (cols.length === 1) {
                 cols[0].forEach(r => {
                     r.x = (leftX + rightX) / 2;
-                    r.y = wCenterY - r.totalLengthPx/2;
+                    const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
+                    r.y = isFlippedVert ? wCenterY + r.totalLengthPx/2 : wCenterY - r.totalLengthPx/2;
                 });
             } else {
                 const gap = (rightX - leftX) / (cols.length + 1);
@@ -3614,7 +3641,8 @@ window.autoAlignRacks = function() {
                     }
                     col.forEach(r => {
                         r.x = targetX;
-                        r.y = wCenterY - r.totalLengthPx/2;
+                        const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
+                        r.y = isFlippedVert ? wCenterY + r.totalLengthPx/2 : wCenterY - r.totalLengthPx/2;
                     });
                 });
             }
@@ -3635,3 +3663,8 @@ canvas.addEventListener('mousemove', e => {
     window.lastMouseX = e.offsetX;
     window.lastMouseY = e.offsetY;
 });
+
+// FIXED by Heidi - global exposure
+window.racks = typeof racks !== 'undefined' ? racks : [];
+window.currentScale = typeof currentScale !== 'undefined' ? currentScale : 0;
+window.cameraZoom = typeof cameraZoom !== 'undefined' ? cameraZoom : 1;

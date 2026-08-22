@@ -107,11 +107,19 @@ class BootpayController
         ");
         $stmt->execute([$userId, $billingKey, $planType, $nextPaymentDate]);
 
+        // users.plan 업데이트 (plan_type에서 플랜 추출: starter_1m → starter)
+        $planKey = 'free';
+        if (strpos($planType, 'pro') === 0) $planKey = 'pro';
+        elseif (strpos($planType, 'starter') === 0) $planKey = 'starter';
+        $planExpires = date('Y-m-d H:i:s', strtotime("+$months months"));
+        $updatePlan = $this->db->prepare("UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?");
+        $updatePlan->execute([$planKey, $planExpires, $userId]);
+
         // 최초 결제 기록 (amount가 넘어온 경우)
         $amount = $data['amount'] ?? 0;
         if ($amount > 0) {
-            $logStmt = $this->db->prepare("INSERT INTO payment_logs (user_id, amount, receipt_url, status) VALUES (?, ?, ?, 'success')");
-            $logStmt->execute([$userId, $amount, $receiptUrl]); 
+            $logStmt = $this->db->prepare("INSERT INTO payment_logs (user_id, amount, pay_type, plan_type, receipt_url, status) VALUES (?, ?, 'subscribe', ?, ?, 'success')");
+            $logStmt->execute([$userId, $amount, $planType, $receiptUrl]); 
         }
 
         echo json_encode(['success' => true, 'message' => '정기결제가 성공적으로 등록되었습니다.', 'next_payment_date' => $nextPaymentDate]);
@@ -164,5 +172,94 @@ class BootpayController
     public function mypagePayments()
     {
         include CM_VIEWS_PATH . '/vendor/payments.php';
+    }
+
+    /**
+     * 추가 발송 건수(Add-on) 단건 결제 검증 및 충전
+     */
+    public function verifyAddon()
+    {
+        header('Content-Type: application/json');
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $receiptId = $data['receipt_id'] ?? '';
+        $amount = (int)($data['amount'] ?? 0);
+        $userIdStr = $_SESSION['user']['user_id'] ?? '';  // 문자열 user_id (예: "testuser123")
+        $userIdInt = (int)($_SESSION['user']['id'] ?? 0); // 숫자 id (PK)
+
+        file_put_contents(CM_PATH . '/bootpay_addon_debug.log',
+            "[" . date('Y-m-d H:i:s') . "] RECEIVED: receipt_id={$receiptId}, amount={$amount}, userIdStr={$userIdStr}, userIdInt={$userIdInt}\n",
+            FILE_APPEND);
+
+        if (empty($receiptId) || $amount <= 0) {
+            echo json_encode(['success' => false, 'message' => '잘못된 결제 정보입니다. (receipt_id=' . $receiptId . ', amount=' . $amount . ')']);
+            return;
+        }
+
+        // 부트페이 결제 조회(verify)
+        $verifyResult = $this->bootpayService->verifyPayment($receiptId);
+        file_put_contents(CM_PATH . '/bootpay_addon_debug.log',
+            "VERIFY RESULT: " . print_r($verifyResult, true) . "\n",
+            FILE_APPEND);
+
+        // 결제 조회 성공 여부 확인
+        // status=200 은 HTTP 성공, status=1 은 부트페이 SDK가 결제완료를 직접 반환하는 경우
+        if (!isset($verifyResult->status)) {
+            echo json_encode(['success' => false, 'message' => '결제 조회 응답 없음']);
+            return;
+        }
+
+        // status=200: HTTP 성공 응답 (receipt_data 안에 결제 상태)
+        // status=1: SDK가 결제 완료 상태를 직접 반환
+        if ($verifyResult->status === 200) {
+            $paymentData = $verifyResult->receipt_data ?? null;
+            $paymentStatus = $paymentData->status ?? -1;
+        } elseif ($verifyResult->status === 1) {
+            // SDK가 receipt_data를 직접 반환한 경우 - status=1이 결제완료를 의미
+            $paymentData = $verifyResult;
+            $paymentStatus = 1;
+        } else {
+            echo json_encode(['success' => false, 'message' => '결제 조회 실패 (status=' . $verifyResult->status . ')']);
+            return;
+        }
+
+        file_put_contents(CM_PATH . '/bootpay_addon_debug.log',
+            "PAYMENT STATUS: {$paymentStatus}, paymentData: " . print_r($paymentData, true) . "\n",
+            FILE_APPEND);
+
+        // status=1: 결제 완료, status=2: 서버 승인 대기
+        if ($paymentStatus !== 1 && $paymentStatus !== 2) {
+            echo json_encode(['success' => false, 'message' => '결제가 완료 상태가 아닙니다. (status=' . $paymentStatus . ')']);
+            return;
+        }
+
+        // DB 처리: 10건 추가 충전 및 결제 로그
+        try {
+            $this->db->beginTransaction();
+
+            // user_id(문자열)와 id(숫자) 각각 올바른 타입으로 매칭
+            $stmt = $this->db->prepare("UPDATE users SET addon_quotes_balance = addon_quotes_balance + 10 WHERE user_id = ? OR id = ?");
+            $stmt->execute([$userIdStr, $userIdInt]);
+
+            $logStmt = $this->db->prepare("INSERT INTO payment_logs (user_id, amount, pay_type, plan_type, receipt_url, status) VALUES (?, ?, 'addon', NULL, ?, 'success')");
+            $receiptUrl = $paymentData->receipt_url ?? '';
+            $logStmt->execute([$userIdInt, $amount, $receiptUrl]);
+
+            $this->db->commit();
+            file_put_contents(CM_PATH . '/bootpay_addon_debug.log', "DB SUCCESS: +10 for userIdStr={$userIdStr}, userIdInt={$userIdInt}\n", FILE_APPEND);
+            echo json_encode(['success' => true]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            file_put_contents(CM_PATH . '/bootpay_addon_debug.log', "DB ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            echo json_encode(['success' => false, 'message' => 'DB 처리 중 오류: ' . $e->getMessage()]);
+        }
     }
 }

@@ -244,6 +244,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                         <div class="drag-item bg-dark text-white p-2 rounded" id="drag-hydrant" draggable="true" ondragstart="handleDragStart(event, 'hydrant')">🧯 소화전</div>
                         <div class="drag-item bg-dark text-white p-2 rounded" id="drag-panel" draggable="true" ondragstart="handleDragStart(event, 'panel')">⚡ 전기판넬</div>
                         <div class="drag-item bg-dark text-white p-2 rounded" id="drag-forbidden" draggable="true" ondragstart="handleDragStart(event, 'forbidden')">🚫 사용불가</div>
+                        
                     </div>
                     <div id="obstacle-inputs-container" class="mt-3 d-flex flex-column gap-2"></div>
                 </div>
@@ -274,22 +275,22 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">가로 (W) mm</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-w" value="1100" placeholder="예: 1100">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-w" value="1100" placeholder="예: 1100">
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">세로/깊이 (D) mm</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-d" value="1100" placeholder="예: 1100">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-d" value="1100" placeholder="예: 1100">
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">
                                 적재 높이 (H) mm
                                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-pallet-height')">❓</button>
                             </label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-h" value="1500" placeholder="화물 포함">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-h" value="1500" placeholder="화물 포함">
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">총 중량 (kg)</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-weight" value="1000" placeholder="파렛트당 중량">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-weight" value="1000" placeholder="파렛트당 중량">
                         </div>
                     </div>
 
@@ -308,11 +309,11 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">최대 인상높이 (mm)</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-lift-height" value="4500" placeholder="마스트 한계">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-lift-height" value="4500" placeholder="마스트 한계">
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">직각교차 통로폭(AST)</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-ast" value="2800" placeholder="작업 통로 폭">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-ast" value="2800" placeholder="작업 통로 폭">
                         </div>
                     </div>
 
@@ -323,11 +324,11 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 단수 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-levels" value="3" placeholder="예: 3단">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-levels" value="3" placeholder="예: 3단">
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 높이(mm)</label>
-                            <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
                         </div>
                     </div>
 
@@ -696,6 +697,23 @@ function runAutoLayout() {
             return;
         }
     }
+    
+    // 지게차 인상높이 vs 랙 설치높이 검증
+    const palletH = parseInt(document.getElementById('pallet-h')?.value) || 0;
+    const levels = parseInt(document.getElementById('rack-levels')?.value) || 0;
+    const maxLiftH = parseInt(document.getElementById('forklift-lift-height')?.value) || 0;
+    let rackH = parseInt(document.getElementById('rack-height')?.value) || 0;
+    
+    if (rackH <= 0 && palletH > 0 && levels > 0) {
+        const rawH = (palletH * levels) + (levels * 200) + 300;
+        rackH = Math.ceil(rawH / 500) * 500;
+    }
+    
+    if (rackH > maxLiftH) {
+        alert(`⚠️ 계산된 랙 설치 높이(${rackH.toLocaleString()}mm)가 지게차 최대 인상높이(${maxLiftH.toLocaleString()}mm)를 초과합니다!\n단수를 낮추거나 지게차 제원을 확인해주세요.`);
+        document.getElementById('rack-levels')?.focus();
+        return;
+    }
 
     const btn = document.getElementById('run-layout-btn');
     btn.innerHTML = '✅ 도면 활성화 완료';
@@ -798,6 +816,9 @@ function showAiResult(d) {
 
 // --- 견적 요청 모달 제출 ---
 function submitQuoteRequest() {
+    if (typeof updateRackFormCounts === 'function') {
+        updateRackFormCounts();
+    }
     const company = document.getElementById('modal-company').value.trim();
     const name    = document.getElementById('modal-name').value.trim();
     const phone   = document.getElementById('modal-phone').value.trim();
@@ -1004,7 +1025,7 @@ window.generateCustomInputs = function(numEdges) {
         <div class="col-6">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-transparent text-info border-secondary">${i}번 선분</span>
-                <input type="number" id="edge-input-${i-1}" class="form-control bg-transparent text-white border-secondary" value="" placeholder="길이(mm)" oninput="updateEdgeLength(${i-1}, this.value)">
+                <input type="number" id="edge-input-${i-1}" onclick="this.select()" class="form-control bg-transparent text-white border-secondary" value="" placeholder="길이(mm)" oninput="updateEdgeLength(${i-1}, this.value)">
             </div>
         </div>`;
     }
@@ -1021,10 +1042,10 @@ window.activeInteractMode = null; // 기본은 null (이동 모드)
 
 window.setInteractMode = function(mode) {
     const btnRotate = document.getElementById('mode-btn-rotate');
-    const btnRotateCcw = document.getElementById('mode-btn-rotate-ccw');
     const btnExtend = document.getElementById('mode-btn-extend');
     const btnCopy = document.getElementById('mode-btn-copy');
     const btnBypass = document.getElementById('mode-btn-bypass');
+    const btnDelete = document.getElementById('mode-btn-delete');
     
     // 이미 활성화된 모드를 다시 클릭 시 모드 해제(null)
     if (window.activeInteractMode === mode) {
@@ -1033,14 +1054,15 @@ window.setInteractMode = function(mode) {
         window.activeInteractMode = mode;
     }
     
+    // 항상 뱃지 정보 즉시 업데이트
+    if (typeof updateRackFormCounts === 'function') {
+        updateRackFormCounts();
+    }
+    
     // 버튼 스타일 리셋
     if (btnRotate) {
         btnRotate.style.background = 'rgba(251,191,36,0.06)';
         btnRotate.style.color = '#fbbf24';
-    }
-    if (btnRotateCcw) {
-        btnRotateCcw.style.background = 'rgba(251,191,36,0.06)';
-        btnRotateCcw.style.color = '#fbbf24';
     }
     if (btnExtend) {
         btnExtend.style.background = 'rgba(56,189,248,0.06)';
@@ -1054,14 +1076,15 @@ window.setInteractMode = function(mode) {
         btnBypass.style.background = 'rgba(244,63,94,0.06)';
         btnBypass.style.color = '#f43f5e';
     }
+    if (btnDelete) {
+        btnDelete.style.background = 'rgba(239,68,68,0.06)';
+        btnDelete.style.color = '#ef4444';
+    }
     
     // 활성화된 모드 버튼 하이라이트
     if (window.activeInteractMode === 'rotate' && btnRotate) {
         btnRotate.style.background = '#fbbf24';
         btnRotate.style.color = '#000';
-    } else if (window.activeInteractMode === 'rotate-ccw' && btnRotateCcw) {
-        btnRotateCcw.style.background = '#fbbf24';
-        btnRotateCcw.style.color = '#000';
     } else if (window.activeInteractMode === 'extend' && btnExtend) {
         btnExtend.style.background = '#38bdf8';
         btnExtend.style.color = '#000';
@@ -1071,6 +1094,9 @@ window.setInteractMode = function(mode) {
     } else if (window.activeInteractMode === 'bypass' && btnBypass) {
         btnBypass.style.background = '#f43f5e';
         btnBypass.style.color = '#000';
+    } else if (window.activeInteractMode === 'delete' && btnDelete) {
+        btnDelete.style.background = '#ef4444';
+        btnDelete.style.color = '#fff';
     }
     
     // 캔버스 즉시 갱신 (핸들 렌더링 변경 반영)
@@ -1110,7 +1136,7 @@ window.addEventListener('DOMContentLoaded', () => {
         backdrop-filter: blur(16px);
     ">
         <!-- 헤더 -->
-        <div class="text-center mb-2" style="font-size:0.63rem; color:rgba(148,163,184,0.75); letter-spacing:0.1em; font-weight:700;">📐 CANVAS</div>
+        <div id="remote-header" class="text-center mb-2" style="font-size:0.63rem; color:rgba(148,163,184,0.75); letter-spacing:0.1em; font-weight:700; cursor:grab;">📐 CANVAS</div>
 
         <!-- 줌 버튼 행 -->
         <div class="d-flex justify-content-between gap-1 mb-2">
@@ -1166,25 +1192,14 @@ window.addEventListener('DOMContentLoaded', () => {
         <!-- 🛠️ 편집 모드 선택 패널 -->
         <div class="text-center mb-1" style="font-size:0.6rem; color:rgba(148,163,184,0.6); letter-spacing:0.05em; font-weight:700;">🛠️ EDIT MODE</div>
         <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-            <!-- 회전 모드 가로 2단 분할 (시계 / 반시계) -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                <!-- 시계 회전 모드 (Amber) -->
-                <button id="mode-btn-rotate" onclick="setInteractMode('rotate')" style="
-                    border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
-                    background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.65rem; font-weight:700;
-                    padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:2px;
-                " onmouseover="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.06)'">
-                    <span>↻</span> <span>시계</span>
-                </button>
-                <!-- 반시계 회전 모드 (Amber) -->
-                <button id="mode-btn-rotate-ccw" onclick="setInteractMode('rotate-ccw')" style="
-                    border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
-                    background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.65rem; font-weight:700;
-                    padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:2px;
-                " onmouseover="if(window.activeInteractMode!=='rotate-ccw') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate-ccw') this.style.background='rgba(251,191,36,0.06)'">
-                    <span>↺</span> <span>반시계</span>
-                </button>
-            </div>
+            <!-- 회전 모드 (Amber) -->
+            <button id="mode-btn-rotate" onclick="setInteractMode('rotate')" style="
+                width:100%; border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
+                background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
+            " onmouseover="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.06)'">
+                <span>↻</span> <span>회전 모드</span>
+            </button>
             <!-- 연장 모드 (Sky Blue) -->
             <button id="mode-btn-extend" onclick="setInteractMode('extend')" style="
                 width:100%; border: 1px solid rgba(56,189,248,0.3); border-radius:8px;
@@ -1209,15 +1224,32 @@ window.addEventListener('DOMContentLoaded', () => {
             " onmouseover="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.18)'" onmouseout="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.06)'">
                 <span>Bypass</span>
             </button>
+            <!-- 삭제 모드 (Red) -->
+            <button id="mode-btn-delete" onclick="setInteractMode('delete')" style="
+                width:100%; border: 1px solid rgba(239,68,68,0.3); border-radius:8px;
+                background: rgba(239,68,68,0.06); color:#ef4444; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
+            " onmouseover="if(window.activeInteractMode!=='delete') this.style.background='rgba(239,68,68,0.18)'" onmouseout="if(window.activeInteractMode!=='delete') this.style.background='rgba(239,68,68,0.06)'">
+                <span>✕</span> <span>삭제 모드</span>
+            </button>
             
             <!-- 도면자동정렬 버튼 -->
             <button id="remote-align-btn" onclick="if(window.autoAlignRacks) window.autoAlignRacks();" style="
-                width:100%; border: 1px solid rgba(56,189,248,0.5); border-radius:8px; margin-top: 6px;
+                width:100%; border: 1px solid rgba(56,189,248,0.5); border-radius:8px;
                 background: rgba(56,189,248,0.1); color:#38bdf8; font-size:0.7rem; font-weight:700;
                 padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
             " onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.1)'">
                 <span>🎛️</span> <span style="margin-left:4px;">도면자동정렬</span>
             </button>
+            
+            <!-- 기본 랙 (드래그 스폰) -->
+            <div id="remote-drag-rack" draggable="true" ondragstart="handleDragStart(event, 'rack')" style="
+                width:100%; border: 1px solid rgba(139,92,246,0.5); border-radius:8px;
+                background: rgba(139,92,246,0.15); color:#c4b5fd; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:grab; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
+            " onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
+                <span>🟦</span> <span style="margin-left:4px;">기본 랙 (드래그)</span>
+            </div>
         </div>
 
         <!-- 구분선 -->
@@ -1227,7 +1259,7 @@ window.addEventListener('DOMContentLoaded', () => {
         <button id="remote-quote-btn" class="d-none" data-bs-toggle="modal" data-bs-target="#quoteRequestModal" style="
             width:100%; border: 1px solid rgba(239,68,68,0.7); border-radius:10px;
             background: rgba(220,38,38,0.2); color:#fca5a5;
-            font-size:0.67rem; font-weight:700; padding:8px 4px;
+            font-size:0.7rem; font-weight:700; padding:18px 4px;
             cursor:pointer; transition: all 0.2s; line-height:1.35; letter-spacing:0.01em;
         " onmouseover="this.style.background='rgba(220,38,38,0.42)';this.style.color='#fff'" onmouseout="this.style.background='rgba(220,38,38,0.2)';this.style.color='#fca5a5'">
             🔴 견적요청
@@ -1235,5 +1267,78 @@ window.addEventListener('DOMContentLoaded', () => {
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. 바이패스 버튼 제어 로직
+    const rackLevelsInput = document.getElementById('rack-levels');
+    const bypassBtn = document.getElementById('mode-btn-bypass');
+    
+    function updateBypassBtnState() {
+        if (!rackLevelsInput || !bypassBtn) return;
+        const levels = parseInt(rackLevelsInput.value) || 0;
+        if (levels < 3) {
+            bypassBtn.style.display = 'none';
+            
+            if (window.activeInteractMode === 'bypass' && typeof window.setInteractMode === 'function') {
+                window.setInteractMode('bypass'); 
+            }
+        } else {
+            bypassBtn.style.display = 'flex';
+        }
+    }
+
+    if (rackLevelsInput) {
+        rackLevelsInput.addEventListener('input', updateBypassBtnState);
+        rackLevelsInput.addEventListener('change', updateBypassBtnState);
+    }
+    setTimeout(updateBypassBtnState, 500);
+
+    // 2. 리모컨 드래그 로직
+    const remoteCtrl = document.getElementById('canvas-remote-ctrl');
+    const remoteHeader = document.getElementById('remote-header');
+    
+    if (remoteCtrl && remoteHeader) {
+        let isDraggingRemote = false;
+        let remoteOffsetX = 0;
+        let remoteOffsetY = 0;
+        
+        remoteHeader.addEventListener('mousedown', function(e) {
+            isDraggingRemote = true;
+            const rect = remoteCtrl.getBoundingClientRect();
+            remoteOffsetX = e.clientX - rect.left;
+            remoteOffsetY = e.clientY - rect.top;
+            remoteHeader.style.cursor = 'grabbing';
+            // 기존 bottom/right 기준을 top/left로 전환
+            remoteCtrl.style.right = 'auto';
+            remoteCtrl.style.bottom = 'auto';
+            remoteCtrl.style.left = rect.left + 'px';
+            remoteCtrl.style.top = rect.top + 'px';
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDraggingRemote) return;
+            e.preventDefault();
+            let newX = e.clientX - remoteOffsetX;
+            let newY = e.clientY - remoteOffsetY;
+            
+            // 화면 밖으로 안 나가게 방어
+            const maxX = window.innerWidth - remoteCtrl.offsetWidth;
+            const maxY = window.innerHeight - remoteCtrl.offsetHeight;
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+            
+            remoteCtrl.style.left = newX + 'px';
+            remoteCtrl.style.top = newY + 'px';
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDraggingRemote) {
+                isDraggingRemote = false;
+                remoteHeader.style.cursor = 'grab';
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>

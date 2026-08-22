@@ -361,6 +361,8 @@ CREATE TABLE `quote_requests` (
   `email` varchar(255) DEFAULT NULL,
   `processed_by` int(11) DEFAULT NULL,
   `processed_at` datetime DEFAULT NULL,
+  `is_mailed` tinyint(1) DEFAULT 0 COMMENT '메일 발송 여부',
+  `mailed_at` datetime DEFAULT NULL COMMENT '메일 발송 일시',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='캔버스 견적 요청 내역';
 
@@ -375,6 +377,9 @@ CREATE TABLE `users` (
   `point` int(11) DEFAULT 0 COMMENT '포인트',
   `level` int(11) DEFAULT 1 COMMENT '레벨',
   `country` varchar(50) DEFAULT 'Unknown' COMMENT '접속 국가',
+  `addon_quotes_balance` int(11) DEFAULT 0 COMMENT '추가 결제된 견적 발송 건수',
+  `plan` enum('free','starter','pro') DEFAULT 'free' COMMENT '구독 플랜 (free/starter/pro)',
+  `plan_expires_at` datetime DEFAULT NULL COMMENT '구독 만료일 (NULL이면 무기한 또는 프리)',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '가입 일시',
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
@@ -464,12 +469,15 @@ CREATE TABLE `payment_logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `amount` int(11) NOT NULL DEFAULT 0 COMMENT '결제 금액',
+  `pay_type` enum('addon','subscribe') DEFAULT 'addon' COMMENT '결제 유형 (addon=건당, subscribe=정기구독)',
+  `plan_type` varchar(50) DEFAULT NULL COMMENT '구독 플랜명 (subscribe일 때: starter_1m, pro_6m 등)',
   `receipt_url` varchar(255) DEFAULT NULL COMMENT '부트페이 영수증 URL',
   `status` varchar(50) NOT NULL DEFAULT 'success' COMMENT '결제 상태 (success, failed 등)',
   `error_msg` text DEFAULT NULL COMMENT '실패 시 에러 메시지',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  KEY `idx_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='단건 결제 기록 테이블';
+  KEY `idx_user` (`user_id`),
+  KEY `idx_pay_type` (`pay_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='결제 기록 테이블 (건당/구독 통합)';
 
 SET FOREIGN_KEY_CHECKS = 1;

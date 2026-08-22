@@ -10,7 +10,29 @@ class VendorController extends BaseController {
             $this->redirect('/login');
             return;
         }
-        $this->view('vendor/index');
+        
+        $vendorUserId = $_SESSION['user']['user_id'];
+        $db = \App\Core\Database::getInstance();
+        
+        // 오늘 접수된 견적 건수
+        $todayStart = date('Y-m-d 00:00:00');
+        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND created_at >= ?");
+        $stmt->execute([$vendorUserId, $todayStart]);
+        $todayQuotesCount = intval($stmt->fetchColumn());
+        
+        // 발송 한도 정보
+        $balanceInfo = $this->getQuoteBalance($vendorUserId);
+
+        // 금일 메일 발송 횟수
+        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND is_mailed = 1 AND mailed_at >= ?");
+        $stmt->execute([$vendorUserId, $todayStart]);
+        $todayMailedCount = intval($stmt->fetchColumn());
+        
+        $this->view('vendor/index', [
+            'todayQuotesCount' => $todayQuotesCount,
+            'todayMailedCount' => $todayMailedCount,
+            'balanceInfo'      => $balanceInfo
+        ]);
     }
     public function settings() {
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
@@ -336,7 +358,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $this->view('vendor/quote_detail', ['quote' => $quote]);
+        $balanceInfo = $this->getQuoteBalance($userId);
+        $this->view('vendor/quote_detail', ['quote' => $quote, 'balanceInfo' => $balanceInfo]);
     }
 
     public function quotePrice($vars) {
@@ -376,10 +399,13 @@ class VendorController extends BaseController {
         $modules = $result['modules'];
         $overallTotal = $result['overallTotal'];
 
+        $balanceInfo = $this->getQuoteBalance($userId);
+
                 $this->view('vendor/quote_price', [
             'quote' => $quote, 
             'settings' => $settings, 
             'modules' => $modules,
+            'balanceInfo' => $balanceInfo,
             'overallTotal' => $overallTotal
         ]);
     }
@@ -650,7 +676,8 @@ class VendorController extends BaseController {
         $result = $this->buildQuoteModules($quote);
         $modules = $result['modules'];
 
-        $this->view('vendor/quote_document', ['quote' => $quote, 'settings' => $settings, 'modules' => $modules]);
+        $balanceInfo = $this->getQuoteBalance($userId);
+        $this->view('vendor/quote_document', ['quote' => $quote, 'settings' => $settings, 'modules' => $modules, 'balanceInfo' => $balanceInfo]);
     }
 
     public function sendEmail(array $vars) {
@@ -673,6 +700,13 @@ class VendorController extends BaseController {
             return;
         }
         
+        // Check Limit
+        $balanceInfo = $this->getQuoteBalance($userId);
+        if ($balanceInfo['remaining'] <= 0) {
+            echo json_encode(['success' => false, 'message' => '발송 한도를 초과했습니다. 추가 결제가 필요합니다.']);
+            return;
+        }
+
         $attachments = [];
         
         // Handle PDF Quote
@@ -701,14 +735,104 @@ class VendorController extends BaseController {
         
         if ($result['success']) {
             $db = \App\Core\Database::getInstance();
+            
+            // 차감 로직: 기본 한도를 초과하여 발송하는 경우 addon_balance 차감
+            if ($balanceInfo['used'] >= $balanceInfo['total_limit'] && $balanceInfo['addon_balance'] > 0) {
+                $db->prepare("UPDATE users SET addon_quotes_balance = addon_quotes_balance - 1 WHERE id = ?")->execute([$userId]);
+            }
+            
             $employeeId = $_SESSION['employee_id'] ?? null;
             if ($employeeId) {
-                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW() WHERE id = ?");
+                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW() WHERE id = ?");
                 $stmt->execute([$employeeId, $id]);
+            } else {
+                $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW() WHERE id = ?");
+                $stmt->execute([$id]);
             }
             echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
         } else {
             echo json_encode(['success' => false, 'message' => '발송 실패: ' . $result['message']]);
         }
     }
+
+    /**
+     * 현재 업체의 남은 견적 발송 건수 조회
+     * @return array [ 'total_limit' => 기본한도, 'addon_balance' => 추가결제 잔여분, 'used' => 현재 주기 사용량, 'remaining' => 총 남은 발송 횟수 ]
+     */
+    public function getQuoteBalance($vendorUserId) {
+        $db = \App\Core\Database::getInstance();
+        
+        // 1. users 테이블에서 플랜 및 가입일 직접 조회
+        $userStmt = $db->prepare("SELECT id, plan, created_at, addon_quotes_balance FROM users WHERE user_id = ? OR id = ? LIMIT 1");
+        $userStmt->execute([$vendorUserId, $vendorUserId]);
+        $userData = $userStmt->fetch();
+
+        if (!$userData) {
+            return ['total_limit' => 10, 'addon_balance' => 0, 'used' => 0, 'remaining' => 10, 'plan' => 'free'];
+        }
+
+        $plan = $userData['plan'] ?? 'free';
+        $addonBalance = intval($userData['addon_quotes_balance'] ?? 0);
+
+        // 2. 플랜별 기본 제공 건수
+        if ($plan === 'pro') {
+            // PRO: 무제한 → addon 충전 불필요
+            return [
+                'total_limit'   => 99999999,
+                'addon_balance' => $addonBalance,
+                'used'          => 0,
+                'remaining'     => 99999999,
+                'plan'          => 'pro'
+            ];
+        } elseif ($plan === 'starter') {
+            $limit = 30;
+        } else {
+            $limit = 10; // free
+        }
+
+        // 3. 현재 주기 기준일 계산 (가입일 기준 매월 동일 일자)
+        $created_at = strtotime($userData['created_at']);
+        $day = date('d', $created_at);
+        $currentMonthDay = strtotime(date("Y-m-{$day} 00:00:00"));
+        if ($currentMonthDay > time()) {
+            $baseDate = date("Y-m-{$day} 00:00:00", strtotime("-1 month", $currentMonthDay));
+        } else {
+            $baseDate = date("Y-m-{$day} 00:00:00", $currentMonthDay);
+        }
+
+        // 4. 현재 주기 발송 메일 수 카운트
+        $countStmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND is_mailed = 1 AND mailed_at >= ?");
+        $countStmt->execute([$vendorUserId, $baseDate]);
+        $usedCount = intval($countStmt->fetchColumn());
+
+        // 5. 남은 횟수 계산 (기본 남은 건수 + addon 누적)
+        $remainingBase = max(0, $limit - $usedCount);
+        $totalRemaining = $remainingBase + $addonBalance;
+
+        return [
+            'total_limit'   => $limit,
+            'addon_balance' => $addonBalance,
+            'used'          => $usedCount,
+            'remaining'     => $totalRemaining,
+            'plan'          => $plan
+        ];
+    }
+
+    public function addonPayment() {
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+            return;
+        }
+
+        // 부트페이 설정 가져오기
+        $db = \App\Core\Database::getInstance();
+        $configStmt = $db->query("SELECT * FROM config WHERE id = 1");
+        $config = $configStmt->fetch();
+
+        $this->view('vendor/addon_payment', [
+            'config' => $config,
+            'user' => clone (object)$_SESSION['user']
+        ]);
+    }
 }
+

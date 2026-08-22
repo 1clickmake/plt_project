@@ -97,6 +97,7 @@ return function(FastRoute\RouteCollector $r) {
 
     // Payment Routes (Bootpay)
     $r->addRoute('POST', '/api/bootpay/save-billing', ['App\Controllers\BootpayController', 'saveBillingKey']);
+    $r->addRoute('POST', '/api/bootpay/verify-addon', ['App\Controllers\BootpayController', 'verifyAddon']);
     $r->addRoute('POST', '/api/bootpay/cancel', ['App\Controllers\BootpayController', 'cancelBilling']);
     $r->addRoute('GET', '/subscribe', ['App\Controllers\BootpayController', 'subscribeForm']);
     $r->addRoute('GET', '/vendor/payments', ['App\Controllers\BootpayController', 'mypagePayments']);
@@ -142,6 +143,7 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/price', ['App\Controllers\VendorController', 'quotePrice']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/document', ['App\Controllers\VendorController', 'quoteDocument']);
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/send_email', ['App\Controllers\VendorController', 'sendEmail']);
+    $r->addRoute('GET',  '/vendor/addon_payment', ['App\Controllers\VendorController', 'addonPayment']);
     $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
     $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);

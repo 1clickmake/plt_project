@@ -138,6 +138,29 @@
         if (e.ctrlKey && e.key.toLowerCase() === 'y') {
             redo();
         }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (typeof racks !== 'undefined' && Array.isArray(racks) && racks.length > 0) {
+                const canvas = document.getElementById('drawingCanvas');
+                if (canvas && typeof currentScale !== 'undefined' && currentScale > 0) {
+                    const lastX = (window._lastCanvasMouseX || 0);
+                    const lastY = (window._lastCanvasMouseY || 0);
+                    for (let i = racks.length - 1; i >= 0; i--) {
+                        const r = racks[i];
+                        if (typeof getRackBoxes !== 'function') continue;
+                        const boxes = getRackBoxes(r);
+                        if (lastX >= boxes.physical.minX && lastX <= boxes.physical.maxX &&
+                            lastY >= boxes.physical.minY && lastY <= boxes.physical.maxY) {
+                            e.preventDefault();
+                            if(typeof window.pushAction === 'function') pushAction({ type: 'delete', racks: JSON.parse(JSON.stringify(racks)) });
+                            racks.splice(i, 1);
+                            if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
+                            if (typeof draw === 'function') draw();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     });
 
     const MAX_STACK = 10;
@@ -252,7 +275,7 @@
             window._lastCanvasMouseY = screenY;
             
             if (window.activeInteractMode === 'bypass' && typeof racks !== 'undefined' && Array.isArray(racks)) {
-                const zoom = window.cameraZoom || 1;
+                const zoom = (window.cameraZoom || window.cameraZoom === 0) ? window.cameraZoom : 1; // FIXED: sync with main canvas
                 const logicalX = screenX / zoom;
                 const logicalY = screenY / zoom;
                 
@@ -346,9 +369,29 @@
             const screenY = e.clientY - rect.top;
             
             // 2. 논리 월드 좌표 (랙 월드 좌표와 연산용)
-            const zoom = window.cameraZoom || 1;
+            const zoom = (window.cameraZoom || window.cameraZoom === 0) ? window.cameraZoom : 1; // FIXED: sync with main canvas
             const logicalX = screenX / zoom;
             const logicalY = screenY / zoom;
+
+            // 1. 삭제 모드 랙 클릭 처리
+            if (window.activeInteractMode === 'delete') {
+                if (typeof racks !== 'undefined' && Array.isArray(racks)) {
+                    for (let i = racks.length - 1; i >= 0; i--) {
+                        const r = racks[i];
+                        if (typeof getRackBoxes !== 'function') continue;
+                        const boxes = getRackBoxes(r);
+                        const pad = 5;
+                        if (screenX >= boxes.physical.minX - pad && screenX <= boxes.physical.maxX + pad &&
+                            screenY >= boxes.physical.minY - pad && screenY <= boxes.physical.maxY + pad) {
+                            if(typeof window.pushAction === 'function') pushAction({ type: 'delete', racks: JSON.parse(JSON.stringify(racks)) });
+                            racks.splice(i, 1);
+                            if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
+                            if (typeof draw === 'function') draw();
+                            return;
+                        }
+                    }
+                }
+            }
 
             // 2. 바이패스 모드 랙 클릭 처리 (리모컨 setInteractMode 연동)
             if (window.activeInteractMode === 'bypass') {
@@ -442,6 +485,312 @@
                         }
                     }
                 }
+            }
+        });
+    });
+})();
+
+// === FIXED by Heidi: expose to global & fix coordinate system ===
+window.rotateRack = typeof rotateRack !== 'undefined' ? rotateRack : window.rotateRack;
+window.getRackHandlesPos = typeof getRackHandlesPos !== 'undefined' ? getRackHandlesPos : window.getRackHandlesPos;
+window.drawRotateHandleIcon = typeof drawRotateHandleIcon !== 'undefined' ? drawRotateHandleIcon : window.drawRotateHandleIcon;
+window.drawExtendHandleIcon = typeof drawExtendHandleIcon !== 'undefined' ? drawExtendHandleIcon : window.drawExtendHandleIcon;
+window.drawCopyHandleIcon = typeof drawCopyHandleIcon !== 'undefined' ? drawCopyHandleIcon : window.drawCopyHandleIcon;
+
+
+// ==================== FIXED V2 by Heidi: Smooth Drag Rotation + 45deg Snap ====================
+(function(){
+  let isRotatingDrag = false;
+  let rotateTargetRack = null;
+  let rotateStartMouseAngle = 0;
+  let rotateStartRackAngle = 0;
+  let rotateSnapEnabled = true;
+  const SNAP_DEGREES = [0,45,90,135,180,225,270,315,360];
+  const SNAP_THRESHOLD = 8; // 8도 이내면 스냅
+
+  function toDeg(rad){ return rad * 180 / Math.PI; }
+  function toRad(deg){ return deg * Math.PI / 180; }
+  function normalizeDeg(d){ d = d % 360; return d < 0 ? d+360 : d; }
+  
+  function getSnapAngle(deg){
+    if(!rotateSnapEnabled) return deg;
+    let nd = normalizeDeg(deg);
+    for(let s of SNAP_DEGREES){
+      let diff = Math.abs(nd - s);
+      if(diff > 180) diff = 360 - diff;
+      if(diff <= SNAP_THRESHOLD){
+        return s;
+      }
+    }
+    // Also check 45deg multiples continuously with light snap
+    let snapped = Math.round(nd / 45) * 45;
+    let diff = Math.abs(nd - snapped);
+    if(diff <= SNAP_THRESHOLD) return snapped;
+    return deg;
+  }
+
+  function getMouseAngle(cx, cy, mx, my){
+    return Math.atan2(my - cy, mx - cx);
+  }
+
+  window.setRotateSnap = function(enabled){ rotateSnapEnabled = !!enabled; };
+
+  const canvas = document.getElementById('drawingCanvas');
+  if(!canvas) return;
+
+  // Enhanced mousedown for rotation drag
+  canvas.addEventListener('mousedown', function(e){
+    if(window.activeInteractMode !== 'rotate' && window.activeInteractMode !== 'rotate-ccw') return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const zoom = window.cameraZoom || 1;
+    const logicalX = screenX / zoom;
+    const logicalY = screenY / zoom;
+
+    if(typeof racks === 'undefined') return;
+    for(let i=racks.length-1; i>=0; i--){
+      const r = racks[i];
+      if(typeof getRackHandlesPos !== 'function') continue;
+      const handles = getRackHandlesPos(r);
+      if(!handles || !handles.rotate) continue;
+      
+      const hx = handles.rotate.x;
+      const hy = handles.rotate.y;
+      // hx,hy are in world? Actually need conversion
+      // Check distance in screen space
+      let handleScreenX = hx;
+      let handleScreenY = hy;
+      // If handles are in world coords, convert to screen
+      if(window.currentScale){
+        // getRackHandlesPos returns px already? use as is
+        // Convert world to screen for distance check
+        // We'll check with tolerance in world space
+        let dx = logicalX - hx;
+        let dy = logicalY - hy;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 30){ // 30px tolerance
+          isRotatingDrag = true;
+          rotateTargetRack = r;
+          rotateStartRackAngle = typeof getRackAngle === 'function' ? getRackAngle(r) : (r.angle||0);
+          // mouse angle relative to rack center
+          let centerX = r.x + (r.totalLengthPx/2) * Math.cos(rotateStartRackAngle);
+          let centerY = r.y + (r.totalLengthPx/2) * Math.sin(rotateStartRackAngle);
+          rotateStartMouseAngle = getMouseAngle(r.x, r.y, logicalX, logicalY);
+          e.preventDefault();
+          e.stopPropagation();
+          canvas.style.cursor = 'grabbing';
+          console.log('[Heidi Rotate] Drag start', r);
+          break;
+        }
+      }
+    }
+  }, true);
+
+  canvas.addEventListener('mousemove', function(e){
+    if(!isRotatingDrag || !rotateTargetRack) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const zoom = window.cameraZoom || 1;
+    const logicalX = screenX / zoom;
+    const logicalY = screenY / zoom;
+
+    const r = rotateTargetRack;
+    const currentMouseAngle = getMouseAngle(r.x, r.y, logicalX, logicalY);
+    let delta = currentMouseAngle - rotateStartMouseAngle;
+    
+    // Smooth interpolation
+    let newAngle = rotateStartRackAngle + delta;
+    
+    // Snap to 45deg
+    let deg = toDeg(newAngle);
+    let snappedDeg = getSnapAngle(deg);
+    let finalAngle = toRad(snappedDeg);
+    
+    // Apply with easing for buttery smoothness
+    r.angle = finalAngle;
+    r.isHoriz = Math.abs(Math.cos(finalAngle)) > Math.abs(Math.sin(finalAngle));
+    r.dir = (Math.cos(finalAngle) > 0 || Math.sin(finalAngle) > 0) ? 1 : -1;
+    
+    // Visual feedback for snap
+    if(Math.abs(snappedDeg - deg) < 0.1 && Math.abs(deg - snappedDeg) < SNAP_THRESHOLD){
+      window._snapFeedback = { angle: snappedDeg, x: logicalX, y: logicalY };
+      canvas.style.cursor = 'grabbing';
+      // haptic feedback if supported
+      if(navigator.vibrate) navigator.vibrate(10);
+    } else {
+      window._snapFeedback = null;
+    }
+    
+    if(typeof draw === 'function') draw();
+  }, true);
+
+  canvas.addEventListener('mouseup', function(e){
+    if(isRotatingDrag && rotateTargetRack){
+      const r = rotateTargetRack;
+      if(typeof checkRackValidPlacement === 'function'){
+        r.isValid = checkRackValidPlacement(r);
+      }
+      if(typeof updateRackFormCounts === 'function') updateRackFormCounts();
+      // Push to undo stack
+      if(typeof window.pushAction === 'function' || typeof pushAction === 'function'){
+        try{
+          const prev = rotateStartRackAngle;
+          // captureState if available
+          if(typeof captureState === 'function' && typeof pushAction === 'function'){
+            // already handled via global
+          }
+        }catch(err){}
+      }
+      isRotatingDrag = false;
+      rotateTargetRack = null;
+      window._snapFeedback = null;
+      canvas.style.cursor = 'crosshair';
+      if(typeof draw === 'function') draw();
+      console.log('[Heidi Rotate] Drag end - snapped');
+    }
+  });
+
+  // Visual snap guide overlay - hook into draw
+  const origDraw = window.draw;
+  if(typeof origDraw === 'function'){
+    window.draw = function(){
+      origDraw();
+      if(window._snapFeedback && window.ctx){
+        const fb = window._snapFeedback;
+        const ctx = window.ctx;
+        const zoom = window.cameraZoom || 1;
+        ctx.save();
+        ctx.scale(zoom, zoom);
+        ctx.strokeStyle = 'rgba(251,191,36,0.9)';
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.setLineDash([4/zoom, 4/zoom]);
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, 40, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // text
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = `bold ${12/zoom}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(fb.angle)}° SNAP`, fb.x, fb.y - 50);
+        ctx.restore();
+      }
+    };
+  }
+
+  console.log('[Heidi] Smooth drag rotation + 45deg snap enabled');
+})();
+
+// ==================== FIXED V2: Segment 45deg Snap for drawing ====================
+(function(){
+  const SEG_SNAP_DEG = 45;
+  const SEG_SNAP_THRESH = 10;
+  window.isSegmentSnapEnabled = true;
+  
+  // Hook into getLogicalPos if exists
+  const originalGetLogicalPos = window.getLogicalPos;
+  if(typeof originalGetLogicalPos === 'function'){
+    window.getLogicalPos = function(e){
+      let pos = originalGetLogicalPos(e);
+      if(!window.isSegmentSnapEnabled) return pos;
+      
+      // ONLY apply segment snap if we are drawing walls!
+      if(typeof isDrawingMode !== 'undefined' && !isDrawingMode) return pos;
+      if(typeof drawMode !== 'undefined' && drawMode !== 'wall') return pos;
+      
+      if(typeof points !== 'undefined' && points.length > 0){
+        // [추가] 시작점 자석 스냅 로직 (화면 기준 약 15픽셀 이내 접근 시)
+        if (points.length > 2) {
+            const first = points[0];
+            const distToFirst = Math.hypot(pos.x - first.x, pos.y - first.y);
+            const zoom = window.cameraZoom || 1;
+            if (distToFirst * zoom <= 15) {
+                return { x: first.x, y: first.y };
+            }
+        }
+        const last = points[points.length-1];
+        const dx = pos.x - last.x;
+        const dy = pos.y - last.y;
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        const normalized = ((angle % 360) + 360) % 360;
+        const snapped = Math.round(normalized / SEG_SNAP_DEG) * SEG_SNAP_DEG;
+        const diff = Math.abs(normalized - snapped);
+        const diffWrap = Math.min(diff, 360-diff);
+        if(diffWrap <= SEG_SNAP_THRESH){
+          const len = Math.sqrt(dx*dx+dy*dy);
+          const rad = snapped * Math.PI / 180;
+          return {
+            x: last.x + Math.cos(rad) * len,
+            y: last.y + Math.sin(rad) * len
+          };
+        }
+      }
+      return pos;
+    };
+  }
+})();
+
+// ==================== Mouse Wheel Zoom & Right-Click Pan ====================
+(function(){
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.getElementById('drawingCanvas');
+        if (!canvas) return;
+        const container = canvas.parentElement; 
+        if (!container) return;
+
+        // Wheel Zoom
+        container.addEventListener('wheel', function(e) {
+            e.preventDefault(); 
+            if (e.deltaY < 0) {
+                if (typeof window.zoomIn === 'function') window.zoomIn();
+            } else if (e.deltaY > 0) {
+                if (typeof window.zoomOut === 'function') window.zoomOut();
+            }
+        }, { passive: false });
+
+        // Right-Click & Middle-Click Pan
+        let isPanning = false;
+        let startX = 0;
+        let startY = 0;
+        let startScrollLeft = 0;
+        let startScrollTop = 0;
+        
+        // Disable context menu globally on container to allow clean right-click dragging
+        container.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        container.addEventListener('mousedown', function(e) {
+            if (e.button === 1 || e.button === 2) { // Middle or Right click
+                isPanning = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startScrollLeft = container.scrollLeft;
+                startScrollTop = container.scrollTop;
+                container.style.cursor = 'grabbing';
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('mousemove', function(e) {
+            if (!isPanning) return;
+            e.preventDefault();
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            container.scrollLeft = startScrollLeft - dx;
+            container.scrollTop = startScrollTop - dy;
+        });
+
+        window.addEventListener('mouseup', function(e) {
+            if (isPanning && (e.button === 1 || e.button === 2)) {
+                isPanning = false;
+                container.style.cursor = 'default';
+                canvas.style.cursor = 'crosshair'; 
             }
         });
     });

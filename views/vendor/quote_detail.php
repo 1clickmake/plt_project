@@ -53,26 +53,40 @@
                         </h5>
                         
                         <!-- 화면 표시용 (프린트시 숨김) -->
-                        <div class="row g-3 d-print-none">
-                            <div class="col-6">
-                                <span class="text-light opacity-75 small d-block">회사명</span>
-                                <span class="text-light fw-bold fs-5"><?= htmlspecialchars($quote['company']) ?></span>
+                        <div class="row g-3 d-print-none position-relative">
+                            <?php if (isset($balanceInfo) && $balanceInfo['remaining'] <= 0): ?>
+                            <!-- 마스킹 오버레이 -->
+                            <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: rgba(15, 23, 42, 0.85); z-index: 10; border-radius: 8px; backdrop-filter: blur(4px);">
+                                <i class="fa-solid fa-lock text-warning fs-3 mb-2"></i>
+                                <span class="text-white fw-bold mb-2 text-center" style="font-size: 0.9rem;">메일 발송 횟수를 모두 소진하여<br>고객 정보를 확인할 수 없습니다.</span>
+                                <a href="/vendor/addon_payment" class="btn btn-warning btn-sm fw-bold px-3 py-1 text-dark rounded-pill">추가 결제하기</a>
                             </div>
-                            <div class="col-6">
-                                <span class="text-light opacity-75 small d-block">담당자</span>
-                                <span class="text-light fw-bold fs-5"><?= htmlspecialchars($quote['name']) ?></span>
-                            </div>
-                            <div class="col-6">
-                                <span class="text-light opacity-75 small d-block">연락처</span>
-                                <a href="tel:<?= htmlspecialchars($quote['phone']) ?>" class="text-info fw-semibold font-monospace fs-5"><?= htmlspecialchars($quote['phone']) ?></a>
-                            </div>
-                            <div class="col-6">
-                                <span class="text-light opacity-75 small d-block">접수일시</span>
-                                <span class="text-light font-monospace fs-6"><?= date('Y-m-d H:i:s', strtotime($quote['created_at'])) ?></span>
-                            </div>
-                            <div class="col-12">
-                                <span class="text-light opacity-75 small d-block">시공 현장 주소</span>
-                                <span class="text-light fw-semibold"><?= htmlspecialchars($quote['address']) ?></span>
+                            <!-- 블러 처리된 내용 -->
+                            <div class="row g-3 m-0 w-100" style="filter: blur(6px) grayscale(50%); opacity: 0.3; user-select: none;">
+                            <?php else: ?>
+                            <div class="row g-3 m-0 w-100">
+                            <?php endif; ?>
+                            
+                                <div class="col-6">
+                                    <span class="text-light opacity-75 small d-block">회사명</span>
+                                    <span class="text-light fw-bold fs-5"><?= htmlspecialchars($quote['company']) ?></span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-light opacity-75 small d-block">담당자</span>
+                                    <span class="text-light fw-bold fs-5"><?= htmlspecialchars($quote['name']) ?></span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-light opacity-75 small d-block">연락처</span>
+                                    <a href="tel:<?= htmlspecialchars($quote['phone']) ?>" class="text-info fw-semibold font-monospace fs-5"><?= htmlspecialchars($quote['phone']) ?></a>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-light opacity-75 small d-block">접수일시</span>
+                                    <span class="text-light font-monospace fs-6"><?= date('Y-m-d H:i:s', strtotime($quote['created_at'])) ?></span>
+                                </div>
+                                <div class="col-12">
+                                    <span class="text-light opacity-75 small d-block">시공 현장 주소</span>
+                                    <span class="text-light fw-semibold"><?= htmlspecialchars($quote['address']) ?></span>
+                                </div>
                             </div>
                         </div>
 

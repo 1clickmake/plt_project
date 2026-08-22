@@ -62,6 +62,7 @@ include CM_LAYOUT_PATH . '/header.php';
         <div class="navbar-actions">
             <!-- PC Nav Links -->
             <div class="nav-links">
+                <a href="/#pricing">Price</a>
                 <a href="/faq">FAQ</a>
                 <?php if ($is_member): ?>
                     <?php if ($is_admin): ?>
@@ -93,6 +94,10 @@ include CM_LAYOUT_PATH . '/header.php';
         </div>
         <div class="offcanvas-body">
             <div class="d-flex flex-column gap-3 mt-2">
+                
+                <a href="/#pricing" class="text-dark text-decoration-none fw-medium fs-5 px-3 py-2 rounded" style="background-color: #ffffff; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-won-sign text-muted me-2"></i> Price
+                </a>
                 
                 <a href="/faq" class="text-dark text-decoration-none fw-medium fs-5 px-3 py-2 rounded" style="background-color: #ffffff; border: 1px solid #e2e8f0;">
                     <i class="fa-solid fa-question-circle text-muted me-2"></i> FAQ

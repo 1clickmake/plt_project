@@ -8,7 +8,7 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASAMIYA SAAS - <?= $pageTitle ?></title>
+    <title>CMAKE SAAS - <?= $pageTitle ?></title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -155,14 +155,90 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
     <main class="main-content">
         <div class="page-header">
-            <h1 class="page-title"><i class="fa-solid fa-rocket me-2 text-indigo-400"></i> 견적 바로가기</h1>
+            <h1 class="page-title"><i class="fa-solid fa-chart-pie me-2 text-indigo-400"></i> 대시보드</h1>
         </div>
         
-        <div class="empty-state">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <h3>어떤 멋진 기능을 넣어볼까요?</h3>
-            <p>현재는 빈 페이지입니다.<br>견적 관련된 대시보드나 바로가기 메뉴를 구상해보세요!</p>
+        <div class="row g-4 mb-4">
+            <!-- 금일 접수 건수 위젯 -->
+            <div class="col-md-4">
+                <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px;">
+                    <div class="card-body p-4 d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-inbox fs-3 text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary mb-1">금일 신규 견적 접수</h6>
+                            <h2 class="text-white mb-0 fw-bold"><?= number_format($todayQuotesCount ?? 0) ?> <span class="fs-6 text-muted fw-normal">건</span></h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 금일 메일 발송 횟수 위젯 -->
+            <div class="col-md-4">
+                <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px;">
+                    <div class="card-body p-4 d-flex align-items-center">
+                        <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-envelope-circle-check fs-3 text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary mb-1">금일 메일 발송</h6>
+                            <h2 class="text-white mb-0 fw-bold"><?= number_format($todayMailedCount ?? 0) ?> <span class="fs-6 text-muted fw-normal">건</span></h2>
+                            <div class="fs-8 text-secondary mt-1">오늘 0시 기준</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 발송 한도 위젯 -->
+            <?php
+                $plan      = $balanceInfo['plan'] ?? 'free';
+                $isPro     = ($plan === 'pro');
+                $isStarter = ($plan === 'starter');
+                $isLow     = !$isPro && isset($balanceInfo) && $balanceInfo['remaining'] <= 0;
+                $planLabel = ['free' => ['FREE', 'secondary'], 'starter' => ['STARTER', 'info'], 'pro' => ['PRO', 'warning']];
+                [$planText, $planColor] = $planLabel[$plan] ?? ['FREE', 'secondary'];
+            ?>
+            <div class="col-md-4">
+                <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px; <?= $isLow ? 'border: 1px solid #dc3545 !important;' : '' ?>">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-success bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px; <?= $isLow ? 'background-color: rgba(220,53,69,0.25) !important;' : '' ?>">
+                                <i class="fa-regular fa-paper-plane fs-3 <?= $isLow ? 'text-danger' : ($isPro ? 'text-warning' : 'text-success') ?>"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-secondary mb-1">
+                                    메일 발송 가능 횟수
+                                    <span class="badge bg-<?= $planColor ?> ms-2" style="font-size:0.65rem;"><?= $planText ?></span>
+                                </h6>
+                                <h2 class="text-white mb-0 fw-bold">
+                                    <?php if ($isPro): ?>
+                                        <span class="text-warning">무제한</span>
+                                    <?php else: ?>
+                                        <?= number_format($balanceInfo['remaining'] ?? 0) ?> <span class="fs-6 text-muted fw-normal">건 남음</span>
+                                    <?php endif; ?>
+                                </h2>
+                                <?php if (!$isPro): ?>
+                                    <div class="fs-8 text-secondary mt-1">
+                                        기본 <?= number_format(max(0, $balanceInfo['total_limit'] - $balanceInfo['used'])) ?>건 + 이월 <?= number_format($balanceInfo['addon_balance'] ?? 0) ?>건
+                                    </div>
+                                <?php else: ?>
+                                    <div class="fs-8 text-warning mt-1">PRO 플랜 · 발송 한도 없음</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if (!$isPro): ?>
+                        <div>
+                            <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-2" style="border-radius: 10px;">
+                                <i class="fa-solid fa-bolt"></i> 횟수 충전
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
+
     </main>
 
 </body>

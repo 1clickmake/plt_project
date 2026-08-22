@@ -624,7 +624,7 @@ body { background-color: #0B1120 !important; }
                     견적 1건의 인건비보다 저렴한<br>월 구독으로 시작하세요
                 </h2>
                 <p class="mt-3 fs-6 text-secondary lh-lg">
-                    FREE부터 PRO까지, 현장 검증된 기능만 담았습니다.<br>14일 무료 체험 • 카드 등록 불필요
+                    FREE부터 PRO까지, 현장 검증된 기능만 담았습니다.<br>10건 무료 체험 • 카드 등록 불필요
                 </p>
             </div>
             
