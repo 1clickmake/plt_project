@@ -43,7 +43,7 @@ class AuthController extends BaseController {
             setup_user_variables(); // Update global variables immediately
             
             global $is_admin;
-            $this->redirect($is_admin ? '/admin' : '/vendor/profiles');
+            $this->redirect($is_admin ? '/admin' : '/vendor');
         } else {
             $this->view('auth/login', ['error' => 'Invalid User ID or password']);
         }

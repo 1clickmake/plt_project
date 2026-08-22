@@ -69,6 +69,22 @@ $empPhone = ($isCompleted && !empty($quote['employee_phone']))
     ? $quote['employee_phone'] 
     : (!empty($_SESSION['employee_phone']) ? $_SESSION['employee_phone'] : ($settings['contact_number'] ?? ''));
 ?>
+<?php
+// Hex 색상을 RGB로 변환하여 rgba() 형태로 만들기 (html2canvas가 color-mix를 지원하지 않음)
+$hex = ltrim($empColor, '#');
+if (strlen($hex) == 3) {
+    $r = hexdec(str_repeat(substr($hex, 0, 1), 2));
+    $g = hexdec(str_repeat(substr($hex, 1, 1), 2));
+    $b = hexdec(str_repeat(substr($hex, 2, 1), 2));
+} else if (strlen($hex) == 6) {
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+} else {
+    $r = 183; $g = 217; $b = 155; // default fallback (#b7d99b)
+}
+$rgba30 = "rgba($r, $g, $b, 0.3)";
+?>
 <style>
 .sheet .green-bg,
 .sheet .label-cell,
@@ -78,7 +94,7 @@ $empPhone = ($isCompleted && !empty($quote['employee_phone']))
 .sheet .info-title,
 .sheet .info-sub-title,
 .quote-template-wrapper .caution {
-    background-color: color-mix(in srgb, <?= $empColor ?> 30%, white) !important;
+    background-color: <?= $rgba30 ?> !important;
 }
 .quote-template-wrapper .footer-bar {
     background-color: <?= $empColor ?> !important;
@@ -302,7 +318,8 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td colspan="2" class="center">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
       <td class="center"><?= number_format($sumQty) ?></td>
       <td colspan="2" class="center">대</td>
-      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">\ <span id="final-grand-total-new"><?= number_format($grandTotal) ?></span></td>
+      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">
+        <span id="final-grand-total-new"><?= number_format($grandTotal) ?></span></td>
       <td></td>
     </tr>
     <?php endif; ?>
@@ -390,7 +407,8 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td colspan="2" class="center">합&nbsp;&nbsp;&nbsp;&nbsp;계</td>
       <td class="center"><?= number_format($sumQty) ?></td>
       <td colspan="2" class="center">대</td>
-      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">\ <span id="final-grand-total-used"><?= number_format($grandTotal) ?></span></td>
+      <td colspan="2" class="right red" style="font-size:18px; font-weight:bold;">
+        <span id="final-grand-total-used"><?= number_format($grandTotal) ?></span></td>
       <td></td>
     </tr>
     <?php endif; ?>

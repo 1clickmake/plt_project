@@ -129,6 +129,9 @@ $pageTitle = "직원 관리";
                                             <p class="card-text text-muted small m-0"><i class="fa-regular fa-clock me-2"></i>등록일: <?= date('Y-m-d', strtotime($emp['created_at'])) ?></p>
                                         </div>
                                         <div class="card-footer d-flex justify-content-end gap-2 p-3">
+                                            <a href="/vendor/employees/<?= $emp['id'] ?>/logs" class="btn btn-sm btn-outline-info rounded-pill px-3">
+                                                <i class="fa-solid fa-clock-rotate-left"></i> 접속 로그
+                                            </a>
                                             <button class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="editEmployee(<?= htmlspecialchars(json_encode($emp)) ?>)">
                                                 <i class="fa-solid fa-pen"></i> 수정
                                             </button>

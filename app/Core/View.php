@@ -10,9 +10,12 @@ class View {
         // Escape data recursively for XSS protection
         $escapedData = self::escape($data);
 
+        // Auto-inject global variables into view scope so controllers don't have to manually declare them
+        global $is_member, $is_guest, $is_super, $is_admin, $user, $siteConfig;
+        
         // Extract variables to local scope
         extract($escapedData);
-        
+
         // Ensure $csrf_token and global $csrf_token are available as raw HTML
         global $csrf_token;
         $csrf_token = $csrf_html; // This updates both the global and the local variable in this scope

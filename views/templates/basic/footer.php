@@ -1,4 +1,4 @@
-<footer class="premium-footer">
+<footer class="premium-footer" style="background-color: #f8f9fa; border-top: 1px solid #e2e8f0; color: #475569;">
     <div class="container">
         <div class="footer-container">
             <!-- Brand Column -->
@@ -7,7 +7,7 @@
                     <?php if (($siteConfig['logo_type'] ?? 'text') === 'image' && !empty($siteConfig['logo_image'])): ?>
                         <img src="<?= $siteConfig['logo_image'] ?>" alt="<?= htmlspecialchars($siteConfig['site_name']) ?>" style="max-height: 40px;">
                     <?php else: ?>
-                        <span style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">
+                        <span style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
                             <?= htmlspecialchars(!empty($siteConfig['logo_text']) ? $siteConfig['logo_text'] : ($siteConfig['site_name'] ?? 'NEURON AI')) ?>
                         </span>
                     <?php endif; ?>

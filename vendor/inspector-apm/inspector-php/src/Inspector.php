@@ -15,16 +15,13 @@ use Inspector\Transports\CurlTransport;
 use Exception;
 use Throwable;
 
-use function addslashes;
-use function array_map;
-use function array_values;
 use function call_user_func;
-use function end;
 use function is_array;
 use function is_callable;
 use function register_shutdown_function;
+use function is_null;
 
-class Inspector
+class Inspector extends Scope
 {
     /**
      * Agent configuration.
@@ -40,14 +37,6 @@ class Inspector
      * Current transaction.
      */
     protected ?Transaction $transaction = null;
-
-    /**
-     * Stack of currently open segments for managing parent-child relationships.
-     * The last element is the most recent open segment.
-     *
-     * @var Segment[]
-     */
-    protected array $openSegments = [];
 
     /**
      * Run a list of callbacks before flushing data to the remote platform.
@@ -77,6 +66,8 @@ class Inspector
      */
     final public function __construct(Configuration $configuration)
     {
+        parent::__construct(null, null);
+
         $this->transport = match ($configuration->getTransport()) {
             'async' => new AsyncTransport($configuration),
             default => new CurlTransport($configuration),
@@ -194,92 +185,25 @@ class Inspector
     }
 
     /**
-     * Get the currently open parent segment, if any.
+     * Inspector resolves to itself.
      */
-    protected function getCurrentParentSegment(): ?Segment
+    protected function resolveInspector(): Inspector
     {
-        return $this->openSegments === [] ? null : end($this->openSegments);
+        return $this;
     }
 
     /**
-     * Add a new segment to the queue.
-     */
-    public function startSegment(string $type, ?string $label = null): Segment
-    {
-        $segment = new Segment($this->transaction, addslashes($type), $label);
-
-        // Set Inspector reference for lifecycle management
-        $segment->setInspector($this);
-
-        // Set a parent relationship if there's an open segment
-        $parentSegment = $this->getCurrentParentSegment();
-        if ($parentSegment instanceof \Inspector\Models\Segment) {
-            $segment->setParent($parentSegment->getHash());
-        }
-
-        $segment->start();
-
-        // Add to open segments stack
-        $this->openSegments[] = $segment;
-
-        $this->addEntries($segment);
-        return $segment;
-    }
-
-    /**
-     * Monitor the execution of a code block.
+     * Fork the current context into an independent Scope.
      *
-     * @throws Throwable
+     * @throws InspectorException
      */
-    public function addSegment(callable $callback, string $type, ?string $label = null, bool $throw = true): mixed
+    public function fork(): Scope
     {
         if (!$this->hasTransaction()) {
-            return $callback();
+            throw new InspectorException('Cannot fork without an active transaction.');
         }
 
-        $segment = $this->startSegment($type, $label);
-        try {
-            return $callback($segment);
-        } catch (Throwable $exception) {
-            if ($throw) {
-                throw $exception;
-            }
-
-            $this->reportException($exception);
-        } finally {
-            $segment->end();
-        }
-        return null;
-    }
-
-    /**
-     * Called by Segment when it ends to remove from open segments stack.
-     * This maintains the parent-child relationship hierarchy.
-     */
-    public function endSegment(Segment $segment): void
-    {
-        // Remove the segment from the open segments stack
-        foreach ($this->openSegments as $index => $openSegment) {
-            if ($openSegment === $segment) {
-                unset($this->openSegments[$index]);
-                // Re-index array to maintain proper stack behavior
-                $this->openSegments = array_values($this->openSegments);
-                break;
-            }
-        }
-    }
-
-    /**
-     * Get information about currently open segments (useful for debugging).
-     * Returns an array of segment types and labels.
-     */
-    public function getOpenSegments(): array
-    {
-        return array_map(fn (Segment $segment): array => [
-            'type' => $segment->type,
-            'label' => $segment->label,
-            'hash' => $segment->getHash()
-        ], $this->openSegments);
+        return new Scope($this, $this->resolveParentHash());
     }
 
     /**
@@ -301,6 +225,7 @@ class Inspector
         $this->addEntries($error);
 
         $segment->addContext('Error', [
+            'message' => $error->message,
             'class' => $error->class,
             'file' => $error->file,
             'line' => $error->line,
@@ -317,6 +242,8 @@ class Inspector
 
     /**
      * Add an entry to the queue.
+     *
+     * @param Model|Model[] $entries
      */
     public function addEntries(array|Model $entries): Inspector
     {

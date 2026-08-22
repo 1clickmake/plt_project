@@ -22,11 +22,11 @@ class Mailer {
         try {
             // Server settings
             $mail->isSMTP();
-            $mail->Host       = $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com';
+            $mail->Host       = $_SERVER['SMTP_HOST'] ?? $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-            $mail->Username   = $_ENV['SMTP_USER'] ?? ''; 
-            $mail->Password   = $_ENV['SMTP_PASS'] ?? ''; 
-            $mail->Port       = $_ENV['SMTP_PORT'] ?? 465;
+            $mail->Username   = $_SERVER['SMTP_USER'] ?? $_ENV['SMTP_USER'] ?? ''; 
+            $mail->Password   = $_SERVER['SMTP_PASS'] ?? $_ENV['SMTP_PASS'] ?? ''; 
+            $mail->Port       = $_SERVER['SMTP_PORT'] ?? $_ENV['SMTP_PORT'] ?? 465;
             $mail->Timeout    = 10; // Timeout after 10 seconds
 
             // Dynamic Encryption based on port
@@ -49,7 +49,7 @@ class Mailer {
             $mail->CharSet = 'UTF-8';
 
             // Recipients
-            $mail->setFrom($mail->Username, $_ENV['SMTP_FROM_NAME'] ?? 'Neuron AI Admin');
+            $mail->setFrom($mail->Username, $_SERVER['SMTP_FROM_NAME'] ?? $_ENV['SMTP_FROM_NAME'] ?? 'Neuron AI Admin');
             
             if (is_array($to)) {
                 foreach ($to as $address) {

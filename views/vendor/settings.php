@@ -49,55 +49,55 @@
                         <!-- 회사명 -->
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Company Name (회사명)</label>
-                            <input type="text" name="company_name" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 아사미야 랙 주식회사" value="<?= htmlspecialchars($settings['company_name'] ?? '') ?>" required style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="company_name" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="회사명" value="<?= htmlspecialchars($settings['company_name'] ?? '') ?>" required style="border-radius: 8px; padding: 10px;">
                         </div>
                         
                         <!-- 연락처 -->
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Contact Number (전화번호)</label>
-                            <input type="text" name="contact_number" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 031-522-5504" value="<?= htmlspecialchars($settings['contact_number'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="contact_number" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 02-1234-5678" value="<?= htmlspecialchars($settings['contact_number'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
                         
                         <!-- 팩스 -->
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Fax Number (팩스)</label>
-                            <input type="text" name="fax_number" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 031-532-8018" value="<?= htmlspecialchars($settings['fax_number'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="fax_number" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 02-1234-5678" value="<?= htmlspecialchars($settings['fax_number'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
                         <!-- 본사 주소 -->
                         <div class="col-12">
                             <label class="form-label text-light small fw-bold mb-1">Headquarters Address (본사 주소)</label>
-                            <input type="text" name="headquarters_address" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 경기도 포천시 군내면 상성북리 769-3번지" value="<?= htmlspecialchars($settings['headquarters_address'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="headquarters_address" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 서울 강님구 역삼동 11-11" value="<?= htmlspecialchars($settings['headquarters_address'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
                         <!-- 담당자 -->
                         <div class="col-md-6">
-                            <label class="form-label text-light small fw-bold mb-1">대표자명 등록</label>
-                            <input type="text" name="manager_name" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 우재욱 사원" value="<?= htmlspecialchars($settings['manager_name'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <label class="form-label text-light small fw-bold mb-1">대표자명</label>
+                            <input type="text" name="manager_name" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="홍길동" value="<?= htmlspecialchars($settings['manager_name'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
                         <!-- 담당자 이메일 -->
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Manager Email (이메일)</label>
-                            <input type="email" name="manager_email" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: email@daum.net" value="<?= htmlspecialchars($settings['manager_email'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="email" name="manager_email" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: email@email.net" value="<?= htmlspecialchars($settings['manager_email'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
                         <!-- 공장 주소 -->
                         <div class="col-12">
                             <label class="form-label text-light small fw-bold mb-1">Factory Address (공장 주소)</label>
-                            <input type="text" name="factory_address" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 경기도 포천시 군내면 상성복리 769-3번지" value="<?= htmlspecialchars($settings['factory_address'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="factory_address" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="" value="<?= htmlspecialchars($settings['factory_address'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
 
                         <!-- 공장 연락처 -->
                         <div class="col-md-6">
                             <label class="form-label text-light small fw-bold mb-1">Factory Contact (공장 연락처)</label>
-                            <input type="text" name="factory_contact" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 010-7351-2736" value="<?= htmlspecialchars($settings['factory_contact'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="factory_contact" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="" value="<?= htmlspecialchars($settings['factory_contact'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
                         
                         <!-- 계좌 정보 -->
                         <div class="col-md-6 mt-3">
                             <label class="form-label text-light small fw-bold mb-1">Account Info (계좌 정보)</label>
-                            <input type="text" name="bank_account" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="국민 123456-789 예금주" value="<?= htmlspecialchars($settings['bank_account'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
+                            <input type="text" name="bank_account" class="form-control bg-dark bg-opacity-50 text-light border-secondary" placeholder="예: 국민 123456-789 홍길동" value="<?= htmlspecialchars($settings['bank_account'] ?? '') ?>" style="border-radius: 8px; padding: 10px;">
                         </div>
                         
                         <!-- URL 슬러그 설정 -->
@@ -105,7 +105,7 @@
                             <label class="form-label text-light small fw-bold mb-1">Custom URL Slug (고유 접속 주소)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-dark border-secondary text-light small" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px;"><?= $_ENV['APP_URL'] ?? 'http://localhost:8001' ?>/quote/</span>
-                                <input type="text" name="url_slug" class="form-control bg-dark bg-opacity-50 text-light border-secondary fw-semibold" placeholder="예: asamiya" value="<?= htmlspecialchars($settings['url_slug'] ?? '') ?>" required style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 10px;">
+                                <input type="text" name="url_slug" class="form-control bg-dark bg-opacity-50 text-light border-secondary fw-semibold" value="<?= htmlspecialchars($settings['url_slug'] ?? $user['user_id']) ?>" required style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 10px;">
                             </div>
                             <small class="text-info mt-1 d-block">💡 이 주소를 통해 고객들이 직접 견적용 캔버스 도면에 접속하게 됩니다.</small>
                         </div>

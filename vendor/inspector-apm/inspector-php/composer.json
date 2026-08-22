@@ -9,6 +9,12 @@
             "email": "valerio@inspector.dev"
         }
     ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/neuron-core/neuron-ai"
+        }
+    ],
     "require": {
         "php": "^8.1"
     },
@@ -28,7 +34,7 @@
     "require-dev": {
         "ext-curl": "*",
         "friendsofphp/php-cs-fixer": "^3.75",
-        "neuron-core/neuron-ai": "^2.8",
+        "neuron-core/neuron-ai": "4.x-dev",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^9.0",
         "rector/rector": "^2.2",
@@ -40,23 +46,24 @@
         }
     },
     "scripts": {
-        "analyse": [
-            "vendor/bin/phpstan analyse -v --memory-limit=2G"
-        ],
-        "format": [
-            "php-cs-fixer fix --allow-risky=yes"
-        ],
         "test": [
             "vendor/bin/phpunit --colors=always"
         ],
-        "refactor": [
-            "vendor/bin/rector"
+        "analyse": [
+            "vendor/bin/phpstan analyse -v --ansi --memory-limit=2G"
+        ],
+        "style": [
+            "php-cs-fixer fix --allow-risky=yes"
+        ],
+        "format": [
+            "vendor/bin/rector",
+            "php-cs-fixer fix --allow-risky=yes"
         ]
     },
     "extra": {
         "branch-alias": {
-            "dev-develop": "3.16.x-dev",
-            "dev-master": "3.16.x-dev"
+            "dev-develop": "3.17.x-dev",
+            "dev-main": "3.17.x-dev"
         }
     }
 }

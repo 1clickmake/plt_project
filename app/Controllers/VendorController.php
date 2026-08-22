@@ -5,6 +5,13 @@ namespace App\Controllers;
 use App\Core\Database;
 
 class VendorController extends BaseController {
+    public function index() {
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+            return;
+        }
+        $this->view('vendor/index');
+    }
     public function settings() {
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
@@ -50,15 +57,18 @@ class VendorController extends BaseController {
             if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
                 $uploadDirExcel = __DIR__ . '/../../public/data/excel/';
                 if (!file_exists($uploadDirExcel)) {
-                    mkdir($uploadDirExcel, 0777, true);
+                    @mkdir($uploadDirExcel, 0777, true);
                 }
                 $excelFilename = 'price_' . $userId . '_' . time() . '.' . pathinfo($_FILES['price_excel']['name'], PATHINFO_EXTENSION);
                 $fullExcelPath = $uploadDirExcel . $excelFilename;
                 
-                if (move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
+                if (@move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
                     $priceExcelPath = '/data/excel/' . $excelFilename;
                     
                     try {
+                        // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 무제한(또는 300초)으로 연장
+                        set_time_limit(300);
+                        
                         // AI-driven Excel Parsing
                         $aiService = \App\Services\AI\AIExtractorFactory::create();
                         $excelText = $aiService->extractTextFromExcel($fullExcelPath);
@@ -70,13 +80,20 @@ class VendorController extends BaseController {
                             throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
                         }
 
+                        // 원본 파일명 삽입
+                        if (!isset($extractedPricing['meta'])) {
+                            $extractedPricing['meta'] = [];
+                        }
+                        $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
+
                         $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
 
                         // Save to vendor_pricing_rules (Versioning)
-                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, pricing_data) VALUES (:vid, :am, :pd)");
+                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, source_file, pricing_data) VALUES (:vid, :am, :sf, :pd)");
                         $insertRuleStmt->execute([
                             'vid' => $userId,
                             'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
+                            'sf' => $_FILES['price_excel']['name'],
                             'pd' => $pricesData
                         ]);
 
@@ -86,6 +103,9 @@ class VendorController extends BaseController {
                         // Keep old data if parsing fails
                         error_log("Gemini AI Parsing Failed: " . $e->getMessage());
                     }
+                } else {
+                    echo "<script>alert('파일 업로드 실패 (권한 문제). 서버의 public/data/excel 폴더 쓰기 권한을 확인해 주세요!'); window.history.back();</script>";
+                    return;
                 }
             }
 
@@ -140,6 +160,7 @@ class VendorController extends BaseController {
     }
 
     public function pricing() {
+        $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
@@ -151,6 +172,74 @@ class VendorController extends BaseController {
 
         $userId = $_SESSION['user']['user_id'];
         $db = Database::getInstance();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
+                $uploadDirExcel = __DIR__ . '/../../public/data/excel/';
+                if (!file_exists($uploadDirExcel)) {
+                    @mkdir($uploadDirExcel, 0777, true);
+                }
+                $excelFilename = 'price_' . $userId . '_' . time() . '.' . pathinfo($_FILES['price_excel']['name'], PATHINFO_EXTENSION);
+                $fullExcelPath = $uploadDirExcel . $excelFilename;
+                
+                if (@move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
+                    $priceExcelPath = '/data/excel/' . $excelFilename;
+                    
+                    try {
+                        // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 무제한(또는 300초)으로 연장
+                        set_time_limit(300);
+                        
+                        // AI-driven Excel Parsing
+                        $aiService = \App\Services\AI\AIExtractorFactory::create();
+                        $excelText = $aiService->extractTextFromExcel($fullExcelPath);
+                        $extractedPricing = $aiService->extractPricingFromJson($excelText);
+                        
+                        if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
+                            $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
+                            throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
+                        }
+
+                        // 원본 파일명 삽입
+                        if (!isset($extractedPricing['meta'])) {
+                            $extractedPricing['meta'] = [];
+                        }
+                        $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
+
+                        $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
+
+                        // Save to vendor_pricing_rules
+                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, source_file, pricing_data) VALUES (:vid, :am, :sf, :pd)");
+                        $insertRuleStmt->execute([
+                            'vid' => $userId,
+                            'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
+                            'sf' => $_FILES['price_excel']['name'],
+                            'pd' => $pricesData
+                        ]);
+                        
+                        // Update vendor_settings
+                        $stmtCheck = $db->prepare("SELECT id FROM vendor_settings WHERE user_id = :uid");
+                        $stmtCheck->execute(['uid' => $userId]);
+                        if ($stmtCheck->fetchColumn()) {
+                            $updStmt = $db->prepare("UPDATE vendor_settings SET price_excel_path = :pep, prices_data = :pd WHERE user_id = :uid");
+                            $updStmt->execute(['pep' => $priceExcelPath, 'pd' => $pricesData, 'uid' => $userId]);
+                        } else {
+                            $insStmt = $db->prepare("INSERT INTO vendor_settings (user_id, price_excel_path, prices_data) VALUES (:uid, :pep, :pd)");
+                            $insStmt->execute(['uid' => $userId, 'pep' => $priceExcelPath, 'pd' => $pricesData]);
+                        }
+
+                        echo "<script>alert('단가표가 성공적으로 분석 및 적용되었습니다.'); window.location.href='/vendor/pricing';</script>";
+                        return;
+                    } catch (\Exception $e) {
+                        $errorMsg = addslashes("AI 분석 실패: " . $e->getMessage());
+                        echo "<script>alert('{$errorMsg}'); window.history.back();</script>";
+                        return;
+                    }
+                } else {
+                    echo "<script>alert('파일 업로드 실패 (권한 문제). 서버의 public/data/excel 폴더 쓰기 권한을 확인해 주세요!'); window.history.back();</script>";
+                    return;
+                }
+            }
+        }
         
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
         $limit = 20;
@@ -182,6 +271,7 @@ class VendorController extends BaseController {
     }
 
     public function quotes() {
+        $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
@@ -218,6 +308,7 @@ class VendorController extends BaseController {
     }
 
     public function quoteDetail($vars) {
+        $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
@@ -249,6 +340,7 @@ class VendorController extends BaseController {
     }
 
     public function quotePrice($vars) {
+        $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
@@ -523,6 +615,7 @@ class VendorController extends BaseController {
     }
 
     public function quoteDocument($vars) {
+        $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;

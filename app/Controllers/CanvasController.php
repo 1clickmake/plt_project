@@ -346,12 +346,14 @@ class CanvasController extends BaseController {
                     if ($imageData !== false) {
                         $dir = __DIR__ . '/../../public/uploads/quotes';
                         if (!is_dir($dir)) {
-                            mkdir($dir, 0755, true);
+                            @mkdir($dir, 0755, true);
                         }
                         $filename = 'quote_' . time() . '_' . rand(1000, 9999) . '.' . $type;
                         $filepath = $dir . '/' . $filename;
-                        if (file_put_contents($filepath, $imageData)) {
+                        if (@file_put_contents($filepath, $imageData)) {
                             $imagePath = '/uploads/quotes/' . $filename;
+                        } else {
+                            throw new \Exception("이미지 저장 권한 에러. 서버의 public/uploads 폴더 쓰기 권한을 확인해주세요!");
                         }
                     }
                 }

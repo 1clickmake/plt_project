@@ -58,7 +58,7 @@ $pageTitle = "단가표(엑셀) 관리";
             <div class="row g-4">
                 <div class="col-lg-12">
                     <div class="glass-panel p-4">
-                        <form action="/vendor/pricing" method="POST" enctype="multipart/form-data">
+                        <form id="pricingUploadForm" action="/vendor/pricing" method="POST" enctype="multipart/form-data">
                             <h5 class="fw-bold text-warning mb-3">새 단가표 업로드</h5>
                             <div class="mb-3">
                                 <?php if(!empty($settings['price_excel_path'])): ?>
@@ -112,16 +112,15 @@ $pageTitle = "단가표(엑셀) 관리";
                                                 <td class="py-3 fw-bold text-light"><?= htmlspecialchars($rule['applied_month']) ?></td>
                                                 <td class="py-3 text-light">
                                                     <?php 
+                                                        $sourceFile = !empty($rule['source_file']) ? htmlspecialchars($rule['source_file']) : '엑셀 단가표 AI 파싱 완료';
                                                         $pData = json_decode($rule['pricing_data'], true);
+                                                        
                                                         if (is_array($pData) && isset($pData['meta'])) {
                                                             $extractedAt = $pData['meta']['extracted_at'] ?? '알 수 없음';
-                                                            $sourceFile = !empty($pData['meta']['source_file']) ? htmlspecialchars($pData['meta']['source_file']) : '엑셀 단가표 AI 파싱 완료';
-                                                            
                                                             echo "<span class='badge bg-info text-dark mb-1'><i class='fa-solid fa-calendar-check'></i> 데이터 기준일: {$extractedAt}</span><br>";
                                                             echo "<span class='text-muted small'><i class='fa-solid fa-file-excel'></i> {$sourceFile}</span>";
                                                         } else {
-                                                            // 만약 JSON이 아니거나 형식이 다르면
-                                                            echo "<span class='badge bg-secondary mb-1'><i class='fa-solid fa-file-excel'></i> 엑셀 단가표 파일</span><br>";
+                                                            echo "<span class='badge bg-secondary mb-1'><i class='fa-solid fa-file-excel'></i> {$sourceFile}</span><br>";
                                                             echo "<span class='text-light small'>파싱 데이터 적용 완료</span>";
                                                         }
                                                     ?>
@@ -162,7 +161,31 @@ $pageTitle = "단가표(엑셀) 관리";
         </div>
     </main>
 
+    <!-- 로딩 오버레이 (숨김 상태) -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
+        <div class="spinner-border text-info" role="status" style="width: 4rem; height: 4rem; border-width: 0.35em;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4 class="text-white mt-4 fw-bold">잠시만 기다려 주세요...</h4>
+        <p class="text-info opacity-75">AI가 단가표 데이터를 분석하고 있습니다.</p>
+    </div>
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('pricingUploadForm').addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            // 폼 제출이 정상적으로 실행되도록 약간의 지연 후 버튼 비활성화
+            setTimeout(() => {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> 업로드 중...';
+            }, 50);
+            
+            // 로딩 오버레이 표시
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = 'flex';
+        });
+    </script>
 </body>
 </html>

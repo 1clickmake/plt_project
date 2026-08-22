@@ -119,6 +119,9 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/payment/confirm-order', ['App\Controllers\PaymentController', 'confirmOrder']);
 
     // SaaS Vendor Routes
+    $r->addRoute('GET', '/vendor', ['App\Controllers\VendorController', 'index']);
+    $r->addRoute('GET', '/vendor/', ['App\Controllers\VendorController', 'index']);
+    $r->addRoute('GET', '/vendor/employees/{id:\d+}/logs', ['App\Controllers\VendorEmployeeController', 'logs']);
     $r->addRoute('GET', '/vendor/profiles', ['App\Controllers\VendorEmployeeController', 'profiles']);
     $r->addRoute('POST', '/vendor/profiles/login', ['App\Controllers\VendorEmployeeController', 'profileLogin']);
     $r->addRoute(['GET', 'POST'], '/vendor/employees', ['App\Controllers\VendorEmployeeController', 'index']);

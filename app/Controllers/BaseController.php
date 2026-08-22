@@ -59,4 +59,27 @@ class BaseController {
             $this->redirect('/login');
         }
     }
+
+    protected function requireVendorEmployees() {
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+        }
+        
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("SELECT id FROM users WHERE user_id = ?");
+        $stmt->execute([$_SESSION['user']['user_id']]);
+        $vendor_int_id = $stmt->fetchColumn();
+
+        if ($vendor_int_id) {
+            $stmt2 = $db->prepare("SELECT COUNT(*) FROM vendor_employees WHERE vendor_id = ?");
+            $stmt2->execute([$vendor_int_id]);
+            $count = $stmt2->fetchColumn();
+            
+            if ($count == 0) {
+                // 직원이 한 명도 없으면 직원 관리 페이지로 이동
+                echo "<script>alert('견적 관리를 시작하려면 최소 1명의 대표 또는 직원을 등록해야 합니다.'); window.location.href='/vendor/employees';</script>";
+                exit;
+            }
+        }
+    }
 }
