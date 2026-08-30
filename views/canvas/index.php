@@ -184,7 +184,7 @@
 window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
 </script>
 <div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
-    <div class="text-center mb-3 flex-shrink-0">
+    <div class="text-center mb-3 flex-shrink-0 position-relative">
         <?php if (!empty($vendor)): ?>
             <h4 class="fw-bold text-light mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h4>
         <?php endif; ?>
@@ -192,6 +192,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
             스마트 창고 배치 견적
         </h2>
         <p class="text-muted small m-0">복잡한 창고 형태도 드래그 앤 드롭으로 1분 만에 완성! <?php if(!empty($vendor['contact_number'])) echo " (문의: " . htmlspecialchars($vendor['contact_number']) . ")"; ?></p>
+        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info position-absolute" style="top: 0px; right: 0px;">🎥 동영상메뉴얼</a>
     </div>
 
     <div class="row g-4 flex-grow-1" style="min-height: 0;">
@@ -233,7 +234,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                             <span class="step-badge">3단계</span> 장애물 배치
                             <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-step3')">❓</button>
                         </h5>
-                        <button class="btn btn-sm btn-outline-danger" onclick="resetCanvas()">🔄 초기화</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.location.reload();">🔄 초기화</button>
                     </div>
                     <p class="text-muted small mb-2">우측 도면에 나타난 창고 위로 아이콘을 끌어다 놓으세요!</p>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -397,7 +398,7 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <h5 class="fw-semibold text-info m-0 me-1">실시간 2D 배치 도면</h5>
-                        <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
+                        <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
                             <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">2585×1000×4500 (2S 3단)</span>
                             <span class="text-secondary">|</span>
                             <span>독립 <strong id="top-badge-indep" class="text-primary">0</strong>대</span>
@@ -550,6 +551,10 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
           <div class="col-12">
             <label class="form-label text-muted small mb-1">시공 현장 주소 <span class="text-danger">★</span> <span class="text-secondary" style="font-size:0.7rem;">(최소 시/군/구 수준)</span></label>
             <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-address" placeholder="예: 경기도 성남시 분당구">
+          </div>
+          <div class="col-12">
+            <label class="form-label text-muted small mb-1">상세내용 입력</label>
+            <textarea class="form-control bg-transparent text-white border-secondary" id="modal-details" rows="2" placeholder="추가적인 요청사항이나 현장 특이사항을 적어주세요."></textarea>
           </div>
         </div>
       </div>
@@ -824,6 +829,7 @@ function submitQuoteRequest() {
     const phone   = document.getElementById('modal-phone').value.trim();
     const email   = document.getElementById('modal-email').value.trim();
     const address = document.getElementById('modal-address').value.trim();
+    const details = document.getElementById('modal-details') ? document.getElementById('modal-details').value.trim() : '';
 
     const conditionTypeNode = document.querySelector('input[name="condition_type"]:checked');
     const conditionType = conditionTypeNode ? conditionTypeNode.value : 'new';
@@ -849,9 +855,13 @@ function submitQuoteRequest() {
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
         const ctx = tempCanvas.getContext('2d');
-        ctx.fillStyle = '#090d16';
+        ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
         ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // 색상 반전: 밝은 도면 선을 어둡게(흰색->검정), 청록색 치수를 붉은색 계열로 반전
+        ctx.filter = 'invert(1)';
         ctx.drawImage(canvas, 0, 0);
+        ctx.filter = 'none'; // 필터 초기화
         imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
     }
 
@@ -953,7 +963,7 @@ function submitQuoteRequest() {
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
             currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
         }),
-        summary: window.lastAiSummary || '',
+        summary: (details ? `[고객 요청사항]\n${details}\n\n` : '') + (window.lastAiSummary || ''),
         edge_lengths: edge_lengths_str,
         pallet_w: pw,
         pallet_d: pd,
@@ -977,10 +987,19 @@ function submitQuoteRequest() {
         image_data: imgData
     };
 
+    const formData = new FormData();
+    formData.append('json_payload', JSON.stringify(payload));
+    
+    // 첨부된 파일들 추가
+    if (typeof uploadedFiles !== 'undefined' && uploadedFiles.length > 0) {
+        uploadedFiles.forEach(file => {
+            formData.append('extra_files[]', file);
+        });
+    }
+
     fetch('/quote/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: formData
     })
     .then(res => res.json())
     .then(res => {
@@ -1080,6 +1099,11 @@ window.setInteractMode = function(mode) {
         btnDelete.style.background = 'rgba(239,68,68,0.06)';
         btnDelete.style.color = '#ef4444';
     }
+    const btnLevels = document.getElementById('mode-btn-levels');
+    if (btnLevels) {
+        btnLevels.style.background = 'rgba(168,85,247,0.06)';
+        btnLevels.style.color = '#a855f7';
+    }
     
     // 활성화된 모드 버튼 하이라이트
     if (window.activeInteractMode === 'rotate' && btnRotate) {
@@ -1097,6 +1121,9 @@ window.setInteractMode = function(mode) {
     } else if (window.activeInteractMode === 'delete' && btnDelete) {
         btnDelete.style.background = '#ef4444';
         btnDelete.style.color = '#fff';
+    } else if (window.activeInteractMode === 'levels' && btnLevels) {
+        btnLevels.style.background = '#a855f7';
+        btnLevels.style.color = '#fff';
     }
     
     // 캔버스 즉시 갱신 (핸들 렌더링 변경 반영)
@@ -1233,6 +1260,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 <span>✕</span> <span>삭제 모드</span>
             </button>
             
+            <!-- 단수 편집 모드 (Purple) -->
+            <button id="mode-btn-levels" onclick="setInteractMode('levels')" style="
+                width:100%; border: 1px solid rgba(168,85,247,0.3); border-radius:8px;
+                background: rgba(168,85,247,0.06); color:#a855f7; font-size:0.7rem; font-weight:700;
+                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px; margin-bottom:8px;
+            " onmouseover="if(window.activeInteractMode!=='levels') this.style.background='rgba(168,85,247,0.18)'" onmouseout="if(window.activeInteractMode!=='levels') this.style.background='rgba(168,85,247,0.06)'">
+                <span>☰</span> <span>단수 편집</span>
+            </button>
+            
             <!-- 도면자동정렬 버튼 -->
             <button id="remote-align-btn" onclick="if(window.autoAlignRacks) window.autoAlignRacks();" style="
                 width:100%; border: 1px solid rgba(56,189,248,0.5); border-radius:8px;
@@ -1265,6 +1301,40 @@ window.addEventListener('DOMContentLoaded', () => {
             🔴 견적요청
         </button>
     </div>
+</div>
+
+<!-- 개별 칸 단수/높이 커스텀 설정 모달 -->
+<div class="modal fade" id="customLevelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+    <div class="modal-content" style="background: rgba(15,23,42,0.95); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; backdrop-filter: blur(10px);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title" style="color: #a855f7; font-weight: 700;">칸(베이) 설정 변경</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-white">
+        <input type="hidden" id="modal-custom-rack-idx">
+        <input type="hidden" id="modal-custom-row">
+        <input type="hidden" id="modal-custom-span">
+        
+        <div class="mb-3">
+            <label class="form-label text-muted small mb-1">변경할 단수 입력</label>
+            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-level" placeholder="예: 2" min="1">
+        </div>
+        <div class="mb-2">
+            <label class="form-label text-muted small mb-1">변경할 기둥 높이 (선택사항)</label>
+            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-height" placeholder="예: 3500" step="500">
+            <div class="form-text text-secondary" style="font-size:0.7rem; margin-top:4px;">
+                ※ 500 단위 입력을 권장합니다.<br>
+                ※ 비워두시면 단수에 맞춰 자동 계산됩니다.
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-sm" id="btn-save-custom-level" style="background: rgba(168,85,247,0.2); color:#c084fc; border:1px solid #a855f7; font-weight:600; padding: 4px 16px;">적용하기</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>

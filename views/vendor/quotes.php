@@ -25,7 +25,18 @@
             <div class="navbar-title fw-bold text-light" style="font-size: 1.1rem;">
                 SaaS Dashboard &gt; 견적요청 수신함
             </div>
-            <div class="user-profile d-flex align-items-center gap-2">
+<div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
                 <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
             </div>
@@ -41,14 +52,21 @@
                 </div>
                 
 <div class="p-4">
-                <ul class="nav nav-tabs mb-4 border-secondary" id="quoteTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active text-light bg-transparent border-0 border-bottom border-warning" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">미완료 (<?= count($pending_quotes) ?>)</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link text-light bg-transparent border-0" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">완료됨 (<?= count($completed_quotes) ?>)</button>
-                    </li>
-                </ul>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <ul class="nav nav-tabs border-secondary mb-0 w-100" id="quoteTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active text-light bg-transparent border-0 border-bottom border-warning" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab" onclick="window.location.href=window.location.pathname;">미완료 (<?= count($pending_quotes) ?>)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-light bg-transparent border-0" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">완료됨 (<?= count($completed_quotes) ?>)</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="input-group ms-3" style="max-width: 300px;">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-search"></i></span>
+                        <input type="text" id="quoteSearch" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="회사명, 연락처, 지역, 담당자 검색...">
+                    </div>
+                </div>
 
                 <div class="tab-content" id="quoteTabsContent">
                     <!-- 미완료 탭 -->
@@ -165,6 +183,7 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Tab switching style
         document.querySelectorAll('#quoteTabs .nav-link').forEach(tab => {
             tab.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -172,6 +191,24 @@
                 this.classList.add('border-bottom', 'border-warning');
             });
         });
+
+        // Search Filter
+        const searchInput = document.getElementById('quoteSearch');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function(e) {
+                const term = e.target.value.toLowerCase();
+                const allRows = document.querySelectorAll('tbody tr');
+                
+                allRows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    if (text.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
     </script>
 </body>
 </html>

@@ -138,12 +138,14 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/vendor/employees/delete', ['App\Controllers\VendorEmployeeController', 'delete']);
     $r->addRoute(['GET', 'POST'], '/vendor/settings', ['App\Controllers\VendorController', 'settings']);
     $r->addRoute(['GET', 'POST'], '/vendor/pricing', ['App\Controllers\VendorController', 'pricing']);
+    $r->addRoute('GET', '/vendor/pricing/download', ['App\Controllers\VendorController', 'downloadPricingExcel']);
     $r->addRoute('GET',  '/vendor/quotes',        ['App\Controllers\VendorController', 'quotes']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/price', ['App\Controllers\VendorController', 'quotePrice']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/document', ['App\Controllers\VendorController', 'quoteDocument']);
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/send_email', ['App\Controllers\VendorController', 'sendEmail']);
     $r->addRoute('GET',  '/vendor/addon_payment', ['App\Controllers\VendorController', 'addonPayment']);
+    $r->addRoute('GET',  '/quote/{slug}/video',   ['App\Controllers\CanvasController', 'showVideoManual']);
     $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
     $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);

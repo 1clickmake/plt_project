@@ -44,7 +44,18 @@ $pageTitle = "단가표(엑셀) 관리";
             <div class="navbar-title fw-bold text-light" style="font-size: 1.1rem;">
                 SaaS Dashboard &gt; 단가표(엑셀) 관리
             </div>
-            <div class="user-profile d-flex align-items-center gap-2">
+<div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
                 <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
             </div>
@@ -70,7 +81,7 @@ $pageTitle = "단가표(엑셀) 관리";
                                                 <div class="text-light small mt-1 font-monospace"><?= htmlspecialchars(basename($settings['price_excel_path'])) ?></div>
                                             </div>
                                         </div>
-                                        <a href="<?= htmlspecialchars($settings['price_excel_path']) ?>" class="btn btn-outline-secondary btn-sm rounded" download>다운로드</a>
+                                        <a href="/vendor/pricing/download" class="btn btn-outline-secondary btn-sm rounded">보안 다운로드</a>
                                     </div>
                                 <?php endif; ?>
                                 

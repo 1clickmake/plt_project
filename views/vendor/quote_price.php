@@ -35,6 +35,17 @@
                     ◀ 목록으로 돌아가기
                 </a>
                 <div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
                 </div>
@@ -69,6 +80,23 @@ $quoteDate = strtotime($quote['created_at'] ?? 'now');
 $quoteDateStr = date('Y년 m월 d일 ', $quoteDate) . $days[date('w', $quoteDate)];
 $addrParts = explode(' ', trim($quote['address'] ?? ''));
 $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
+
+$palletWeight = intval($quote['pallet_weight'] ?? 1000) ?: 1000;
+$beamThickness = intval($quote['beam_thickness'] ?? 125) ?: 125;
+$totalPallets = !empty($quote['rack_pallets']) ? intval($quote['rack_pallets']) : 0;
+if ($totalPallets <= 0) {
+    $indep = intval($quote['rack_indep'] ?? 0);
+    $conn = intval($quote['rack_conn'] ?? 0);
+    $bypass = intval($quote['rack_bypass'] ?? 0);
+    $small = intval($quote['rack_small_conn'] ?? 0);
+    $levels = intval($quote['rack_levels'] ?? 2);
+    $w = intval($quote['pallet_w'] ?? 1100) ?: 1100;
+    $d = intval($quote['pallet_d'] ?? 1100) ?: 1100;
+    $entryW = (strpos($quote['fork_direction'] ?? '', 'W') !== false) ? $w : $d;
+    $beamL = ($entryW * 2) + 385;
+    $palletsPerCell = ($beamL >= 2585) ? 2 : 1;
+    $totalPallets = ((($indep + $conn + $bypass) * $palletsPerCell) + ($small * 1)) * $levels;
+}
 ?>
 <style>
 .sheet .green-bg,
@@ -152,7 +180,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <th>비 고</th>
     </tr>
 
-    <tr><td colspan="8" class="section-title-red">〈 <?= htmlspecialchars($quote['rack_type'] ?? '일반 파렛트랙') ?> 〉</td></tr>
+    <tr><td colspan="8" class="section-title-red">〈파렛트당 <?= $palletWeight ?>kg, 로드빔 <?= $beamThickness ?>바 <?= $totalPallets ?>plt 적재〉</td></tr>
 
 <?php 
       if (isset($modules) && is_array($modules)) {
@@ -207,23 +235,20 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
           }
       }
       
-      $indep = intval($quote['rack_indep'] ?? 0);
-      $conn = intval($quote['rack_conn'] ?? 0);
-      $bypass = intval($quote['rack_bypass'] ?? 0);
-      $small = intval($quote['rack_small_conn'] ?? 0);
-      $totalFrames = ($indep * 2) + ($bypass * 2) + $conn + $small;
-      $linerQty = $totalFrames * 2;
-      $linerUnitPrice = 500;
-      $linerTotal = $linerQty * $linerUnitPrice;
-      
+      $totalFrames = 0;
       $totalRackQty = 0;
       if (isset($modules) && is_array($modules)) {
           foreach ($modules as $mod) {
               if (trim($mod['name']) === '파렛트랙') {
+                  $isIndep = ($mod['type'] === '독립');
+                  $totalFrames += (int)$mod['qty'] * ($isIndep ? 2 : 1);
                   $totalRackQty += (int)$mod['qty'];
               }
           }
       }
+      $linerQty = $totalFrames * 2;
+      $linerUnitPrice = 500;
+      $linerTotal = $linerQty * $linerUnitPrice;
 ?>
     
     <!-- 바닥수평라이너 행 -->
@@ -250,10 +275,6 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center fw-bold">원 (네고 10% 포함)</td>
     </tr>
   </table>
-
- 
-
-  
 
 </div></div></div></div></div></main>
 

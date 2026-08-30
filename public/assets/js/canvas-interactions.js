@@ -393,6 +393,136 @@
                 }
             }
 
+            // 1.5 단수 편집(levels) 모드 랙 클릭 처리 (베이 단위 개별 설정)
+            if (window.activeInteractMode === 'levels') {
+                if (typeof racks !== 'undefined' && Array.isArray(racks)) {
+                    for (let i = racks.length - 1; i >= 0; i--) {
+                        const r = racks[i];
+                        if (typeof getRackBoxes !== 'function') continue;
+                        const boxes = getRackBoxes(r);
+                        
+                        // 바운딩 박스 체크 (화면 픽셀 좌표 screenX, screenY 기준 판별!)
+                        const pad = 5;
+                        if (screenX >= boxes.physical.minX - pad && screenX <= boxes.physical.maxX + pad &&
+                            screenY >= boxes.physical.minY - pad && screenY <= boxes.physical.maxY + pad) {
+                            
+                            // 랙 로컬 좌표계로 마우스 위치 변환 (logicalX, logicalY 사용)
+                            const angle = typeof getRackAngle === 'function' ? getRackAngle(r) : 0;
+                            const dx = logicalX - r.x;
+                            const dy = logicalY - r.y;
+                            
+                            // 랙 방향(길이축)으로의 클릭 거리 (mm)
+                            const distFromStartPx = dx * Math.cos(angle) + dy * Math.sin(angle);
+                            const distFromStartMm = distFromStartPx / (window.currentScale || 1);
+                            
+                            // 랙 깊이축으로의 클릭 거리 (mm)
+                            const distFromCenterYPx = -dx * Math.sin(angle) + dy * Math.cos(angle);
+                            const distFromCenterYMm = distFromCenterYPx / (window.currentScale || 1);
+                            
+                            const colSizeMm = 85;
+                            const reg = (r.independent || 0) + (r.connected || 0);
+                            const sm = r.smallConnected || 0;
+                            const spans = reg + sm;
+                            
+                            let currentMm = 0;
+                            let spanIndex = -1;
+                            
+                            for (let j = 0; j < reg; j++) {
+                                let nextMm = currentMm + colSizeMm + r.beamLength;
+                                if (distFromStartMm >= currentMm && distFromStartMm <= nextMm) {
+                                    spanIndex = j;
+                                    break;
+                                }
+                                currentMm = nextMm;
+                            }
+                            if (spanIndex === -1 && sm > 0) {
+                                const smallBeamLength = r.smallBeamLength || (typeof getSmallBeamLength === 'function' ? getSmallBeamLength(r.beamLength) : 1385);
+                                let nextMm = currentMm + colSizeMm + smallBeamLength;
+                                if (distFromStartMm >= currentMm && distFromStartMm <= nextMm) {
+                                    spanIndex = reg;
+                                }
+                            }
+                            
+                            if (spanIndex !== -1) {
+                                // 상/하 랙 행 판별 (단열은 무조건 row 0, 복렬은 Y축 부호에 따라 판별)
+                                let row = 0;
+                                if (r.isDouble) {
+                                    row = (distFromCenterYMm > 0) ? 1 : 0; // 중심 기준 아래쪽이면 1(하부), 위쪽이면 0(상부)
+                                }
+                                
+                                const rowCount = r.isDouble ? 2 : 1;
+                                
+                                // r.bayLevels 초기화 로직
+                                if (!r.bayLevels || !Array.isArray(r.bayLevels) || r.bayLevels.length < rowCount) {
+                                    let oldLevels = r.bayLevels || [];
+                                    r.bayLevels = [ [], [] ];
+                                    if (Array.isArray(oldLevels[0])) r.bayLevels[0] = oldLevels[0];
+                                    if (Array.isArray(oldLevels[1])) r.bayLevels[1] = oldLevels[1];
+                                }
+                                
+                                const globalLevelsInput = document.getElementById('rack-levels');
+                                const globalLevels = globalLevelsInput ? (parseInt(globalLevelsInput.value) || 3) : 3;
+                                const defaultRackLevel = r.levels || globalLevels;
+                                
+                                // 해당 row의 bayLevels 길이 동기화
+                                if (r.bayLevels[row].length !== spans) {
+                                    let oldRowLevels = r.bayLevels[row];
+                                    r.bayLevels[row] = new Array(spans).fill(defaultRackLevel);
+                                    for(let k = 0; k < Math.min(oldRowLevels.length, spans); k++) {
+                                        if (oldRowLevels[k] !== undefined) r.bayLevels[row][k] = oldRowLevels[k];
+                                    }
+                                }
+                                
+                                let currentLevel = r.bayLevels[row][spanIndex] !== undefined ? r.bayLevels[row][spanIndex] : defaultRackLevel;
+                                
+                                // r.bayHeights 초기화 로직
+                                if (!r.bayHeights || !Array.isArray(r.bayHeights) || r.bayHeights.length < rowCount) {
+                                    let oldHeights = r.bayHeights || [];
+                                    r.bayHeights = [ [], [] ];
+                                    if (Array.isArray(oldHeights[0])) r.bayHeights[0] = oldHeights[0];
+                                    if (Array.isArray(oldHeights[1])) r.bayHeights[1] = oldHeights[1];
+                                }
+                                if (r.bayHeights[row].length !== spans) {
+                                    let oldRowHeights = r.bayHeights[row];
+                                    r.bayHeights[row] = new Array(spans).fill(null);
+                                    for(let k = 0; k < Math.min(oldRowHeights.length, spans); k++) {
+                                        if (oldRowHeights[k] !== undefined) r.bayHeights[row][k] = oldRowHeights[k];
+                                    }
+                                }
+                                
+                                let currentHeight = r.bayHeights[row][spanIndex] || '';
+                                
+                                // 기본 기둥 높이(placeholder 용) 계산
+                                let basePalletH = parseInt(document.getElementById('pallet-h')?.value) || 1200;
+                                let defaultHeight = parseInt(document.getElementById('rack-height')?.value) || 0;
+                                if (defaultHeight <= 0) {
+                                    const rawH = (basePalletH * globalLevels) + (globalLevels * 200) + 300;
+                                    defaultHeight = Math.ceil(rawH / 500) * 500;
+                                }
+
+                                // 모달에 데이터 세팅
+                                document.getElementById('modal-custom-rack-idx').value = i;
+                                document.getElementById('modal-custom-row').value = row;
+                                document.getElementById('modal-custom-span').value = spanIndex;
+                                document.getElementById('modal-custom-level').value = currentLevel;
+                                
+                                const heightInput = document.getElementById('modal-custom-height');
+                                heightInput.value = currentHeight;
+                                heightInput.placeholder = `현재: ${defaultHeight}`;
+                                
+                                // 부트스트랩 모달 띄우기
+                                const modalEl = document.getElementById('customLevelModal');
+                                if (modalEl) {
+                                    const modal = new bootstrap.Modal(modalEl);
+                                    modal.show();
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             // 2. 바이패스 모드 랙 클릭 처리 (리모컨 setInteractMode 연동)
             if (window.activeInteractMode === 'bypass') {
                 if (typeof racks !== 'undefined' && Array.isArray(racks)) {
@@ -793,5 +923,48 @@ window.drawCopyHandleIcon = typeof drawCopyHandleIcon !== 'undefined' ? drawCopy
                 canvas.style.cursor = 'crosshair'; 
             }
         });
+    });
+})();
+
+// ==================== 커스텀 단수/높이 모달 저장 처리 ====================
+(function(){
+    document.addEventListener('DOMContentLoaded', function() {
+        const saveBtn = document.getElementById('btn-save-custom-level');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                const idxStr = document.getElementById('modal-custom-rack-idx').value;
+                const rowStr = document.getElementById('modal-custom-row').value;
+                const spanStr = document.getElementById('modal-custom-span').value;
+                const levelStr = document.getElementById('modal-custom-level').value;
+                const heightStr = document.getElementById('modal-custom-height').value;
+                
+                if (!idxStr || !rowStr || !spanStr || !levelStr) return;
+                
+                const idx = parseInt(idxStr);
+                const row = parseInt(rowStr);
+                const span = parseInt(spanStr);
+                const level = parseInt(levelStr);
+                let height = heightStr ? parseInt(heightStr) : null;
+                if (height <= 0) height = null;
+                
+                if (typeof racks !== 'undefined' && racks[idx]) {
+                    const r = racks[idx];
+                    if (level > 0) {
+                        r.bayLevels[row][span] = level;
+                        r.bayHeights[row][span] = height;
+                        
+                        if (typeof window.pushAction === 'function') window.pushAction({ type: 'change-bay-level-height', racks: JSON.parse(JSON.stringify(racks)) });
+                        if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
+                        if (typeof draw === 'function') draw();
+                        
+                        const modalEl = document.getElementById('customLevelModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                    }
+                }
+            });
+        }
     });
 })();

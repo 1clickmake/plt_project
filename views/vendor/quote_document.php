@@ -42,7 +42,18 @@
                 <a href="/vendor/quotes" class="btn btn-outline-secondary btn-sm rounded px-3" style="font-size:0.8rem; border-color: rgba(255,255,255,0.15); color:#cbd5e1;">
                     ◀ 목록으로 돌아가기
                 </a>
-                <div class="user-profile d-flex align-items-center gap-2">
+    <div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
                 </div>
@@ -99,11 +110,27 @@ $rgba30 = "rgba($r, $g, $b, 0.3)";
 .quote-template-wrapper .footer-bar {
     background-color: <?= $empColor ?> !important;
 }
+@media print {
+    .sheet .green-bg,
+    .sheet .label-cell,
+    .sheet .quote-table th,
+    .sheet .sum-row td,
+    .sheet .project-title,
+    .sheet .info-title,
+    .sheet .info-sub-title,
+    .quote-template-wrapper .caution {
+        background-color: <?= $rgba30 ?> !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .quote-template-wrapper .footer-bar {
+        background-color: <?= $empColor ?> !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
 </style>
 <?php
-$empName = !empty($_SESSION['employee_name']) ? $_SESSION['employee_name'] . ' ' . ($_SESSION['employee_title'] ?? '') : ($settings['manager_name'] ?? '');
-$empPhone = !empty($_SESSION['employee_phone']) ? $_SESSION['employee_phone'] : ($settings['contact_number'] ?? '');
-
 $conditionType = $quote['condition_type'] ?? 'both';
 $palletWeight = intval($quote['pallet_weight'] ?? 1000);
 if ($palletWeight == 0) $palletWeight = 1000;
@@ -252,7 +279,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
                       <?= number_format($mod['raw_price'] ?? 0) ?>
                   </span>
               <?php else: ?>
-                  <input type="text" class="print-input text-right text-danger calc-other-unit other-new" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
+                  <input type="text" id="other-unit-new-<?= $idx ?>" class="print-input text-right text-danger calc-other-unit other-new" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
               <?php endif; ?>
           </td>
           <td class="right">
@@ -276,7 +303,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <tr>
       <td></td>
       <td class="center">운반비</td>
-      <td class="center red"><input type="text" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
+      <td class="center red"><input type="text" id="transport-region-new" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
       <td class="center"><input type="number" id="transport-qty-new" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">대</td>
       <td class="right"><input type="text" id="transport-unit-new" class="print-input text-right calc-bottom-input" value="0"></td>
@@ -286,7 +313,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <tr>
       <td></td>
       <td class="center">설치비</td>
-      <td class="center"><input type="text" class="print-input text-center text-danger" value=""></td>
+      <td class="center"><input type="text" id="install-spec-new" class="print-input text-center text-danger" value=""></td>
       <td class="center"><input type="number" id="install-qty-new" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">식</td>
       <td class="right"><input type="text" id="install-unit-new" class="print-input text-right calc-bottom-input" value="0"></td>
@@ -299,7 +326,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td></td>
       <td></td>
       <td></td>
-      <td class="right red"><input type="text" class="print-input text-right text-danger" value="천단위절사"></td>
+      <td class="right red"><input type="text" id="truncate-label-new" class="print-input text-right text-danger" value="천단위절사"></td>
       <td class="right red"><input type="text" id="truncate-amount-new" class="print-input text-right text-danger calc-bottom-input" value="0"></td>
       <td class="center red">최저가</td>
     </tr>
@@ -342,7 +369,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
                       <?= number_format($mod['raw_price'] ?? 0) ?>
                   </span>
               <?php else: ?>
-                  <input type="text" class="print-input text-right text-danger calc-other-unit other-used" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
+                  <input type="text" id="other-unit-used-<?= $idx ?>" class="print-input text-right text-danger calc-other-unit other-used" data-qty="<?= intval($mod['qty']) ?>" value="<?= number_format($mod['unit_price']) ?>">
               <?php endif; ?>
           </td>
           <td class="right">
@@ -365,7 +392,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <tr>
       <td></td>
       <td class="center">운반비</td>
-      <td class="center red"><input type="text" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
+      <td class="center red"><input type="text" id="transport-region-used" class="print-input text-center text-danger" value="<?= htmlspecialchars($region) ?>"></td>
       <td class="center"><input type="number" id="transport-qty-used" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">대</td>
       <td class="right"><input type="text" id="transport-unit-used" class="print-input text-right calc-bottom-input" value="0"></td>
@@ -375,7 +402,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <tr>
       <td></td>
       <td class="center">설치비</td>
-      <td class="center"><input type="text" class="print-input text-center text-danger" value=""></td>
+      <td class="center"><input type="text" id="install-spec-used" class="print-input text-center text-danger" value=""></td>
       <td class="center"><input type="number" id="install-qty-used" class="print-input text-center calc-bottom-input" value="1"></td>
       <td class="center">식</td>
       <td class="right"><input type="text" id="install-unit-used" class="print-input text-right calc-bottom-input" value="0"></td>
@@ -388,7 +415,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
       <td></td>
       <td></td>
       <td></td>
-      <td class="right red"><input type="text" class="print-input text-right text-danger" value="천단위절사"></td>
+      <td class="right red"><input type="text" id="truncate-label-used" class="print-input text-right text-danger" value="천단위절사"></td>
       <td class="right red"><input type="text" id="truncate-amount-used" class="print-input text-right text-danger calc-bottom-input" value="0"></td>
       <td class="center red">최저가</td>
     </tr>
@@ -743,6 +770,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
   </div>
 </div>
 
+<div id="saved-quote-data" style="display:none" data-details="<?= base64_encode($_raw['quote']['admin_quote_details'] ?? '{}') ?>"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 async function submitEmailForm() {
@@ -759,6 +787,19 @@ async function submitEmailForm() {
     const sendBtn = document.getElementById('btnSubmitEmail');
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 발송 중...';
+    
+    // ★ 데이터 수집을 먼저! (계산기 숨기기 전에 해야 값이 살아있음)
+    let activeType = document.getElementById('calc-tab-used') && document.getElementById('calc-tab-used').classList.contains('active') ? 'used' : 'new';
+    let finalMargin = document.getElementById('calc-' + activeType + '-percent') ? document.getElementById('calc-' + activeType + '-percent').value : 0;
+    let finalPriceText = document.getElementById('final-grand-total-' + activeType) ? document.getElementById('final-grand-total-' + activeType).innerText : '0';
+    let finalPrice = parseInt(finalPriceText.replace(/,/g, '')) || 0;
+    
+    let details = {};
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.id && !['emailTo', 'emailSubject', 'emailBody', 'emailExtraFiles'].includes(el.id)) {
+            details[el.id] = el.value;
+        }
+    });
     
     // 임시로 계산기 숨기기 (PDF 캡처용)
     const marginCalc = document.querySelector('.margin-calculator');
@@ -796,6 +837,11 @@ async function submitEmailForm() {
         element.style.transform = originalTransform;
         
         const formData = new FormData();
+        
+        formData.append('admin_margin', finalMargin);
+        formData.append('admin_price', finalPrice);
+        formData.append('admin_quote_details', JSON.stringify(details));
+        
         formData.append('to', to);
         formData.append('subject', subject);
         formData.append('body', body);
@@ -815,9 +861,7 @@ async function submitEmailForm() {
         const resData = await response.json();
         if(resData.success) {
             alert('메일이 성공적으로 발송되었습니다!');
-            const modalEl = document.getElementById('emailModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if(modal) modal.hide();
+            window.location.reload();
         } else {
             alert('발송 실패: ' + resData.message);
         }
@@ -841,6 +885,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputUsedPercent = document.getElementById('calc-used-percent');
     const inputNewTarget = document.getElementById('calc-new-target');
     const inputUsedTarget = document.getElementById('calc-used-target');
+    
+    // Check if already mailed
+    let isMailed = <?= !empty($quote['is_mailed']) ? 'true' : 'false' ?>;
+    let savedMargin = <?= isset($quote['admin_margin']) ? (float)$quote['admin_margin'] : 0 ?>;
+
+    if (isMailed) {
+        if (inputNewPercent) inputNewPercent.value = savedMargin;
+        if (inputUsedPercent) inputUsedPercent.value = savedMargin;
+        // Populate details from hidden data attribute (base64 encoded)
+        let detailsB64 = document.getElementById('saved-quote-data').getAttribute('data-details');
+        if (detailsB64) {
+            try {
+                // atob()은 Latin-1 바이너리로 디코딩 → 한글 깨짐. TextDecoder로 UTF-8 디코딩
+                const bytes = Uint8Array.from(atob(detailsB64), c => c.charCodeAt(0));
+                let detailsRaw = new TextDecoder('utf-8').decode(bytes);
+                let savedDetails = JSON.parse(detailsRaw);
+                for (let id in savedDetails) {
+                    let el = document.getElementById(id);
+                    if (el) {
+                        el.value = savedDetails[id];
+                    }
+                }
+            } catch(e) { console.error('Failed to parse details:', e); }
+        }
+        
+        // ★ 값 복원 후 마진 재계산 트리거 (아래 calculateMargin 함수 정의 후 호출)
+        setTimeout(function() {
+            if (typeof calculateMargin === 'function') calculateMargin();
+            
+            // 재계산 후에 모든 입력 비활성화
+            document.querySelectorAll('input, select, textarea').forEach(inp => {
+                if (inp.id && !['emailTo', 'emailSubject', 'emailBody', 'emailExtraFiles'].includes(inp.id)) {
+                    inp.disabled = true;
+                }
+            });
+        }, 100);
+        
+        // Hide email modal button or disable it
+        const topSendBtn = document.querySelector('button[data-bs-target="#emailModal"]');
+        if (topSendBtn) {
+            topSendBtn.disabled = true;
+            topSendBtn.innerHTML = '<i class="fa-solid fa-check"></i> 발송 완료됨';
+            topSendBtn.className = 'btn btn-secondary';
+        }
+    }
     
     // We only have one table of items currently, so we'll apply the ACTIVE tab's margin.
     // Ideally, New Racks and Used Racks would be separated in the HTML.
@@ -980,8 +1069,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event Listeners
     if (inputNewPercent) inputNewPercent.addEventListener('input', calculateMargin);
     if (inputUsedPercent) inputUsedPercent.addEventListener('input', calculateMargin);
-    if (inputNewTarget) inputNewTarget.addEventListener('input', calculateMargin);
-    if (inputUsedTarget) inputUsedTarget.addEventListener('input', calculateMargin);
+    
+    function calculatePercentFromTarget(type) {
+        let targetInput = document.getElementById('calc-' + type + '-target');
+        let percentInput = document.getElementById('calc-' + type + '-percent');
+        if (!targetInput || !percentInput) return;
+        
+        let targetVal = parseNum(targetInput.value);
+        let sumRaw = 0;
+        document.querySelectorAll('.rack-' + type).forEach(el => {
+            let rawUnit = parseInt(el.getAttribute('data-raw')) || 0;
+            let qty = parseInt(el.getAttribute('data-qty')) || 0;
+            sumRaw += rawUnit * qty;
+        });
+        
+        if (sumRaw > 0) {
+            let truncInput = document.getElementById('truncate-amount-' + type);
+            let truncVal = truncInput ? parseNum(truncInput.value) : 0;
+            if (truncVal > 0) truncVal = -truncVal;
+            
+            let linerPriceInput = document.getElementById('liner-price-' + type);
+            let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : 500;
+            let linerQty = <?= isset($linerQty) ? (int)$linerQty : 0 ?>; 
+            let linerTotal = linerQty * linerUnitPrice;
+            
+            let requiredPercent = ((targetVal - truncVal + linerTotal) / sumRaw) * 100;
+            percentInput.value = requiredPercent.toFixed(2);
+            calcSectionMargin(type, requiredPercent);
+        }
+    }
+
+    if (inputNewTarget) inputNewTarget.addEventListener('input', function() { calculatePercentFromTarget('new'); });
+    if (inputUsedTarget) inputUsedTarget.addEventListener('input', function() { calculatePercentFromTarget('used'); });
     
     // Listen to tab changes to recalculate
     document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {

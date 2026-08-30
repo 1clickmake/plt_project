@@ -68,7 +68,7 @@ include CM_LAYOUT_PATH . '/header.php';
                     <?php if ($is_admin): ?>
                         <a href="/admin"><i class="fa-solid fa-gauge-high"></i> Admin Panel</a>
                     <?php endif; ?>
-                    <a href="/vendor/settings"><i class="fa-solid fa-building"></i> SaaS Settings</a>
+                    <a href="/vendor"><i class="fa-solid fa-building"></i> 견적관리</a>
                     <a href="/mypage" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;" class="username-link">
                         <i class="fa-solid fa-circle-user"></i> <?= htmlspecialchars($user['username']) ?>
                     </a>

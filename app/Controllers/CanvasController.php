@@ -18,7 +18,28 @@ class CanvasController extends BaseController {
             return;
         }
 
+        // 방문 기록 저장
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $vendorUserId = $vendor['user_id'];
+        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+        $stmtVisit->execute([$vendorUserId, $ip]);
+
         $this->view('canvas/index', ['vendor' => $vendor]);
+    }
+
+    public function showVideoManual($vars) {
+        $slug = $vars['slug'] ?? '';
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
+        $stmt->execute(['slug' => $slug]);
+        $vendor = $stmt->fetch();
+
+        if (!$vendor) {
+            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
+            return;
+        }
+
+        $this->view('canvas/video', ['vendor' => $vendor]);
     }
 
     /**
@@ -298,7 +319,12 @@ class CanvasController extends BaseController {
     public function submitQuote() {
         header('Content-Type: application/json; charset=utf-8');
         try {
-            $body = json_decode(file_get_contents('php://input'), true);
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            if (strpos($contentType, 'application/json') !== false) {
+                $body = json_decode(file_get_contents('php://input'), true);
+            } else {
+                $body = json_decode($_POST['json_payload'] ?? '{}', true);
+            }
             $vendorUserId = intval($body['vendor_user_id'] ?? 0);
             $company      = trim($body['company'] ?? '');
             $name         = trim($body['name'] ?? '');
@@ -334,6 +360,14 @@ class CanvasController extends BaseController {
                 throw new \Exception("필수 입력 정보가 누락되었습니다.");
             }
 
+            // 휴먼 에러 및 악의적 변수 방어 (Sanity Check)
+            if ($pallet_w < 0 || $pallet_w > 5000 || $pallet_d < 0 || $pallet_d > 5000 || $pallet_h < 0 || $pallet_h > 5000) {
+                throw new \Exception("입력된 파렛트 규격이 너무 크거나 비정상적입니다.");
+            }
+            if ($rack_levels < 0 || $rack_levels > 100) {
+                throw new \Exception("선택된 랙 단수가 비정상적입니다.");
+            }
+
             $imageData = $body['image_data'] ?? '';
             $imagePath = '';
             
@@ -359,6 +393,38 @@ class CanvasController extends BaseController {
                 }
             }
 
+            // 추가 첨부파일(extra_files) 처리
+            $extraFilesPaths = [];
+            if (!empty($_FILES['extra_files']['name'][0])) {
+                $dir = __DIR__ . '/../../public/uploads/quotes_extra';
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0755, true);
+                }
+                
+                $fileCount = count($_FILES['extra_files']['name']);
+                for ($i = 0; $i < $fileCount; $i++) {
+                    if ($_FILES['extra_files']['error'][$i] === UPLOAD_ERR_OK) {
+                        $tmpName = $_FILES['extra_files']['tmp_name'][$i];
+                        $originalName = $_FILES['extra_files']['name'][$i];
+                        $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+                        
+                        // 보안: 허용된 확장자만
+                        $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'xls', 'xlsx', 'zip'];
+                        if (in_array(strtolower($ext), $allowedExts)) {
+                            $newName = 'ext_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                            $dest = $dir . '/' . $newName;
+                            if (move_uploaded_file($tmpName, $dest)) {
+                                $extraFilesPaths[] = [
+                                    'path' => '/uploads/quotes_extra/' . $newName,
+                                    'original_name' => $originalName
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+            $extraFilesJson = !empty($extraFilesPaths) ? json_encode($extraFilesPaths, JSON_UNESCAPED_UNICODE) : null;
+
             $db = Database::getInstance();
 
             // 현재 벤더의 가장 최신 단가표 ID 조회
@@ -367,13 +433,13 @@ class CanvasController extends BaseController {
             $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
 
             $sql = "INSERT INTO quote_requests (
-                        vendor_user_id, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, summary,
+                        vendor_user_id, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, extra_files, summary,
                         edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
                         forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
                         rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
                         condition_type, self_install
                     ) VALUES (
-                        :vuid, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :summary,
+                        :vuid, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :extra_files, :summary,
                         :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
                         :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
                         :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
@@ -391,6 +457,7 @@ class CanvasController extends BaseController {
                 'address' => $address,
                 'cdata'   => $canvasData,
                 'imgpath' => $imagePath,
+                'extra_files' => $extraFilesJson,
                 'summary' => $summary,
                 'edge_lengths' => $edge_lengths,
                 'pallet_w' => $pallet_w,

@@ -108,7 +108,18 @@
             <div class="navbar-title fw-bold text-light" style="font-size: 1.1rem;">
                 SaaS Dashboard &gt; 직원 관리 &gt; 접속 로그
             </div>
-            <div class="user-profile d-flex align-items-center gap-2">
+<div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
                 <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
             </div>

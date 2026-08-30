@@ -1,0 +1,1 @@
+<?php require 'config/config.php'; require 'app/Core/Database.php'; $db = App\Core\Database::getInstance(); $stmt = $db->query('SELECT id, extra_files FROM quote_requests WHERE extra_files IS NOT NULL ORDER BY id DESC LIMIT 1'); $row = $stmt->fetch(PDO::FETCH_ASSOC); var_dump($row); var_dump(json_decode($row['extra_files'], true));

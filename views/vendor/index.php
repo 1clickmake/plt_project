@@ -154,13 +154,115 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     <?php require __DIR__ . '/sidebar.php'; ?>
 
     <main class="main-content">
-        <div class="page-header">
-            <h1 class="page-title"><i class="fa-solid fa-chart-pie me-2 text-indigo-400"></i> 대시보드</h1>
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h1 class="page-title mb-0"><i class="fa-solid fa-chart-pie me-2 text-indigo-400"></i> 대시보드</h1>
+            <?php
+                $btnPlan = $balanceInfo['plan'] ?? 'free';
+                $btnIsPro = ($btnPlan === 'pro');
+            ?>
+            <?php if (!$btnIsPro): ?>
+            <div>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-2" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+            </div>
+            <?php endif; ?>
         </div>
         
+        <!-- 고유 접속 주소 안내 영역 -->
+        <?php if ($isSettingsComplete ?? false): ?>
+            <?php
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                $domainName = $_SERVER['HTTP_HOST'];
+                $customUrl = $protocol . $domainName . "/quote/" . htmlspecialchars($vendorSettings['url_slug']);
+            ?>
+            <div class="card bg-dark bg-opacity-50 border-primary mb-4 shadow-sm" style="border-radius: 15px;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fa-solid fa-link fs-4 text-primary"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-white mb-1 fw-bold">내 전용 견적 접속 주소</h5>
+                            <div class="text-secondary fs-6">고객에게 아래 링크를 전달하여 견적 요청을 받아보세요.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-2">
+                        <!-- 전용 주소 텍스트 -->
+                        <div class="d-flex align-items-center gap-2 bg-black bg-opacity-25 p-2 rounded-3 border border-secondary">
+                            <span class="text-info fs-5 fw-bold px-2 user-select-all" id="customUrlText"><?= $customUrl ?></span>
+                            <button class="btn btn-primary rounded-3" onclick="copyCustomUrl()" title="주소 복사">
+                                <i class="fa-regular fa-copy"></i> 복사
+                            </button>
+                        </div>
+                        <!-- 홈페이지 삽입 소스코드 -->
+                        <div class="mt-1 text-end">
+                            <div class="text-secondary mb-1" style="font-size: 0.8rem;"><i class="fa-solid fa-code"></i> 홈페이지에 아래 소스를 붙여넣어 견적신청 버튼을 만들어보세요.</div>
+                            <div class="d-flex align-items-center justify-content-end gap-2 bg-dark p-2 rounded-3 border border-secondary">
+                                <code class="text-light user-select-all" id="embedCodeText" style="font-size: 0.85rem;">&lt;a href="<?= $customUrl ?>" target="_blank"&gt;견적바로가기&lt;/a&gt;</code>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="copyEmbedCode()" title="소스 복사">복사</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function copyCustomUrl() {
+                    const text = document.getElementById('customUrlText').innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('전용 접속 주소가 복사되었습니다!\n고객에게 바로 전달해보세요. 💕');
+                    }).catch(err => {
+                        console.error('복사 실패:', err);
+                    });
+                }
+                function copyEmbedCode() {
+                    const text = document.getElementById('embedCodeText').innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('HTML 소스코드가 복사되었습니다!\n홈페이지에 붙여넣어 주세요. 💕');
+                    }).catch(err => {
+                        console.error('복사 실패:', err);
+                    });
+                }
+            </script>
+        <?php else: ?>
+            <div class="card bg-dark bg-opacity-50 border-warning mb-4 shadow-sm" style="border-radius: 15px; border: 1px solid #ffc107 !important;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-warning bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fa-solid fa-triangle-exclamation fs-4 text-warning"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-white mb-1 fw-bold">공급사 설정이 필요합니다!</h5>
+                            <div class="text-secondary fs-6">아직 전용 접속 주소(URL Slug)가 생성되지 않았어요. 견적을 받으려면 설정을 완료해 주세요!</div>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="/vendor/settings" class="btn btn-warning fw-bold px-4 rounded-3">
+                            <i class="fa-solid fa-gear me-2"></i> 설정 관리로 이동
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="row g-4 mb-4">
+            <!-- 금일 접속자 위젯 -->
+            <div class="col-md-3">
+                <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px;">
+                    <div class="card-body p-4 d-flex align-items-center">
+                        <div class="rounded-circle bg-warning bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-users-viewfinder fs-3 text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary mb-1">금일 폼 접속자</h6>
+                            <h2 class="text-white mb-0 fw-bold"><?= number_format($todayVisitCount ?? 0) ?> <span class="fs-6 text-muted fw-normal">명</span></h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 금일 접수 건수 위젯 -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px;">
                     <div class="card-body p-4 d-flex align-items-center">
                         <div class="rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px;">
@@ -175,14 +277,14 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             </div>
 
             <!-- 금일 메일 발송 횟수 위젯 -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px;">
                     <div class="card-body p-4 d-flex align-items-center">
                         <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center me-4" style="width: 60px; height: 60px;">
                             <i class="fa-solid fa-envelope-circle-check fs-3 text-info"></i>
                         </div>
                         <div>
-                            <h6 class="text-secondary mb-1">금일 메일 발송</h6>
+                            <h6 class="text-secondary mb-1">금일 견적메일 발송</h6>
                             <h2 class="text-white mb-0 fw-bold"><?= number_format($todayMailedCount ?? 0) ?> <span class="fs-6 text-muted fw-normal">건</span></h2>
                             <div class="fs-8 text-secondary mt-1">오늘 0시 기준</div>
                         </div>
@@ -199,7 +301,7 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
                 $planLabel = ['free' => ['FREE', 'secondary'], 'starter' => ['STARTER', 'info'], 'pro' => ['PRO', 'warning']];
                 [$planText, $planColor] = $planLabel[$plan] ?? ['FREE', 'secondary'];
             ?>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-dark bg-opacity-50 border-secondary h-100 shadow-sm" style="border-radius: 15px; <?= $isLow ? 'border: 1px solid #dc3545 !important;' : '' ?>">
                     <div class="card-body p-4 d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
@@ -208,7 +310,7 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
                             </div>
                             <div>
                                 <h6 class="text-secondary mb-1">
-                                    메일 발송 가능 횟수
+                                    견적메일 발송 가능 횟수
                                     <span class="badge bg-<?= $planColor ?> ms-2" style="font-size:0.65rem;"><?= $planText ?></span>
                                 </h6>
                                 <h2 class="text-white mb-0 fw-bold">
@@ -227,19 +329,82 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <?php if (!$isPro): ?>
-                        <div>
-                            <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-2" style="border-radius: 10px;">
-                                <i class="fa-solid fa-bolt"></i> 횟수 충전
-                            </a>
-                        </div>
-                        <?php endif; ?>
+                        <!-- 충전 버튼 상단 이동됨 -->
                     </div>
                 </div>
             </div>
         </div>
+        
+        <!-- 접속 통계 차트 영역 -->
+        <div class="card bg-dark bg-opacity-50 border-secondary mb-4 shadow-sm" style="border-radius: 15px;">
+            <div class="card-header border-secondary bg-transparent p-4">
+                <h5 class="text-white mb-0 fw-bold"><i class="fa-solid fa-chart-line me-2 text-info"></i> 최근 7일 접속 추이</h5>
+            </div>
+            <div class="card-body p-4">
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="visitChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const ctx = document.getElementById('visitChart');
+                if (ctx) {
+                    const statsData = <?= json_encode($visitStats ?? []) ?>;
+                    const labels = Object.keys(statsData).map(dateStr => {
+                        const d = new Date(dateStr);
+                        return (d.getMonth() + 1) + '/' + d.getDate();
+                    });
+                    const dataPoints = Object.values(statsData);
 
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '일별 폼 접속 횟수',
+                                data: dataPoints,
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                    titleFont: { size: 13 },
+                                    bodyFont: { size: 14, weight: 'bold' },
+                                    padding: 10,
+                                    displayColors: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: '#9ca3af', stepSize: 1, precision: 0 },
+                                    grid: { color: 'rgba(255,255,255,0.05)' }
+                                },
+                                x: {
+                                    ticks: { color: '#9ca3af' },
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
     </main>
-
 </body>
 </html>

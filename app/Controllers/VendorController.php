@@ -28,10 +28,47 @@ class VendorController extends BaseController {
         $stmt->execute([$vendorUserId, $todayStart]);
         $todayMailedCount = intval($stmt->fetchColumn());
         
+        // 공급사 설정 상태 확인
+        $stmtSettings = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = ?");
+        $stmtSettings->execute([$vendorUserId]);
+        $vendorSettings = $stmtSettings->fetch(\PDO::FETCH_ASSOC);
+        $isSettingsComplete = $vendorSettings && !empty($vendorSettings['url_slug']);
+
+        // 금일 폼 접속 횟수
+        $stmtVisit = $db->prepare("SELECT COUNT(*) FROM vendor_page_visits WHERE vendor_user_id = ? AND visited_at >= ?");
+        $stmtVisit->execute([$vendorUserId, $todayStart]);
+        $todayVisitCount = intval($stmtVisit->fetchColumn());
+
+        // 최근 7일 접속 통계 (일자별)
+        $sevenDaysAgo = date('Y-m-d 00:00:00', strtotime('-6 days'));
+        $stmtStats = $db->prepare("
+            SELECT DATE(visited_at) as visit_date, COUNT(*) as cnt 
+            FROM vendor_page_visits 
+            WHERE vendor_user_id = ? AND visited_at >= ? 
+            GROUP BY visit_date 
+            ORDER BY visit_date ASC
+        ");
+        $stmtStats->execute([$vendorUserId, $sevenDaysAgo]);
+        $visitStatsRaw = $stmtStats->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // 7일치 빈 날짜 배열 채우기
+        $visitStats = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-$i days"));
+            $visitStats[$d] = 0;
+        }
+        foreach ($visitStatsRaw as $row) {
+            $visitStats[$row['visit_date']] = intval($row['cnt']);
+        }
+
         $this->view('vendor/index', [
             'todayQuotesCount' => $todayQuotesCount,
             'todayMailedCount' => $todayMailedCount,
-            'balanceInfo'      => $balanceInfo
+            'balanceInfo'      => $balanceInfo,
+            'vendorSettings'   => $vendorSettings,
+            'isSettingsComplete'=> $isSettingsComplete,
+            'todayVisitCount'  => $todayVisitCount,
+            'visitStats'       => $visitStats
         ]);
     }
     public function settings() {
@@ -197,7 +234,7 @@ class VendorController extends BaseController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
-                $uploadDirExcel = __DIR__ . '/../../public/data/excel/';
+                $uploadDirExcel = __DIR__ . '/../../storage/excel/';
                 if (!file_exists($uploadDirExcel)) {
                     @mkdir($uploadDirExcel, 0777, true);
                 }
@@ -205,7 +242,7 @@ class VendorController extends BaseController {
                 $fullExcelPath = $uploadDirExcel . $excelFilename;
                 
                 if (@move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
-                    $priceExcelPath = '/data/excel/' . $excelFilename;
+                    $priceExcelPath = $excelFilename;
                     
                     try {
                         // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 무제한(또는 300초)으로 연장
@@ -292,6 +329,43 @@ class VendorController extends BaseController {
         ]);
     }
 
+    public function downloadPricingExcel() {
+        $this->requireVendorEmployees();
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        $userId = $_SESSION['user']['user_id'];
+        $db = Database::getInstance();
+        $stmtSettings = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :uid");
+        $stmtSettings->execute(['uid' => $userId]);
+        $settings = $stmtSettings->fetch();
+        
+        if (!$settings || empty($settings['price_excel_path'])) {
+            echo "<script>alert('등록된 단가표 파일이 없습니다.'); window.history.back();</script>";
+            return;
+        }
+
+        $basename = basename($settings['price_excel_path']);
+        $filePath = __DIR__ . '/../../storage/excel/' . $basename;
+
+        if (file_exists($filePath)) {
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="pricing_table.xlsx"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($filePath));
+            readfile($filePath);
+            exit;
+        } else {
+            echo "<script>alert('파일을 찾을 수 없습니다.'); window.history.back();</script>";
+            return;
+        }
+    }
+
     public function quotes() {
         $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
@@ -319,6 +393,13 @@ class VendorController extends BaseController {
         // Split quotes into completed and pending
         $completed_quotes = array_filter($quotes, function($q) { return !empty($q['processed_by']); });
         $pending_quotes = array_filter($quotes, function($q) { return empty($q['processed_by']); });
+
+        // Sort completed quotes by mailed_at / processed_at DESC
+        usort($completed_quotes, function($a, $b) {
+            $timeA = strtotime($a['mailed_at'] ?? $a['processed_at'] ?? $a['created_at']);
+            $timeB = strtotime($b['mailed_at'] ?? $b['processed_at'] ?? $b['created_at']);
+            return $timeB <=> $timeA;
+        });
 
         $this->view('vendor/quotes', [
             'quotes' => $quotes,
@@ -599,6 +680,122 @@ class VendorController extends BaseController {
             $overallTotal += $unit['final_price'] * $bypass;
         }
 
+        // 🌟 커스텀 단수 / 기둥 높이 변경 랙 (canvas_data 파싱)
+        $canvasData = json_decode($quote['canvas_data'] ?? '', true);
+        $racks = $canvasData['racks'] ?? [];
+        $customLevelCounts = [];
+
+        if (!empty($racks) && is_array($racks)) {
+            foreach ($racks as $r) {
+                $reg = intval($r['independent'] ?? 0) + intval($r['connected'] ?? 0);
+                $sm = intval($r['smallConnected'] ?? 0);
+                $rowCount = !empty($r['isDouble']) ? 2 : 1;
+                $defaultRackLevel = intval($r['levels'] ?? 0) ?: $levels;
+                $rBeamL = intval($r['beamLength'] ?? 0) ?: $beamL;
+                $rSmallBeamL = intval($r['smallBeamLength'] ?? 0) ?: 1385;
+                $rDepth = intval($r['rackDepth'] ?? 0) ?: $depth;
+
+                $bypassBays = $r['bypassBays'] ?? [];
+                $bayLevels = $r['bayLevels'] ?? [];
+                $bayHeights = $r['bayHeights'] ?? [];
+
+                for ($row = 0; $row < $rowCount; $row++) {
+                    for ($j = 0; $j < $reg; $j++) {
+                        $isBypass = !empty($bypassBays[$row][$j]);
+                        if ($isBypass) continue;
+
+                        $bayLvl = (isset($bayLevels[$row][$j]) && $bayLevels[$row][$j] !== null && intval($bayLevels[$row][$j]) > 0) ? intval($bayLevels[$row][$j]) : $defaultRackLevel;
+                        $bayH = (isset($bayHeights[$row][$j]) && !empty($bayHeights[$row][$j]) && intval($bayHeights[$row][$j]) > 0) ? intval($bayHeights[$row][$j]) : $rackH;
+
+                        if ($bayLvl !== $levels || $bayH !== $rackH) {
+                            $key = "{$bayLvl}_{$bayH}_{$rBeamL}_{$rDepth}";
+                            if (!isset($customLevelCounts[$key])) {
+                                $customLevelCounts[$key] = ['level' => $bayLvl, 'height' => $bayH, 'beamLength' => $rBeamL, 'depth' => $rDepth, 'indep' => 0, 'conn' => 0, 'small' => 0];
+                            }
+                            $bayType = ($j < intval($r['independent'] ?? 0)) ? 'indep' : 'conn';
+                            $customLevelCounts[$key][$bayType]++;
+                        }
+                    }
+
+                    for ($j = $reg; $j < $reg + $sm; $j++) {
+                        $isBypass = !empty($bypassBays[$row][$j]);
+                        if ($isBypass) continue;
+
+                        $bayLvl = (isset($bayLevels[$row][$j]) && $bayLevels[$row][$j] !== null && intval($bayLevels[$row][$j]) > 0) ? intval($bayLevels[$row][$j]) : $defaultRackLevel;
+                        $bayH = (isset($bayHeights[$row][$j]) && !empty($bayHeights[$row][$j]) && intval($bayHeights[$row][$j]) > 0) ? intval($bayHeights[$row][$j]) : $rackH;
+
+                        if ($bayLvl !== $levels || $bayH !== $rackH) {
+                            $key = "{$bayLvl}_{$bayH}_{$rSmallBeamL}_{$rDepth}_sm";
+                            if (!isset($customLevelCounts[$key])) {
+                                $customLevelCounts[$key] = ['level' => $bayLvl, 'height' => $bayH, 'beamLength' => $rSmallBeamL, 'depth' => $rDepth, 'indep' => 0, 'conn' => 0, 'small' => 0, 'isSmall' => true];
+                            }
+                            $customLevelCounts[$key]['small']++;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($customLevelCounts as $cItem) {
+            $cLvl = $cItem['level'];
+            $cH = $cItem['height'];
+            $cBeamL = $cItem['beamLength'];
+            $cDepth = $cItem['depth'];
+            $cBeamLevels = max(1, $cLvl - 1);
+            $cSpanS = max(1, $cLvl - 1);
+
+            if ($cItem['indep'] > 0) {
+                $unit = $buildUnitBom(2, $cBeamLevels, $tiePerLevel, $cH, $cDepth, $cBeamL, $barType, $beamThick);
+                $sName = "{$cSpanS}S {$cLvl}단 독립";
+                $modules[] = [
+                    'type' => '독립',
+                    'name' => '파렛트랙',
+                    'spec' => "{$cBeamL}*{$cDepth}*{$cH}",
+                    'remark' => $sName,
+                    'qty' => $cItem['indep'],
+                    'unit_price' => $unit['final_price'],
+                    'raw_price' => $unit['raw_price'],
+                    'total_price' => $unit['final_price'] * $cItem['indep'],
+                    'bom' => $unit['bom']
+                ];
+                $overallTotal += $unit['final_price'] * $cItem['indep'];
+            }
+
+            if ($cItem['conn'] > 0) {
+                $unit = $buildUnitBom(1, $cBeamLevels, $tiePerLevel, $cH, $cDepth, $cBeamL, $barType, $beamThick);
+                $sName = "{$cSpanS}S {$cLvl}단 연결";
+                $modules[] = [
+                    'type' => '연결',
+                    'name' => '파렛트랙',
+                    'spec' => "{$cBeamL}*{$cDepth}*{$cH}",
+                    'remark' => $sName,
+                    'qty' => $cItem['conn'],
+                    'unit_price' => $unit['final_price'],
+                    'raw_price' => $unit['raw_price'],
+                    'total_price' => $unit['final_price'] * $cItem['conn'],
+                    'bom' => $unit['bom']
+                ];
+                $overallTotal += $unit['final_price'] * $cItem['conn'];
+            }
+
+            if ($cItem['small'] > 0) {
+                $unit = $buildUnitBom(1, $cBeamLevels, 2, $cH, $cDepth, $cBeamL, $barType, $beamThick);
+                $sNameSmall = "{$cSpanS}S {$cLvl}단 작은연결";
+                $modules[] = [
+                    'type' => '작은연결',
+                    'name' => '파렛트랙',
+                    'spec' => "{$cBeamL}*{$cDepth}*{$cH}",
+                    'remark' => $sNameSmall,
+                    'qty' => $cItem['small'],
+                    'unit_price' => $unit['final_price'],
+                    'raw_price' => $unit['raw_price'],
+                    'total_price' => $unit['final_price'] * $cItem['small'],
+                    'bom' => $unit['bom']
+                ];
+                $overallTotal += $unit['final_price'] * $cItem['small'];
+            }
+        }
+
         // 복렬 홀더(Holder)
         $holders = intval($quote['rack_holders'] ?? 0);
         if ($holders > 0) {
@@ -741,13 +938,17 @@ class VendorController extends BaseController {
                 $db->prepare("UPDATE users SET addon_quotes_balance = addon_quotes_balance - 1 WHERE id = ?")->execute([$userId]);
             }
             
+            $adminMargin = $_POST['admin_margin'] ?? 0;
+            $adminPrice = $_POST['admin_price'] ?? 0;
+            $adminQuoteDetails = $_POST['admin_quote_details'] ?? null;
+            
             $employeeId = $_SESSION['employee_id'] ?? null;
             if ($employeeId) {
-                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW() WHERE id = ?");
-                $stmt->execute([$employeeId, $id]);
+                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
+                $stmt->execute([$employeeId, $adminMargin, $adminPrice, $adminQuoteDetails, $id, $userId]);
             } else {
-                $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW() WHERE id = ?");
-                $stmt->execute([$id]);
+                $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
+                $stmt->execute([$adminMargin, $adminPrice, $adminQuoteDetails, $id, $userId]);
             }
             echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
         } else {

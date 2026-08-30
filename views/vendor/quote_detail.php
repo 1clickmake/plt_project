@@ -34,7 +34,18 @@
                 <a href="/vendor/quotes" class="btn btn-outline-secondary btn-sm rounded px-3" style="font-size:0.8rem; border-color: rgba(255,255,255,0.15); color:#cbd5e1;">
                     ◀ 목록으로 돌아가기
                 </a>
-                <div class="user-profile d-flex align-items-center gap-2">
+    <div class="user-profile d-flex align-items-center gap-2">
+                <?php
+                    $dbBtn = \App\Core\Database::getInstance();
+                    $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
+                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $btnPlan = $stmtBtn->fetchColumn();
+                    if ($btnPlan !== 'pro'):
+                ?>
+                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                    <i class="fa-solid fa-bolt"></i> 횟수 충전
+                </a>
+                <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
                 </div>
@@ -140,6 +151,53 @@
                                 "></canvas>
                             <?php endif; ?>
                         </div>
+
+                        <!-- 첨부파일 (이미지는 출력, PDF/기타는 다운로드) -->
+                        <?php if (!empty($quote['extra_files'])): ?>
+                            <?php 
+                                $extraFiles = htmlspecialchars_decode($quote['extra_files'] ?? '', ENT_QUOTES);
+                                $decodeLimit = 5;
+                                while (is_string($extraFiles) && $decodeLimit > 0) {
+                                    $decoded = json_decode($extraFiles, true);
+                                    if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                                        break;
+                                    }
+                                    $extraFiles = $decoded;
+                                    $decodeLimit--;
+                                }
+                                if (!is_array($extraFiles)) {
+                                    $extraFiles = [];
+                                }
+                            ?>
+                            <!-- DEBUG_EXTRA_FILES: 원본=<?= htmlspecialchars($quote['extra_files']) ?> 파싱결과=<?= htmlspecialchars(json_encode($extraFiles, JSON_UNESCAPED_UNICODE)) ?> -->
+                            <?php if (!empty($extraFiles)): ?>
+                                <div class="mt-4 pt-3 border-top border-secondary text-start">
+                                    <h6 class="text-white fw-bold mb-3">📎 고객 추가 첨부파일</h6>
+                                    
+                                    <?php foreach ($extraFiles as $file): ?>
+                                        <?php 
+                                            $ext = strtolower(pathinfo($file['original_name'], PATHINFO_EXTENSION));
+                                            $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif']);
+                                        ?>
+                                        
+                                        <?php if ($isImage): ?>
+                                            <!-- 이미지는 직접 렌더링 -->
+                                            <div class="mb-3 text-center">
+                                                <div class="text-light small mb-1"><i class="fa-regular fa-image"></i> <?= htmlspecialchars($file['original_name']) ?></div>
+                                                <img src="<?= htmlspecialchars($file['path']) ?>" alt="첨부 이미지" style="max-width: 100%; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+                                            </div>
+                                        <?php else: ?>
+                                            <!-- 이미지 외 파일(PDF 등)은 다운로드 버튼 -->
+                                            <div class="mb-2">
+                                                <a href="<?= htmlspecialchars($file['path']) ?>" download="<?= htmlspecialchars($file['original_name']) ?>" class="btn btn-sm btn-outline-info rounded px-3 py-2" style="font-size: 0.85rem;">
+                                                    <i class="fa-solid fa-file-pdf"></i> <?= htmlspecialchars($file['original_name']) ?> 다운로드
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
 

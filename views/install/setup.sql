@@ -329,6 +329,7 @@ CREATE TABLE `quote_requests` (
   `address` varchar(255) NOT NULL COMMENT '현장 주소',
   `canvas_data` longtext DEFAULT NULL COMMENT '랙 및 도면 정보 JSON',
   `image_path` varchar(255) DEFAULT NULL COMMENT '고해상도 캔버스 이미지 경로',
+  `extra_files` text DEFAULT NULL COMMENT '고객 업로드 첨부파일 경로 (JSON)',
   `summary` longtext DEFAULT NULL COMMENT 'AI 시공 요약 리포트',
   `edge_lengths` text DEFAULT NULL,
   `status` varchar(50) DEFAULT 'pending',
@@ -363,6 +364,7 @@ CREATE TABLE `quote_requests` (
   `processed_at` datetime DEFAULT NULL,
   `is_mailed` tinyint(1) DEFAULT 0 COMMENT '메일 발송 여부',
   `mailed_at` datetime DEFAULT NULL COMMENT '메일 발송 일시',
+  `admin_quote_details` longtext DEFAULT NULL COMMENT '견적서 수동입력 상세 데이터 JSON',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='캔버스 견적 요청 내역';
 
@@ -479,5 +481,17 @@ CREATE TABLE `payment_logs` (
   KEY `idx_user` (`user_id`),
   KEY `idx_pay_type` (`pay_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='결제 기록 테이블 (건당/구독 통합)';
+
+DROP TABLE IF EXISTS `vendor_page_visits`;
+CREATE TABLE `vendor_page_visits` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '접속 로그 고유 ID',
+  `vendor_user_id` varchar(255) NOT NULL COMMENT '공급사 아이디',
+  `ip_address` varchar(45) NOT NULL COMMENT '접속자 IP',
+  `visited_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '접속 일시',
+  PRIMARY KEY (`id`),
+  KEY `idx_vendor_user_id` (`vendor_user_id`),
+  KEY `idx_visited_at` (`visited_at`),
+  KEY `idx_vendor_date` (`vendor_user_id`, `visited_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='공급사 견적폼 접속 통계';
 
 SET FOREIGN_KEY_CHECKS = 1;
