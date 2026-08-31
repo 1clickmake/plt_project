@@ -1,9 +1,14 @@
+<?php
+$isEmbed = isset($_GET['embed']) && in_array(strtolower((string)$_GET['embed']), ['1', 'true', 'yes']);
+$theme = strtolower((string)($_GET['theme'] ?? 'dark'));
+$isLightTheme = in_array($theme, ['light', 'white']);
+?>
 <!DOCTYPE html>
-<html lang="ko" data-bs-theme="dark">
+<html lang="ko" <?= $isLightTheme ? 'data-bs-theme="light"' : 'data-bs-theme="dark"' ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>파렛트랙 자동 견적 시스템 - B2B SaaS</title>
+    <title><?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>파렛트랙 자동 견적 시스템 - B2B SaaS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -177,13 +182,136 @@
             color: white;
         }
 
+        /* ☀️ 화이트 모드 (Theme Light) 스타일 오버라이드 */
+        html[data-bs-theme="light"] body,
+        body.theme-light {
+            background: #f1f5f9 !important;
+            color: #1e293b !important;
+        }
+        body.theme-light .glass-panel {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        body.theme-light .canvas-container {
+            background: #ffffff !important;
+            border: 1px dashed #cbd5e1 !important;
+        }
+        body.theme-light .text-light,
+        body.theme-light .text-white {
+            color: #0f172a !important;
+        }
+        body.theme-light .text-secondary,
+        body.theme-light .text-muted {
+            color: #64748b !important;
+        }
+        body.theme-light .border-secondary {
+            border-color: #e2e8f0 !important;
+        }
+        body.theme-light .form-control,
+        body.theme-light .form-select {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        body.theme-light .form-control:focus,
+        body.theme-light .form-select:focus {
+            border-color: #0ea5e9 !important;
+            box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.15) !important;
+        }
+        body.theme-light .form-control::placeholder {
+            color: #94a3b8 !important;
+        }
+        body.theme-light .drag-item {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        }
+        body.theme-light .shape-diagram {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        body.theme-light .shape-btn {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #475569 !important;
+        }
+        body.theme-light .shape-btn:hover {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        body.theme-light .file-drop-zone {
+            background: rgba(14, 165, 233, 0.04) !important;
+            border-color: rgba(14, 165, 233, 0.4) !important;
+        }
+        body.theme-light .file-preview-thumb {
+            background: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #64748b !important;
+        }
+        body.theme-light #canvas-summary-badge {
+            background: #ffffff !important;
+            border-color: #bae6fd !important;
+            color: #1e293b !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+        }
+        body.theme-light #canvas-remote-ctrl > div {
+            background: #ffffff !important;
+            border: 1px solid #bae6fd !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05) !important;
+        }
+        body.theme-light #remote-header {
+            color: #0284c7 !important;
+        }
+        body.theme-light .modal-content {
+            background: #ffffff !important;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+        }
+        body.theme-light .modal-content .text-white {
+            color: #1e293b !important;
+        }
+        body.theme-light .modal-content .text-bg-dark {
+            background: #ffffff !important;
+            color: #1e293b !important;
+        }
+        body.theme-light .offcanvas {
+            background: #ffffff !important;
+            color: #1e293b !important;
+            border-left-color: #e2e8f0 !important;
+        }
+        body.theme-light .offcanvas .text-white {
+            color: #0f172a !important;
+        }
+        body.theme-light .offcanvas .btn-close,
+        body.theme-light .modal .btn-close {
+            filter: none !important;
+        }
+
+        /* 📱 아이프레임(iframe) 임베드 시 컴팩트 레이아웃 */
+        body.is-embed {
+            height: 100vh;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        body.is-embed .container-fluid {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
     </style>
 </head>
-<body>
+<body class="<?= $isLightTheme ? 'theme-light' : '' ?> <?= $isEmbed ? 'is-embed' : '' ?>">
 <script>
 window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
+window.CANVAS_THEME = <?= json_encode($isLightTheme ? 'light' : 'dark') ?>;
+window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 </script>
 <div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
+    <?php if (!$isEmbed): ?>
     <div class="text-center mb-3 flex-shrink-0 position-relative">
         <?php if (!empty($vendor)): ?>
             <h4 class="fw-bold text-light mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h4>
@@ -192,8 +320,8 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
             스마트 창고 배치 견적
         </h2>
         <p class="text-muted small m-0">복잡한 창고 형태도 드래그 앤 드롭으로 1분 만에 완성! <?php if(!empty($vendor['contact_number'])) echo " (문의: " . htmlspecialchars($vendor['contact_number']) . ")"; ?></p>
-        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info position-absolute" style="top: 0px; right: 0px;">🎥 동영상메뉴얼</a>
     </div>
+    <?php endif; ?>
 
     <div class="row g-4 flex-grow-1" style="min-height: 0;">
         <!-- 왼쪽: 4단계 입력 폼 -->
@@ -395,8 +523,8 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
         <div class="col-xl-9 col-lg-8 h-100">
             <div class="glass-panel p-4 h-100 d-flex flex-column">
                 <!-- 상단 배지 바 (한 줄 컴팩트) -->
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
                         <h5 class="fw-semibold text-info m-0 me-1">실시간 2D 배치 도면</h5>
                         <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
                             <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">2585×1000×4500 (2S 3단)</span>
@@ -411,7 +539,9 @@ window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
                             <span class="text-secondary">|</span>
                             <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">0</strong> PLT</span>
                         </div>
-<!-- 배치도수락 버튼 제거 (리모컨 전용) -->
+                    </div>
+                    <div class="flex-shrink-0">
+                        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info">🎥 동영상메뉴얼</a>
                     </div>
                 </div>
 
@@ -851,6 +981,18 @@ function submitQuoteRequest() {
     const canvas = document.getElementById('drawingCanvas');
     let imgData = '';
     if (canvas) {
+        // 화이트모드/다크모드 여부와 관계없이 견적서 저장용 도면 이미지는
+        // 항상 최고 가독성을 자랑하는 CAD 청사진(1번 다크모드 반전 스타일)으로 일관되게 캡처합니다.
+        const prevTheme = window.CANVAS_THEME;
+        const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
+        
+        // 1. 임시로 다크 팔레트로 전환 후 캔버스 그리기
+        if (isCurrentlyLight) {
+            window.CANVAS_THEME = 'dark';
+            document.body.classList.remove('theme-light');
+            if (typeof draw === 'function') draw();
+        }
+
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
@@ -858,11 +1000,18 @@ function submitQuoteRequest() {
         ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
         ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
         
-        // 색상 반전: 밝은 도면 선을 어둡게(흰색->검정), 청록색 치수를 붉은색 계열로 반전
+        // 색상 반전: 다크모드 선을 고대비 CAD 도면 스타일(주황/갈색 랙, 또렷한 치수선)로 반전
         ctx.filter = 'invert(1)';
         ctx.drawImage(canvas, 0, 0);
         ctx.filter = 'none'; // 필터 초기화
         imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+
+        // 2. 원래 테마로 즉시 복구
+        if (isCurrentlyLight) {
+            window.CANVAS_THEME = prevTheme;
+            document.body.classList.add('theme-light');
+            if (typeof draw === 'function') draw();
+        }
     }
 
     let edge_lengths_array = [];
@@ -1318,7 +1467,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         <div class="mb-3">
             <label class="form-label text-muted small mb-1">변경할 단수 입력</label>
-            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-level" placeholder="예: 2" min="1">
+            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-level" placeholder="예: 2" min="2">
         </div>
         <div class="mb-2">
             <label class="form-label text-muted small mb-1">변경할 기둥 높이 (선택사항)</label>

@@ -478,20 +478,121 @@ class VendorController extends BaseController {
 
         $result = $this->buildQuoteModules($quote);
         $modules = $result['modules'];
+        $customItems = $result['custom_items'] ?? [];
         $overallTotal = $result['overallTotal'];
+        $isCustomized = $result['is_customized'] ?? false;
 
         $balanceInfo = $this->getQuoteBalance($userId);
 
-                $this->view('vendor/quote_price', [
+        $this->view('vendor/quote_price', [
             'quote' => $quote, 
             'settings' => $settings, 
             'modules' => $modules,
+            'customItems' => $customItems,
             'balanceInfo' => $balanceInfo,
-            'overallTotal' => $overallTotal
+            'overallTotal' => $overallTotal,
+            'isCustomized' => $isCustomized
         ]);
     }
 
-        private function buildQuoteModules($quote) {
+    public function saveQuoteDetails($vars) {
+        $this->requireVendorEmployees();
+        header('Content-Type: application/json');
+
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $quoteId = intval($vars['id'] ?? 0);
+        $db = Database::getInstance();
+
+        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
+        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            echo json_encode(['success' => false, 'message' => '해당 견적을 찾을 수 없거나 권한이 없습니다.']);
+            return;
+        }
+
+        if (!empty($row['is_mailed']) || !empty($row['processed_by'])) {
+            echo json_encode(['success' => false, 'message' => '이미 고객에게 메일 발송이 완료된 견적서는 무결성 보호를 위해 단가를 수정할 수 없습니다.']);
+            return;
+        }
+
+        $rawInput = file_get_contents('php://input');
+        $input = json_decode($rawInput, true);
+        if (!$input) {
+            $input = $_POST;
+        }
+
+        $modules = $input['modules'] ?? [];
+        $customItems = $input['custom_items'] ?? [];
+        $overallTotal = intval($input['overallTotal'] ?? 0);
+
+        $detailsData = [
+            'modules' => $modules,
+            'custom_items' => $customItems,
+            'overallTotal' => $overallTotal,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'updated_by' => $_SESSION['employee_name'] ?? $_SESSION['user']['username'] ?? 'User'
+        ];
+
+        $jsonStr = json_encode($detailsData, JSON_UNESCAPED_UNICODE);
+
+        $upd = $db->prepare("UPDATE quote_requests SET admin_quote_details = :details WHERE id = :qid");
+        $upd->execute(['details' => $jsonStr, 'qid' => $quoteId]);
+
+        echo json_encode(['success' => true, 'message' => '단가 및 부품 변경 사항이 안전하게 저장되었습니다!']);
+    }
+
+    public function resetQuoteDetails($vars) {
+        $this->requireVendorEmployees();
+        header('Content-Type: application/json');
+
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $quoteId = intval($vars['id'] ?? 0);
+        $db = Database::getInstance();
+
+        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
+        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            echo json_encode(['success' => false, 'message' => '해당 견적을 찾을 수 없거나 권한이 없습니다.']);
+            return;
+        }
+
+        if (!empty($row['is_mailed']) || !empty($row['processed_by'])) {
+            echo json_encode(['success' => false, 'message' => '이미 발송 완료된 견적서는 초기화할 수 없습니다.']);
+            return;
+        }
+
+        $upd = $db->prepare("UPDATE quote_requests SET admin_quote_details = NULL WHERE id = :qid AND vendor_user_id = :vuid");
+        $upd->execute(['qid' => $quoteId, 'vuid' => $userId]);
+
+        echo json_encode(['success' => true, 'message' => '기본 도면 산출 값으로 초기화되었습니다!']);
+    }
+
+    private function buildQuoteModules($quote) {
+        // 🌟 이미 관리자가 수동 수정한 상세 내역이 DB에 저장되어 있다면 이를 우선 사용
+        if (!empty($quote['admin_quote_details'])) {
+            $savedDetails = json_decode($quote['admin_quote_details'], true);
+            if (is_array($savedDetails) && isset($savedDetails['modules'])) {
+                return [
+                    'modules' => $savedDetails['modules'],
+                    'custom_items' => $savedDetails['custom_items'] ?? [],
+                    'overallTotal' => $savedDetails['overallTotal'] ?? 0,
+                    'is_customized' => true
+                ];
+            }
+        }
+
         // BOM 계산 로직 (동적 산출)
         require_once __DIR__ . '/../Services/SehwaPriceCalculator.php';
         
@@ -588,7 +689,7 @@ class VendorController extends BaseController {
 
             $sumRaw = 0;
             foreach ($bom as $item) {
-                $sumRaw += $item['total'];
+                $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0;
             }
             $finalPrice = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
 
@@ -814,7 +915,7 @@ class VendorController extends BaseController {
             }
             
             $sumRaw = 0;
-            foreach ($hBom as $item) { $sumRaw += $item['total']; }
+            foreach ($hBom as $item) { $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0; }
             $hFinal = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
 
             $modules[] = [
@@ -833,7 +934,9 @@ class VendorController extends BaseController {
 
         return [
             'modules' => $modules,
-            'overallTotal' => $overallTotal
+            'custom_items' => [],
+            'overallTotal' => $overallTotal,
+            'is_customized' => false
         ];
     }
 
@@ -872,9 +975,18 @@ class VendorController extends BaseController {
 
         $result = $this->buildQuoteModules($quote);
         $modules = $result['modules'];
+        $customItems = $result['custom_items'] ?? [];
+        $isCustomized = $result['is_customized'] ?? false;
 
         $balanceInfo = $this->getQuoteBalance($userId);
-        $this->view('vendor/quote_document', ['quote' => $quote, 'settings' => $settings, 'modules' => $modules, 'balanceInfo' => $balanceInfo]);
+        $this->view('vendor/quote_document', [
+            'quote' => $quote, 
+            'settings' => $settings, 
+            'modules' => $modules, 
+            'customItems' => $customItems,
+            'balanceInfo' => $balanceInfo,
+            'isCustomized' => $isCustomized
+        ]);
     }
 
     public function sendEmail(array $vars) {
@@ -940,15 +1052,29 @@ class VendorController extends BaseController {
             
             $adminMargin = $_POST['admin_margin'] ?? 0;
             $adminPrice = $_POST['admin_price'] ?? 0;
-            $adminQuoteDetails = $_POST['admin_quote_details'] ?? null;
+            
+            // 기존에 저장된 커스텀 BOM 상세(modules, custom_items 등)가 있다면 보존하고 견적서 입력값을 병합
+            $currDetailsStmt = $db->prepare("SELECT admin_quote_details FROM quote_requests WHERE id = ?");
+            $currDetailsStmt->execute([$id]);
+            $currDetailsRaw = $currDetailsStmt->fetchColumn();
+            
+            $finalDetailsJson = $currDetailsRaw;
+            if (!empty($_POST['admin_quote_details'])) {
+                $postedDocInputs = json_decode($_POST['admin_quote_details'], true);
+                if (is_array($postedDocInputs)) {
+                    $currDetailsArr = json_decode($currDetailsRaw ?? '', true) ?: [];
+                    $currDetailsArr['doc_inputs'] = $postedDocInputs;
+                    $finalDetailsJson = json_encode($currDetailsArr, JSON_UNESCAPED_UNICODE);
+                }
+            }
             
             $employeeId = $_SESSION['employee_id'] ?? null;
             if ($employeeId) {
                 $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
-                $stmt->execute([$employeeId, $adminMargin, $adminPrice, $adminQuoteDetails, $id, $userId]);
+                $stmt->execute([$employeeId, $adminMargin, $adminPrice, $finalDetailsJson, $id, $userId]);
             } else {
                 $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
-                $stmt->execute([$adminMargin, $adminPrice, $adminQuoteDetails, $id, $userId]);
+                $stmt->execute([$adminMargin, $adminPrice, $finalDetailsJson, $id, $userId]);
             }
             echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
         } else {
@@ -1033,6 +1159,30 @@ class VendorController extends BaseController {
         $this->view('vendor/addon_payment', [
             'config' => $config,
             'user' => clone (object)$_SESSION['user']
+        ]);
+    }
+
+    public function embed() {
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $db = Database::getInstance();
+
+        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = :uid");
+        $stmt->execute(['uid' => $userId]);
+        $settings = $stmt->fetch();
+
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $domainName = rtrim($protocol . $host, '/');
+
+        $this->view('vendor/embed', [
+            'vendorSettings' => $settings,
+            'domainName' => $domainName,
+            'user' => $_SESSION['user']
         ]);
     }
 }

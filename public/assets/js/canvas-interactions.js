@@ -947,9 +947,15 @@ window.drawCopyHandleIcon = typeof drawCopyHandleIcon !== 'undefined' ? drawCopy
                 let height = heightStr ? parseInt(heightStr) : null;
                 if (height <= 0) height = null;
                 
+                if (isNaN(level) || level < 2) {
+                    alert('⚠️ 설치 단수는 최소 2단 이상이어야 합니다.');
+                    document.getElementById('modal-custom-level').focus();
+                    return;
+                }
+                
                 if (typeof racks !== 'undefined' && racks[idx]) {
                     const r = racks[idx];
-                    if (level > 0) {
+                    if (level >= 2) {
                         r.bayLevels[row][span] = level;
                         r.bayHeights[row][span] = height;
                         

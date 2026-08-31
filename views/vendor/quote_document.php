@@ -299,6 +299,27 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <?php if(!empty($customItems)): ?>
+        <?php foreach($customItems as $cIdx => $cItem): ?>
+        <tr>
+          <td class="center"><?= (isset($modules) ? count($modules) : 0) + $cIdx + 1 ?></td>
+          <td class="center fw-bold text-primary"><?= htmlspecialchars($cItem['name'] ?? '') ?></td>
+          <td class="center"><?= htmlspecialchars($cItem['spec'] ?? '') ?></td>
+          <td class="center"><?= number_format($cItem['qty'] ?? 1) ?></td>
+          <td class="center"><?= htmlspecialchars($cItem['unit'] ?? '개') ?></td>
+          <td class="right">
+              <input type="text" id="custom-unit-new-<?= $cIdx ?>" class="print-input text-right text-danger calc-other-unit other-new" data-qty="<?= intval($cItem['qty'] ?? 1) ?>" value="<?= number_format($cItem['unit_price'] ?? 0) ?>">
+          </td>
+          <td class="right">
+              <span class="calc-other-total other-new-total">
+                  <?= number_format($cItem['total_price'] ?? 0) ?>
+              </span>
+          </td>
+          <td class="center"><?= htmlspecialchars($cItem['remark'] ?? '') ?></td>
+        </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
     <tr><td colspan="8" class="section-title-red">〈파렛트당 <?= $palletWeight ?>kg, 로드빔 <?= $beamThickness ?>바 <?= $totalPallets ?>plt 적재〉</td></tr>
     <tr>
       <td></td>

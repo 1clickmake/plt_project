@@ -1,4 +1,8 @@
 
+function isCanvasLightMode() {
+    return document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
+}
+
 function drawGridBackground() {
     if (currentScale <= 0) return;
     const gridLineMm = cameraZoom >= 1.5 ? 100 : 500;
@@ -17,9 +21,10 @@ function drawGridBackground() {
     
     const maxW = canvas.width / cameraZoom;
     const maxH = canvas.height / cameraZoom;
+    const isLight = isCanvasLightMode();
     
     // 1. Grid Lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1 / cameraZoom;
     ctx.beginPath();
     for (let x = startX; x <= maxW + linePx; x += linePx) {
@@ -35,13 +40,13 @@ function drawGridBackground() {
     // 2. Ruler Background Panels
     const rulerThickTop = 22 / cameraZoom;
     const rulerThickLeft = 45 / cameraZoom;
-    ctx.fillStyle = 'rgba(20, 25, 35, 0.9)'; 
+    ctx.fillStyle = isLight ? 'rgba(241, 245, 249, 0.95)' : 'rgba(20, 25, 35, 0.9)'; 
     
     ctx.fillRect(viewLeft, viewTop, parent.clientWidth / cameraZoom, rulerThickTop);
     ctx.fillRect(viewLeft, viewTop, rulerThickLeft, parent.clientHeight / cameraZoom);
 
     // 3. Ruler Text
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillStyle = isLight ? '#334155' : 'rgba(255, 255, 255, 0.9)';
     ctx.font = (10 / cameraZoom) + 'px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -1887,16 +1892,20 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
         ctx.globalAlpha = 0.45; // 투명처리된 복사된 랙 스타일 적용
     }
 
+    const isLight = isCanvasLightMode();
+
     // 1. 배경 채우기
     if (isPreview) {
-        ctx.fillStyle = r.isValid ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+        ctx.fillStyle = isLight
+            ? (r.isValid ? 'rgba(2, 132, 199, 0.15)' : 'rgba(239, 68, 68, 0.15)')
+            : (r.isValid ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.25)');
     } else {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.6)'; // 어두운 반투명
+        ctx.fillStyle = isLight ? 'rgba(241, 245, 249, 0.85)' : 'rgba(15, 23, 42, 0.6)'; // 반투명 배경
     }
     ctx.fillRect(0, -depthPx/2, r.totalLengthPx, depthPx);
 
     // 2. 가로 로드빔 평행선 그리기 (이중 선)
-    ctx.strokeStyle = isPreview && !r.isValid ? 'rgba(239, 68, 68, 0.8)' : '#0ea5e9';
+    ctx.strokeStyle = isPreview && !r.isValid ? 'rgba(239, 68, 68, 0.8)' : (isLight ? '#0284c7' : '#0ea5e9');
     ctx.lineWidth = 2;
     
     if (isDouble) {
@@ -1910,8 +1919,8 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     }
 
     // 3. 기둥 및 고정 홀더 렌더링
-    ctx.fillStyle = isPreview ? 'rgba(56, 189, 248, 0.7)' : '#0ea5e9';
-    ctx.strokeStyle = '#fff';
+    ctx.fillStyle = isPreview ? (isLight ? 'rgba(2, 132, 199, 0.6)' : 'rgba(56, 189, 248, 0.7)') : (isLight ? '#0284c7' : '#0ea5e9');
+    ctx.strokeStyle = isLight ? '#0f172a' : '#fff';
     ctx.lineWidth = 1;
     
     const regularSpans = (r.independent || 0) + (r.connected || 0);
@@ -2065,7 +2074,7 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
                         ctx.setLineDash([2, 2]);
                         ctx.strokeRect(bayCenterX - textWidth / 2, labelY - 8, textWidth, 16);
                     } else {
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                        ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.85)';
                         ctx.fillRect(bayCenterX - textWidth / 2, labelY - 8, textWidth, 16);
                     }
                     
@@ -2116,10 +2125,10 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
                     
                     const textWidth = ctx.measureText(levelLabelText).width + 8;
                     
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; // 어두운 배경
+                    ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.85)'; // 배경
                     ctx.fillRect(bayCenterX - textWidth / 2, labelY - 10, textWidth, 20);
                     
-                    ctx.fillStyle = '#a855f7'; // 텍스트 컬러 (보라색)
+                    ctx.fillStyle = isCanvasLightMode() ? '#7e22ce' : '#a855f7'; // 텍스트 컬러 (보라색)
                     
                     // 글자가 뒤집히지 않도록 보정
                     const worldAngle = getRackAngle(r);
@@ -2195,10 +2204,10 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)';
         ctx.fillRect(midX - 12, midY - 12, 24, 24);
         
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = isCanvasLightMode() ? '#0284c7' : '#38bdf8';
         ctx.fillText(i + 1, midX, midY);
     }
 
@@ -2471,11 +2480,11 @@ function drawDimensions() {
                         let dir = y2 > y1 ? 1 : -1;
                         ctx.beginPath(); ctx.moveTo(cx-3, y2-5*dir); ctx.lineTo(cx, y2); ctx.lineTo(cx+3, y2-5*dir); ctx.stroke();
                         
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                        ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)';
                         let textW = ctx.measureText(`${distMm}mm`).width + 10;
                         let midY = (y1+y2)/2;
                         ctx.fillRect(cx - textW/2, midY - 10, textW, 20);
-                        ctx.fillStyle = '#fdba74';
+                        ctx.fillStyle = isCanvasLightMode() ? '#ea580c' : '#fdba74';
                         ctx.fillText(`${distMm}mm`, cx, midY);
 
                         window._placedDimensionLabels.push({ cx: cx, cy: midY, hw: textW/2 + 10, hh: 15 });
@@ -2494,11 +2503,11 @@ function drawDimensions() {
                         let dir = x2 > x1 ? 1 : -1;
                         ctx.beginPath(); ctx.moveTo(x2-5*dir, cy-3); ctx.lineTo(x2, cy); ctx.lineTo(x2-5*dir, cy+3); ctx.stroke();
                         
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                        ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)';
                         let textW = ctx.measureText(`${distMm}mm`).width + 10;
                         let midX = (x1+x2)/2;
                         ctx.fillRect(midX - textW/2, cy - 10, textW, 20);
-                        ctx.fillStyle = '#fdba74';
+                        ctx.fillStyle = isCanvasLightMode() ? '#ea580c' : '#fdba74';
                         ctx.fillText(`${distMm}mm`, midX, cy);
 
                         window._placedDimensionLabels.push({ cx: midX, cy: cy, hw: textW/2 + 10, hh: 15 });
@@ -2786,15 +2795,15 @@ function drawWallToRackDimensions() {
         ctx.stroke();
 
         // 텍스트 그리기 (각도에 맞춰 회전)
-        let textColor = seg.isFocused ? '#38bdf8'
-                      : seg.isObstacleHit ? '#fbbf24'
-                      : '#e5e7eb';
+        let textColor = seg.isFocused ? (isCanvasLightMode() ? '#0284c7' : '#38bdf8')
+                      : seg.isObstacleHit ? '#d97706'
+                      : (isCanvasLightMode() ? '#1e293b' : '#e5e7eb');
 
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(textRot);
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillStyle = isCanvasLightMode() ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.85)';
         ctx.fillRect(-textW / 2, -textH / 2, textW, textH);
         ctx.fillStyle = textColor;
         ctx.fillText(label, 0, 0);

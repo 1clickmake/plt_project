@@ -50,16 +50,20 @@
             사용 매뉴얼 영상
         </h2>
         <p class="text-muted small m-0">스마트 창고 배치 견적 시스템 사용 방법을 영상으로 확인하세요.</p>
-        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>" class="btn btn-sm btn-outline-light position-absolute" style="top: 0px; right: 0px;">⬅️ 돌아가기</a>
     </div>
 
     <div class="row g-4 flex-grow-1" style="min-height: 0;">
         <!-- 왼쪽: 빈 공간 -->
         <div class="col-xl-3 col-lg-4 h-100">
-            <div class="glass-panel p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center">
-                <i class="fas fa-video fa-3x mb-3 text-muted"></i>
-                <h5 class="text-light mt-3">영상 시청 안내</h5>
-                <p class="text-muted small mt-2">우측 화면에서 플레이 버튼을 눌러 재생하세요. 전체 화면으로도 시청 가능합니다.</p>
+            <div class="glass-panel p-4 h-100 d-flex flex-column position-relative">
+                <div class="mb-auto">
+                    <a href="javascript:void(0);" onclick="if(document.referrer) { history.back(); } else { location.href='/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>'; }" class="btn btn-outline-secondary w-100"><i class="fas fa-arrow-left me-2"></i> 도면으로 돌아가기</a>
+                </div>
+                <div class="text-center mt-auto mb-auto">
+                    <i class="fas fa-video fa-3x mb-3 text-muted"></i>
+                    <h5 class="text-light mt-3">영상 시청 안내</h5>
+                    <p class="text-muted small mt-2">우측 화면에서 플레이 버튼을 눌러 재생하세요. 전체 화면으로도 시청 가능합니다.</p>
+                </div>
             </div>
         </div>
         
