@@ -38,7 +38,7 @@
                 <?php
                     $dbBtn = \App\Core\Database::getInstance();
                     $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
-                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $stmtBtn->execute([$user['user_id']]);
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
@@ -47,7 +47,7 @@
                 </a>
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                    <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                    <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
                 </div>
             </div>
         </div>
@@ -129,7 +129,6 @@
                                         <i class="fa-solid fa-magnifying-glass-plus"></i> 전체이미지 보기
                                     </a>
                                 <?php endif; ?>
-                                <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">Read-Only Image</span>
                             </div>
                         </div>
                         <div class="text-center">
@@ -141,14 +140,6 @@
                                     width: 100%;
                                     height: auto;
                                 ">
-                            <?php else: ?>
-                                <canvas id="quoteCanvas" width="800" height="500" style="
-                                    background: #090d16;
-                                    border: 1px solid rgba(255,255,255,0.08);
-                                    border-radius: 12px;
-                                    width: 100%;
-                                    height: auto;
-                                "></canvas>
                             <?php endif; ?>
                         </div>
 
@@ -171,7 +162,7 @@
                             ?>
                             <!-- DEBUG_EXTRA_FILES: 원본=<?= htmlspecialchars($quote['extra_files']) ?> 파싱결과=<?= htmlspecialchars(json_encode($extraFiles, JSON_UNESCAPED_UNICODE)) ?> -->
                             <?php if (!empty($extraFiles)): ?>
-                                <div class="mt-4 pt-3 border-top border-secondary text-start">
+                                <div class="mt-4 pt-3 <?php if (!empty($quote['image_path'])): ?>border-top border-secondary<?php endif; ?> text-start">
                                     <h6 class="text-white fw-bold mb-3">📎 고객 추가 첨부파일</h6>
                                     
                                     <?php foreach ($extraFiles as $file): ?>
@@ -183,8 +174,10 @@
                                         <?php if ($isImage): ?>
                                             <!-- 이미지는 직접 렌더링 -->
                                             <div class="mb-3 text-center">
-                                                <div class="text-light small mb-1"><i class="fa-regular fa-image"></i> <?= htmlspecialchars($file['original_name']) ?></div>
-                                                <img src="<?= htmlspecialchars($file['path']) ?>" alt="첨부 이미지" style="max-width: 100%; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+                                                <div class="text-light text-start ps-4 small mb-1"><i class="fa-regular fa-image"></i> <?= htmlspecialchars($file['original_name']) ?></div>
+                                                <a href="<?= htmlspecialchars($file['path']) ?>" target="_blank">
+                                                    <img src="<?= htmlspecialchars($file['path']) ?>" alt="첨부 이미지" style="max-width: 100%; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+                                                </a>
                                             </div>
                                         <?php else: ?>
                                             <!-- 이미지 외 파일(PDF 등)은 다운로드 버튼 -->
@@ -207,76 +200,111 @@
                         <h5 class="fw-bold text-warning pb-2 border-bottom border-secondary d-flex align-items-center gap-2">
                             <span>💡</span> 시공리포트
                         </h5>
+                        
                         <div class="flex-grow-1 print-scroll-reset" style="line-height: 1.0; font-size: 0.88rem; overflow-y: auto; max-height: 700px; white-space: pre-line; word-break: keep-all; color: #e2e8f0;">
-                            <?php
-                                // 창고 벽면 길이 포맷팅
-                                $edgeText = '';
-                                if (!empty($quote['edge_lengths'])) {
-                                    $edges = explode(',', $quote['edge_lengths']);
-                                    $edgeArr = [];
-                                    foreach ($edges as $idx => $len) {
-                                        $edgeArr[] = ($idx + 1) . "번 길이: " . trim($len) . "mm";
-                                    }
-                                    $edgeText = implode(', ', $edgeArr);
-                                }
-                            ?>
-
-                            <?php if ($edgeText): ?>
+                            <?php if (($quote['source_mode'] ?? '') === 'board'): ?>
                                 <div>
-                                    <h6 class="text-white fw-bold">[창고 벽면 길이]</h6>
-                                    <div class="ps-2 text-light"><?= htmlspecialchars($edgeText) ?></div>
-                                </div>
-                            <?php endif; ?>
-
-                            <div>
-                                <h6 class="text-white fw-bold">[랙 및 적재물 제원]</h6>
-                                <div class="ps-2 text-light">
-                                    <div>파렛트 규격: <?= htmlspecialchars($quote['pallet_w'] ?? 0) ?>(W) x <?= htmlspecialchars($quote['pallet_d'] ?? 0) ?>(D) x <?= htmlspecialchars($quote['pallet_h'] ?? 0) ?>(H) mm</div>
-                                    <div>포크 진입 방향: <?= htmlspecialchars($quote['fork_direction'] ?? '') ?></div>
-                                    <div>총 중량: <?= htmlspecialchars($quote['pallet_weight'] ?? 0) ?> kg / PLT</div>
-                                    <div class="mt-2">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
-                                    <div>최대 인상높이: <?= htmlspecialchars($quote['forklift_lift_height'] ?? 0) ?> mm</div>
-                                    <div>직각교차 통로폭(AST): <?= htmlspecialchars($quote['forklift_ast'] ?? 0) ?> mm</div>
-                                    <div class="mt-2">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
-                                    <div>설치 높이: <?= htmlspecialchars($quote['rack_height'] ?? '') ?></div>
-                                </div>
-                            </div>
-
-                            <?php if (!empty($quote['rack_spec'])): ?>
-                                <div>
-                                    <h6 class="text-white fw-bold">
-                                        <?= htmlspecialchars($quote['rack_spec']) ?>
-                                        <?php if (!empty($quote['rack_type'])): ?>
-                                            (<?= htmlspecialchars($quote['rack_type']) ?>)
-                                        <?php endif; ?>
-                                    </h6>
-                                    <div class="ps-2 text-light">
-                                        독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT
-                                    </div>
-                                    <?php if (!empty($quote['rack_small_conn']) || !empty($quote['rack_bypass'])): ?>
-                                        <div class="ps-2 text-light mt-1 text-muted" style="font-size: 0.8rem; color: #e2e8f0;">
-                                            <?php if (!empty($quote['rack_bypass'])): ?>
-                                                <div class="mt-2 pt-2 border-top border-secondary w-75">
-                                                    <?php if (!empty($quote['rack_bypass_type'])): ?>
-                                                        <div class="fw-bold mb-1" style="color: #f87171;"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></div>
-                                                    <?php endif; ?>
-                                                    <div class="text-danger fw-bold">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
-                                                </div>
-                                            <?php endif; ?>
+                                    <h6 class="text-white fw-bold mb-2">[게시판 문의 내용]</h6>
+                                    
+                                    <?php if (!empty($quote['condition_type']) || !empty($quote['self_install'])): ?>
+                                        <div class="mb-3 p-2 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                            <div class="text-light fw-bold mb-1" style="font-size: 0.85rem; color: #a0aec0;"><i class="fa-solid fa-tags me-2"></i>  견적 희망 옵션</div>
+                                            <div class="text-light" style="font-size: 0.9rem;">
+                                                <?php if (!empty($quote['condition_type'])): ?>
+                                                    <?php 
+                                                        $cond_text = '중고 자재';
+                                                        if ($quote['condition_type'] === 'new') $cond_text = '신규 자재';
+                                                        if ($quote['condition_type'] === 'both') $cond_text = '모두(신규+중고 비교 견적)';
+                                                    ?>
+                                                    <div class="ps-3">자재 상태: <?= htmlspecialchars($cond_text) ?></div>
+                                                <?php endif; ?>
+                                                <?php if (($quote['self_install'] ?? 0) == 1): ?>
+                                                    <div class="ps-3">직접 설치</div>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
                                     <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
 
-                            <?php if (!empty($quote['summary'])): ?>
-                                <div>
-                                    <h6 class="text-white fw-bold mb-2">[AI 분석 리포트]</h6>
-                                    <div class="ps-2 text-light">
-                                        <?= htmlspecialchars(str_replace('[AI 분석 리포트]', '', $quote['summary'])) ?>
+                                    <div class="ps-2 text-light fw-bold" style="font-size: 1.05rem; color: #fff;">
+                                        <?= htmlspecialchars($quote['title'] ?? '제목 없음') ?>
+                                    </div>
+                                    <div class="p-2 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                        <?= htmlspecialchars($quote['summary'] ?? '') ?>
                                     </div>
                                 </div>
+                            <?php else: ?>
+                                <?php
+                                    // 창고 벽면 길이 포맷팅
+                                    $edgeText = '';
+                                    if (!empty($quote['edge_lengths'])) {
+                                        $edges = explode(',', $quote['edge_lengths']);
+                                        $edgeArr = [];
+                                        foreach ($edges as $idx => $len) {
+                                            $edgeArr[] = ($idx + 1) . "번 길이: " . trim($len) . "mm";
+                                        }
+                                        $edgeText = implode(', ', $edgeArr);
+                                    }
+                                ?>
+
+                                <?php if ($edgeText): ?>
+                                    <div>
+                                        <h6 class="text-white fw-bold">[창고 벽면 길이]</h6>
+                                        <div class="ps-2 text-light"><?= htmlspecialchars($edgeText) ?></div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div>
+                                    <h6 class="text-white fw-bold">[랙 및 적재물 제원]</h6>
+                                    <div class="ps-2 text-light">
+                                        <div>파렛트 규격: <?= htmlspecialchars($quote['pallet_w'] ?? 0) ?>(W) x <?= htmlspecialchars($quote['pallet_d'] ?? 0) ?>(D) x <?= htmlspecialchars($quote['pallet_h'] ?? 0) ?>(H) mm</div>
+                                        <div>포크 진입 방향: <?= htmlspecialchars($quote['fork_direction'] ?? '') ?></div>
+                                        <div>총 중량: <?= htmlspecialchars($quote['pallet_weight'] ?? 0) ?> kg / PLT</div>
+                                        <div class="mt-2">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
+                                        <div>최대 인상높이: <?= htmlspecialchars($quote['forklift_lift_height'] ?? 0) ?> mm</div>
+                                        <div>직각교차 통로폭(AST): <?= htmlspecialchars($quote['forklift_ast'] ?? 0) ?> mm</div>
+                                        <div class="mt-2">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
+                                        <div>설치 높이: <?= htmlspecialchars($quote['rack_height'] ?? '') ?></div>
+                                    </div>
+                                </div>
+
+                                <?php if (!empty($quote['rack_spec'])): ?>
+                                    <div>
+                                        <h6 class="text-white fw-bold">
+                                            <?= htmlspecialchars($quote['rack_spec']) ?>
+                                            <?php if (!empty($quote['rack_type'])): ?>
+                                                (<?= htmlspecialchars($quote['rack_type']) ?>)
+                                            <?php endif; ?>
+                                        </h6>
+                                        <div class="ps-2 text-light">
+                                            독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT
+                                        </div>
+                                        <?php if (!empty($quote['rack_small_conn']) || !empty($quote['rack_bypass'])): ?>
+                                            <div class="ps-2 text-light mt-1 text-muted" style="font-size: 0.8rem; color: #e2e8f0;">
+                                                <?php if (!empty($quote['rack_bypass'])): ?>
+                                                    <div class="mt-2 pt-2 border-top border-secondary w-75">
+                                                        <?php if (!empty($quote['rack_bypass_type'])): ?>
+                                                            <div class="fw-bold mb-1" style="color: #f87171;"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></div>
+                                                        <?php endif; ?>
+                                                        <div class="text-danger fw-bold">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($quote['summary'])): ?>
+                                    <div>
+                                        <h6 class="text-white fw-bold mb-2">[AI 분석 리포트]</h6>
+                                        <div class="ps-2 text-light">
+                                            <?= htmlspecialchars(str_replace('[AI 분석 리포트]', '', $quote['summary'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
+
+
                     </div>
                 </div>
             </div>

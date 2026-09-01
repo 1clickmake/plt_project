@@ -435,22 +435,42 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $db = Database::getInstance();
 
         $stmt = $db->prepare("
             SELECT q.*, e.name as employee_name, e.color_code as employee_color 
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
-            WHERE q.vendor_user_id = :vuid 
+            WHERE q.vendor_user_id = :vuid1 OR q.vendor_user_id = :vuid2
             ORDER BY q.created_at DESC
         ");
-        $stmt->execute(['vuid' => $userId]);
-        $quotes = $stmt->fetchAll();
+        $stmt->execute(['vuid1' => $userId, 'vuid2' => $userStrId]);
+        $quotes = $stmt->fetchAll() ?: [];
 
-        // Split quotes into completed and pending
-        $completed_quotes = array_filter($quotes, function($q) { return !empty($q['processed_by']); });
-        $pending_quotes = array_filter($quotes, function($q) { return empty($q['processed_by']); });
+        // 게시판 신청건과 일반(도면/캔버스) 견적건 분류
+        $inquiries = array_values(array_filter($quotes, function($q) { 
+            return ($q['source_mode'] ?? '') === 'board'; 
+        }));
+
+        // DB의 vendor_inquiries 테이블 내역도 통합
+        try {
+            $stmtInq = $db->prepare("SELECT * FROM vendor_inquiries WHERE vendor_user_id = :vuid1 OR vendor_user_id = :vuid2 ORDER BY created_at DESC");
+            $stmtInq->execute(['vuid1' => $userId, 'vuid2' => $userStrId]);
+            $extraInquiries = $stmtInq->fetchAll() ?: [];
+            if (!empty($extraInquiries)) {
+                $inquiries = array_merge($inquiries, $extraInquiries);
+            }
+        } catch (\Throwable $e) {}
+
+        // 일반 도면 견적건 분류
+        $regularQuotes = array_filter($quotes, function($q) { 
+            return ($q['source_mode'] ?? '') !== 'board'; 
+        });
+
+        $completed_quotes = array_values(array_filter($regularQuotes, function($q) { return !empty($q['processed_by']); }));
+        $pending_quotes = array_values(array_filter($regularQuotes, function($q) { return empty($q['processed_by']); }));
 
         // Sort completed quotes by mailed_at / processed_at DESC
         usort($completed_quotes, function($a, $b) {
@@ -459,10 +479,19 @@ class VendorController extends BaseController {
             return $timeB <=> $timeA;
         });
 
+        $pending_inquiries_count = 0;
+        foreach ($inquiries as $inq) {
+            if (empty($inq['processed_by']) && ($inq['status'] ?? 'pending') === 'pending') {
+                $pending_inquiries_count++;
+            }
+        }
+
         $this->view('vendor/quotes', [
-            'quotes' => $quotes,
+            'quotes' => $regularQuotes,
             'completed_quotes' => $completed_quotes,
             'pending_quotes' => $pending_quotes,
+            'inquiries' => $inquiries,
+            'pending_inquiries_count' => $pending_inquiries_count,
             'page' => 1,
             'totalPages' => 1
         ]);
@@ -479,7 +508,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
@@ -487,9 +517,9 @@ class VendorController extends BaseController {
             SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
-            WHERE q.id = :qid AND q.vendor_user_id = :vuid
+            WHERE q.id = :qid AND (q.vendor_user_id = :vuid1 OR q.vendor_user_id = :vuid2)
         ");
-        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
         $quote = $stmt->fetch();
 
         if (!$quote) {
@@ -512,7 +542,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
@@ -520,9 +551,9 @@ class VendorController extends BaseController {
             SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
-            WHERE q.id = :qid AND q.vendor_user_id = :vuid
+            WHERE q.id = :qid AND (q.vendor_user_id = :vuid1 OR q.vendor_user_id = :vuid2)
         ");
-        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
         $quote = $stmt->fetch();
 
         if (!$quote) {
@@ -531,7 +562,7 @@ class VendorController extends BaseController {
         }
 
         $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = :uid");
-        $stmt->execute(['uid' => $userId]);
+        $stmt->execute(['uid' => $userStrId]);
         $settings = $stmt->fetch() ?: [];
 
         $result = $this->buildQuoteModules($quote);
@@ -562,12 +593,13 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
-        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
-        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)");
+        $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
         $row = $stmt->fetch();
         if (!$row) {
             echo json_encode(['success' => false, 'message' => '해당 견적을 찾을 수 없거나 권한이 없습니다.']);
@@ -614,12 +646,13 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
-        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND vendor_user_id = :vuid");
-        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)");
+        $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
         $row = $stmt->fetch();
         if (!$row) {
             echo json_encode(['success' => false, 'message' => '해당 견적을 찾을 수 없거나 권한이 없습니다.']);
@@ -631,8 +664,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $upd = $db->prepare("UPDATE quote_requests SET admin_quote_details = NULL WHERE id = :qid AND vendor_user_id = :vuid");
-        $upd->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $upd = $db->prepare("UPDATE quote_requests SET admin_quote_details = NULL WHERE id = :qid AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)");
+        $upd->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
 
         echo json_encode(['success' => true, 'message' => '기본 도면 산출 값으로 초기화되었습니다!']);
     }
@@ -1041,7 +1074,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id'];
+        $userIdStr = $_SESSION['user']['user_id'];
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
@@ -1060,7 +1094,7 @@ class VendorController extends BaseController {
         }
 
         $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = :uid");
-        $stmt->execute(['uid' => $userId]);
+        $stmt->execute(['uid' => $userIdStr]);
         $settings = $stmt->fetch() ?: [];
 
         $result = $this->buildQuoteModules($quote);

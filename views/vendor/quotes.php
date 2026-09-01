@@ -29,7 +29,7 @@
                 <?php
                     $dbBtn = \App\Core\Database::getInstance();
                     $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
-                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $stmtBtn->execute([$user['user_id']]);
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
@@ -38,7 +38,7 @@
                 </a>
                 <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
             </div>
         </div>
 
@@ -59,6 +59,16 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link text-light bg-transparent border-0" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">완료됨 (<?= count($completed_quotes) ?>)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-light bg-transparent border-0" id="inquiries-tab" data-bs-toggle="tab" data-bs-target="#inquiries" type="button" role="tab">
+                                게시판 문의 
+                                <?php if (!empty($pending_inquiries_count) && $pending_inquiries_count > 0): ?>
+                                    <span class="badge bg-danger ms-1"><?= $pending_inquiries_count ?></span>
+                                <?php else: ?>
+                                    (<?= count($inquiries ?? []) ?>)
+                                <?php endif; ?>
+                            </button>
                         </li>
                     </ul>
                     
@@ -146,6 +156,56 @@
                                                 <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['processed_at'] ?? '')) ?></td>
                                                 <td class="py-3 pe-3 text-end">
                                                     <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- 게시판 문의 탭 -->
+                    <div class="tab-pane fade" id="inquiries" role="tabpanel">
+                        <?php if (empty($inquiries)): ?>
+                            <div class="text-center py-5">
+                                <span style="font-size: 3rem;">📝</span>
+                                <h5 class="text-light mt-3 fw-bold">등록된 게시판 문의가 없습니다.</h5>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03);">
+                                    <thead>
+                                        <tr class="text-light opacity-75 small uppercase" style="border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 600;">
+                                            <th class="py-3 ps-3">번호</th>
+                                            <th class="py-3">상태</th>
+                                            <th class="py-3">제목</th>
+                                            <th class="py-3">회사명(담당자)</th>
+                                            <th class="py-3">작성 일시</th>
+                                            <th class="py-3 pe-3 text-end">상세</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($inquiries as $i => $inq): ?>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $inq['id'] ?>'">
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $inq['id'] ?></td>
+                                                <td class="py-3">
+                                                    <?php if($inq['status'] === 'pending'): ?>
+                                                        <span class="badge bg-danger">미답변</span>
+                                                    <?php elseif($inq['status'] === 'answered'): ?>
+                                                        <span class="badge bg-success">답변완료</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary">종료</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="py-3 fw-bold text-light"><?= htmlspecialchars($inq['title']) ?></td>
+                                                <td class="py-3 text-light">
+                                                    <?= htmlspecialchars($inq['company'] ?: '개인') ?> 
+                                                    <span class="opacity-75 small">(<?= htmlspecialchars($inq['name']) ?>)</span>
+                                                </td>
+                                                <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($inq['created_at'])) ?></td>
+                                                <td class="py-3 pe-3 text-end">
+                                                    <a href="/vendor/quotes/<?= $inq['id'] ?>" class="btn btn-outline-info btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>

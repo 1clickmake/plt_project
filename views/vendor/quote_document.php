@@ -55,7 +55,7 @@
                 </a>
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                    <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                    <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
                 </div>
             </div>
         </div>

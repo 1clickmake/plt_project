@@ -28,6 +28,11 @@ class BaseController {
             $data['footerPages'] = [];
         }
 
+        // Automatically pass current session user to views
+        if (isset($_SESSION['user'])) {
+            $data['user'] = $_SESSION['user'];
+        }
+
         // Always pass CSRF token to views
         $data['csrf_token'] = \App\Core\Csrf::getToken();
 

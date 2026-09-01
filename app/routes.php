@@ -142,6 +142,7 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/vendor/pricing/delete', ['App\Controllers\VendorController', 'deletePricingRules']);
     $r->addRoute('GET',  '/vendor/quotes',        ['App\Controllers\VendorController', 'quotes']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
+    $r->addRoute('GET',  '/vendor/inquiries/{id:\d+}', ['App\Controllers\VendorController', 'inquiryDetail']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/price', ['App\Controllers\VendorController', 'quotePrice']);
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/save_details', ['App\Controllers\VendorController', 'saveQuoteDetails']);
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/reset_details', ['App\Controllers\VendorController', 'resetQuoteDetails']);

@@ -2,7 +2,7 @@
 $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $dbSidebar = \App\Core\Database::getInstance();
 $stmtSidebar = $dbSidebar->prepare("SELECT company_name FROM vendor_settings WHERE user_id = ?");
-$stmtSidebar->execute([$_SESSION['user']['user_id']]);
+$stmtSidebar->execute([$user['user_id']]);
 $companyNameSidebar = $stmtSidebar->fetchColumn();
 $displayBrand = $companyNameSidebar ?: 'SETTING';
 ?>

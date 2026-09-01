@@ -36,7 +36,7 @@
                 <?php
                     $dbBtn = \App\Core\Database::getInstance();
                     $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
-                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $stmtBtn->execute([$user['user_id']]);
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
@@ -45,7 +45,7 @@
                 </a>
                 <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
             </div>
         </div>
 
@@ -116,7 +116,7 @@
                             <label class="form-label text-light small fw-bold mb-1">Custom URL Slug (고유 접속 주소)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-dark border-secondary text-light small" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px;"><?= $_ENV['APP_URL'] ?? 'http://localhost:8001' ?>/quote/</span>
-                                <input type="text" name="url_slug" class="form-control bg-dark bg-opacity-50 text-light border-secondary fw-semibold" value="<?= htmlspecialchars($settings['url_slug'] ?? $user['user_id']) ?>" required style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 10px;">
+                                <input type="text" name="url_slug" class="form-control bg-dark bg-opacity-50 text-light border-secondary fw-semibold" value="<?= $user['id'] ?>" readonly style="border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 10px;">
                             </div>
                             <small class="text-info mt-1 d-block">💡 이 주소를 통해 고객들이 직접 견적용 캔버스 도면에 접속하게 됩니다.</small>
                         </div>

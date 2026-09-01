@@ -244,18 +244,21 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
           $index = 1;
           foreach ($modules as $modIndex => $mod) {
 ?>
-    <!-- 모듈 요약 행 (클릭 시 토글) -->
-    <tr class="module-row" data-mod-index="<?= $modIndex ?>" data-type="<?= htmlspecialchars($mod['type'] ?? '') ?>" style="cursor: pointer; background-color: #f8fafc;" data-bs-toggle="collapse" data-bs-target="#collapseBom<?= $modIndex ?>" aria-expanded="false">
+    <!-- 모듈 요약 행 -->
+    <tr class="module-row" data-mod-index="<?= $modIndex ?>" data-type="<?= htmlspecialchars($mod['type'] ?? '') ?>" style="background-color: #f8fafc;">
       <td class="center fw-bold row-no"><?= $index++ ?></td>
       <td class="center fw-bold text-primary mod-name"><?= htmlspecialchars($mod['name']) ?></td>
       <td class="center mod-spec"><?= htmlspecialchars($mod['spec']) ?></td>
-      <td class="center fw-bold text-danger">
-          <input type="number" step="1" min="1" class="form-control form-control-sm text-center fw-bold text-danger mod-qty-input bom-input" value="<?= intval($mod['qty']) ?>" onclick="event.stopPropagation();" style="width: 50px; margin: 0 auto;">
+      <td class="center fw-bold text-danger mod-qty"><?= intval($mod['qty']) ?></td>
+      <td class="center">
+          <input type="text" class="form-control form-control-sm text-center mod-unit-text" value="<?= htmlspecialchars($mod['unit_text'] ?? '대') ?>" style="width: 40px; margin: 0 auto; padding: 1px 4px; font-size: 0.85rem;" title="단위 수정 가능 (대/개/조 등)">
       </td>
-      <td class="center">대</td>
       <td class="right fw-bold mod-unit-price" data-raw="<?= intval($mod['raw_price'] ?? 0) ?>"><?= number_format($mod['unit_price']) ?></td>
       <td class="right fw-bold mod-total-price"><?= number_format($mod['total_price']) ?></td>
-      <td class="center"><span class="mod-remark"><?= htmlspecialchars($mod['remark']) ?></span> <i class="fa-solid fa-chevron-down ms-1 text-muted toggle-icon" style="font-size: 0.8rem; transition: all 0.3s ease;"></i></td>
+      <td class="center" style="white-space: nowrap;">
+          <input type="text" class="form-control form-control-sm text-center mod-remark" value="<?= htmlspecialchars(($mod['remark'] !== '자유롭게 수정하세요' ? $mod['remark'] : '') ?? '') ?>" placeholder="비고" style="width: calc(100% - 24px); display: inline-block; padding: 1px 4px; font-size: 12px;">
+          <i class="fa-solid fa-chevron-down ms-1 text-muted toggle-icon" style="font-size: 0.8rem; transition: all 0.3s ease; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseBom<?= $modIndex ?>" aria-expanded="false"></i>
+      </td>
     </tr>
     
     <!-- 모듈 상세 BOM (토글 영역) -->
@@ -288,7 +291,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 ?>
                 <tr class="bom-item-row" data-is-loss="<?= $isLoss ? '1' : '0' ?>">
                   <td>
-                    <input type="text" class="form-control form-control-sm bom-input bom-part-name" value="<?= htmlspecialchars($b['name']) ?>" <?= $isLoss ? 'readonly' : '' ?>>
+                    <input type="text" class="form-control form-control-sm bom-input bom-part-name" value="<?= htmlspecialchars($b['name'] ?: '파렛트랙') ?>" <?= $isLoss ? 'readonly' : '' ?>>
                   </td>
                   <td>
                     <input type="text" class="form-control form-control-sm bom-input bom-part-spec" value="<?= htmlspecialchars($b['spec']) ?>" <?= $isLoss ? 'readonly' : '' ?>>
@@ -338,11 +341,21 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
               }
           }
       }
-      $linerQty = $totalFrames * 2;
+      $isBoard = ($quote['source_mode'] ?? '') === 'board';
+      $linerQty = $isBoard ? 0 : ($totalFrames * 2);
       $linerUnitPrice = empty($quote['pricing_rule_id']) ? 0 : 500;
       $linerTotal = $linerQty * $linerUnitPrice;
 ?>
     </tbody>
+
+    <!-- 리스트 항목 추가 버튼 -->
+    <tr id="addModuleRowBtn" style="background-color: #f0f9ff;">
+        <td colspan="8" class="py-2 text-center">
+            <button type="button" id="btnAddModuleRow" class="btn btn-outline-primary btn-sm px-4" style="font-size: 0.82rem;">
+                <i class="fa-solid fa-plus me-1"></i> 파렛트랙 항목 추가
+            </button>
+        </td>
+    </tr>
 
     <!-- 바닥수평라이너 행 -->
     <tr id="linerRow" style="background-color: #f8fafc; <?= ($linerQty <= 0) ? 'display:none;' : '' ?>">
@@ -434,50 +447,85 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             let grandTotal = 0;
 
             // 1. 모듈별 BOM 및 합계 계산
+            const isBoardQuote = <?= json_encode(($quote['source_mode'] ?? '') === 'board') ?>;
             const moduleRows = document.querySelectorAll('.module-row');
             moduleRows.forEach(modRow => {
                 const modIndex = modRow.getAttribute('data-mod-index');
                 const modType = modRow.getAttribute('data-type');
-                const qtyInput = modRow.querySelector('.mod-qty-input');
-                const modQty = parseInt(qtyInput ? qtyInput.value : 0) || 0;
 
                 modRow.querySelector('.row-no').innerText = runningIndex++;
 
-                // BOM 목록 합계 계산
                 const bomTable = document.querySelector(`.bom-table[data-mod-index="${modIndex}"]`);
                 let bomRawSum = 0;
+                const bomItemRows = bomTable ? bomTable.querySelectorAll('.bom-item-row') : [];
+                const nonLossRows = Array.from(bomItemRows).filter(r => r.getAttribute('data-is-loss') !== '1');
 
-                if (bomTable) {
-                    const bomItemRows = bomTable.querySelectorAll('.bom-item-row');
-                    bomItemRows.forEach(bRow => {
-                        const isLoss = bRow.getAttribute('data-is-loss') === '1';
-                        if (isLoss) {
-                            // Loss는 기존 값을 가져오거나 0
-                            const totalEl = bRow.querySelector('.bom-part-total');
-                            const val = parseFloat(totalEl ? totalEl.getAttribute('data-val') : 0) || 0;
-                            bomRawSum += val;
-                        } else {
-                            const qtyEl = bRow.querySelector('.bom-part-qty');
-                            const unitEl = bRow.querySelector('.bom-part-unit');
-                            const totalEl = bRow.querySelector('.bom-part-total');
+                bomItemRows.forEach(bRow => {
+                    const isLoss = bRow.getAttribute('data-is-loss') === '1';
+                    if (isLoss) {
+                        const totalEl = bRow.querySelector('.bom-part-total');
+                        const val = parseFloat(totalEl ? totalEl.getAttribute('data-val') : 0) || 0;
+                        bomRawSum += val;
+                    } else {
+                        const qtyEl = bRow.querySelector('.bom-part-qty');
+                        const unitEl = bRow.querySelector('.bom-part-unit');
+                        const totalEl = bRow.querySelector('.bom-part-total');
 
-                            const qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
-                            const unit = parseFloat(unitEl ? unitEl.value : 0) || 0;
-                            const rowTotal = Math.floor(qty * unit);
+                        const qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
+                        const unit = parseFloat(unitEl ? unitEl.value : 0) || 0;
+                        const rowTotal = Math.floor(qty * unit);
 
-                            if (totalEl) {
-                                totalEl.innerText = rowTotal.toLocaleString();
-                                totalEl.setAttribute('data-val', rowTotal);
-                            }
-                            bomRawSum += rowTotal;
+                        if (totalEl) {
+                            totalEl.innerText = rowTotal.toLocaleString();
+                            totalEl.setAttribute('data-val', rowTotal);
                         }
-                    });
+                        bomRawSum += rowTotal;
+                    }
+                });
+
+                let modQty = 1;
+                let modUnitPrice = 0;
+                const isDirectInput = isBoardQuote || modType === '직접입력';
+
+                if (nonLossRows.length > 0) {
+                    const firstBomRow = nonLossRows[0];
+                    const bomName = firstBomRow.querySelector('.bom-part-name');
+                    const bomSpec = firstBomRow.querySelector('.bom-part-spec');
+                    const bomQtyEl = firstBomRow.querySelector('.bom-part-qty');
+                    const bomUnitEl = firstBomRow.querySelector('.bom-part-unit');
+
+                    if (bomName && modRow.querySelector('.mod-name')) {
+                        modRow.querySelector('.mod-name').innerText = bomName.value.trim() || '파렛트랙';
+                    }
+                    if (bomSpec && modRow.querySelector('.mod-spec')) {
+                        modRow.querySelector('.mod-spec').innerText = bomSpec.value.trim();
+                    }
+
+                    if (nonLossRows.length === 1) {
+                        // 단일 품목 BOM (수량/단가를 그대로 모듈과 1:1 일치)
+                        const bQty = parseInt(bomQtyEl ? bomQtyEl.value : 1) || 1;
+                        const bUnit = parseFloat(bomUnitEl ? bomUnitEl.value : 0) || 0;
+
+                        modQty = bQty;
+                        modUnitPrice = isDirectInput ? bUnit : calcFinalAmount(bUnit);
+
+                        if (modRow.querySelector('.mod-qty')) {
+                            modRow.querySelector('.mod-qty').innerText = modQty;
+                        }
+                    } else {
+                        // 다중 부품 BOM (구성 부품별 합산)
+                        const qtyEl = modRow.querySelector('.mod-qty');
+                        modQty = parseInt(qtyEl ? qtyEl.innerText : 1) || 1;
+                        modUnitPrice = isDirectInput ? bomRawSum : calcFinalAmount(bomRawSum);
+                    }
+                } else {
+                    const qtyEl = modRow.querySelector('.mod-qty');
+                    modQty = parseInt(qtyEl ? qtyEl.innerText : 1) || 1;
+                    const unitPriceEl = modRow.querySelector('.mod-unit-price');
+                    modUnitPrice = parseInt((unitPriceEl ? unitPriceEl.innerText : '0').replace(/,/g, '')) || 0;
                 }
 
-                // 모듈 단가 및 총액 산출
-                const modUnitPrice = calcFinalAmount(bomRawSum);
                 const modTotalPrice = modUnitPrice * modQty;
-
                 const unitPriceEl = modRow.querySelector('.mod-unit-price');
                 const totalPriceEl = modRow.querySelector('.mod-total-price');
 
@@ -500,8 +548,9 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             });
 
             // 2. 바닥수평라이너 자동 계산
+            const isBoardMode = <?= json_encode(($quote['source_mode'] ?? '') === 'board') ?>;
             const linerRow = document.getElementById('linerRow');
-            const linerQty = totalFrames * 2;
+            const linerQty = isBoardMode ? 0 : (totalFrames * 2);
             const linerUnitPrice = <?= empty($quote['pricing_rule_id']) ? 0 : 500 ?>;
             const linerTotal = linerQty * linerUnitPrice;
 
@@ -539,9 +588,18 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             document.getElementById('overallTotalText').innerText = grandTotal.toLocaleString();
         }
 
-        // 🌟 실시간 이벤트 리스너 등록 (수량/단가 입력 시 자동 재계산)
+        // 🌟 모든 인풋박스 클릭/포커스 시 전체 텍스트 자동 선택(Select) 기능
+        document.addEventListener('focusin', function(e) {
+            if (e.target && e.target.tagName === 'INPUT' && e.target.type !== 'button' && e.target.type !== 'submit' && e.target.type !== 'hidden') {
+                setTimeout(() => {
+                    try { e.target.select(); } catch(err) {}
+                }, 30);
+            }
+        });
+
+        // 🌟 실시간 이벤트 리스너 등록 (BOM 수량/단가/품명/규격 입력 시 자동 재계산 및 리스트 동기화)
         document.addEventListener('input', function(e) {
-            if (e.target.matches('.mod-qty-input, .bom-part-qty, .bom-part-unit, .custom-item-qty, .custom-item-price')) {
+            if (e.target.matches('.bom-part-qty, .bom-part-unit, .bom-part-name, .bom-part-spec, .custom-item-qty, .custom-item-price, .mod-remark, .mod-unit-text')) {
                 recalculateAll();
             }
         });
@@ -557,7 +615,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                     tr.className = 'bom-item-row';
                     tr.setAttribute('data-is-loss', '0');
                     tr.innerHTML = `
-                        <td><input type="text" class="form-control form-control-sm bom-input bom-part-name" placeholder="부품명 (예: 추가 타이빔)"></td>
+                        <td><input type="text" class="form-control form-control-sm bom-input bom-part-name" value="파렛트랙" placeholder="부품명 (예: 파렛트랙)"></td>
                         <td><input type="text" class="form-control form-control-sm bom-input bom-part-spec" placeholder="규격"></td>
                         <td class="text-center"><input type="number" step="any" class="form-control form-control-sm text-center bom-input bom-part-qty" value="1"></td>
                         <td class="text-end"><input type="number" step="any" class="form-control form-control-sm text-end bom-input bom-part-unit" value="0"></td>
@@ -569,11 +627,22 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 }
             }
 
-            // BOM 부품 삭제
+            // BOM 부품 삭제 (모든 부품 삭제 시 상단 리스트 행도 함께 삭제)
             if (e.target.closest('.btn-del-bom')) {
                 const row = e.target.closest('.bom-item-row');
                 if (row) {
+                    const tbody = row.closest('.bom-tbody');
                     row.remove();
+                    if (tbody && tbody.querySelectorAll('.bom-item-row').length === 0) {
+                        const collapseRow = tbody.closest('.bom-collapse-row');
+                        if (collapseRow) {
+                            const moduleRow = collapseRow.previousElementSibling;
+                            if (moduleRow && moduleRow.classList.contains('module-row')) {
+                                moduleRow.remove();
+                            }
+                            collapseRow.remove();
+                        }
+                    }
                     recalculateAll();
                 }
             }
@@ -623,14 +692,16 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             moduleRows.forEach(modRow => {
                 const modIndex = modRow.getAttribute('data-mod-index');
                 const modType = modRow.getAttribute('data-type');
-                const name = modRow.querySelector('.mod-name').innerText.trim();
-                const spec = modRow.querySelector('.mod-spec').innerText.trim();
-                const remark = modRow.querySelector('.mod-remark').innerText.trim();
-                const qty = parseInt(modRow.querySelector('.mod-qty-input').value) || 0;
+                const name = (modRow.querySelector('.mod-name') || {}).innerText?.trim() || '';
+                const spec = (modRow.querySelector('.mod-spec') || {}).innerText?.trim() || '';
+                const remarkEl = modRow.querySelector('.mod-remark');
+                const remark = remarkEl ? (remarkEl.tagName === 'INPUT' ? remarkEl.value.trim() : remarkEl.innerText.trim()) : '';
+                const qty = parseInt((modRow.querySelector('.mod-qty') || {}).innerText || '0') || 0;
+                const unitText = (modRow.querySelector('.mod-unit-text') || {}).value?.trim() || '대';
                 const unitPriceEl = modRow.querySelector('.mod-unit-price');
-                const unitPrice = parseInt(unitPriceEl.innerText.replace(/,/g, '')) || 0;
-                const rawPrice = parseInt(unitPriceEl.getAttribute('data-raw')) || 0;
-                const totalPrice = parseInt(modRow.querySelector('.mod-total-price').innerText.replace(/,/g, '')) || 0;
+                const unitPrice = parseInt((unitPriceEl ? unitPriceEl.innerText : '0').replace(/,/g, '')) || 0;
+                const rawPrice = parseInt(unitPriceEl ? unitPriceEl.getAttribute('data-raw') : '0') || 0;
+                const totalPrice = parseInt((modRow.querySelector('.mod-total-price') || {}).innerText?.replace(/,/g, '') || '0') || 0;
 
                 const bom = [];
                 const bomTable = document.querySelector(`.bom-table[data-mod-index="${modIndex}"]`);
@@ -661,6 +732,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                     spec: spec,
                     remark: remark,
                     qty: qty,
+                    unit_text: unitText,
                     unit_price: unitPrice,
                     raw_price: rawPrice,
                     total_price: totalPrice,
@@ -787,15 +859,32 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 }
             });
         });
-        // 토글 아이콘(화살표) 애니메이션 변경 로직
+        // 토글 아이콘(화살표) 애니메이션 및 빈 BOM 시 자동 행 추가
         const collapsibles = document.querySelectorAll('.bom-collapse-row .collapse');
         collapsibles.forEach(col => {
             col.addEventListener('show.bs.collapse', function () {
-                const moduleRow = this.closest('.bom-collapse-row').previousElementSibling;
+                const collapseRow = this.closest('.bom-collapse-row');
+                const moduleRow = collapseRow.previousElementSibling;
                 const icon = moduleRow.querySelector('.toggle-icon');
                 if (icon) {
                     icon.classList.remove('fa-chevron-down', 'text-muted');
                     icon.classList.add('fa-chevron-up', 'text-danger');
+                }
+                const modIndex = collapseRow.getAttribute('data-mod-index');
+                const tbody = this.querySelector(`.bom-tbody[data-mod-index="${modIndex}"]`);
+                if (tbody && tbody.querySelectorAll('.bom-item-row').length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'bom-item-row';
+                    tr.setAttribute('data-is-loss', '0');
+                    tr.innerHTML = `
+                        <td><input type="text" class="form-control form-control-sm bom-input bom-part-name" value="파렛트랙" placeholder="부품명 (예: 파렛트랙)"></td>
+                        <td><input type="text" class="form-control form-control-sm bom-input bom-part-spec" placeholder="규격"></td>
+                        <td class="text-center"><input type="number" step="any" class="form-control form-control-sm text-center bom-input bom-part-qty" value="1"></td>
+                        <td class="text-end"><input type="number" step="any" class="form-control form-control-sm text-end bom-input bom-part-unit" value="0"></td>
+                        <td class="text-end fw-bold bom-part-total" data-val="0">0</td>
+                        <td class="text-center"><i class="fa-solid fa-trash-can btn-del-row btn-del-bom" title="삭제"></i></td>
+                    `;
+                    tbody.appendChild(tr);
                 }
             });
             col.addEventListener('hide.bs.collapse', function () {
@@ -807,6 +896,88 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 }
             });
         });
+
+        // 리스트 항목 추가 버튼 이벤트 (새 module-row + bom-collapse-row 생성)
+        let newModIndex = 10000;
+        const addModBtn = document.getElementById('btnAddModuleRow');
+        if (addModBtn) {
+            addModBtn.addEventListener('click', function() {
+                const idx = newModIndex++;
+                const colId = `collapseBom${idx}`;
+
+                const moduleRow = document.createElement('tr');
+                moduleRow.className = 'module-row';
+                moduleRow.setAttribute('data-mod-index', idx);
+                moduleRow.setAttribute('data-type', '직접입력');
+                moduleRow.style.backgroundColor = '#f8fafc';
+                moduleRow.innerHTML = `
+                    <td class="center fw-bold row-no">-</td>
+                    <td class="center fw-bold text-primary mod-name">파렛트랙</td>
+                    <td class="center mod-spec"></td>
+                    <td class="center fw-bold text-danger mod-qty">1</td>
+                    <td class="center">
+                        <input type="text" class="form-control form-control-sm text-center mod-unit-text" value="대" style="width: 40px; margin: 0 auto; padding: 1px 4px; font-size: 0.85rem;">
+                    </td>
+                    <td class="right fw-bold mod-unit-price" data-raw="0">0</td>
+                    <td class="right fw-bold mod-total-price">0</td>
+                    <td class="center" style="white-space: nowrap;">
+                        <input type="text" class="form-control form-control-sm text-center mod-remark" value="" placeholder="비고" style="width: calc(100% - 24px); display: inline-block; padding: 1px 4px; font-size: 12px;">
+                        <i class="fa-solid fa-chevron-down ms-1 text-muted toggle-icon" style="font-size: 0.8rem; transition: all 0.3s ease; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#${colId}" aria-expanded="false"></i>
+                    </td>
+                `;
+
+                const bomCollapseRow = document.createElement('tr');
+                bomCollapseRow.className = 'bom-collapse-row';
+                bomCollapseRow.setAttribute('data-mod-index', idx);
+                bomCollapseRow.innerHTML = `
+                    <td colspan="8" class="p-0 border-0">
+                        <div class="collapse" id="${colId}">
+                            <div class="p-3" style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="small fw-bold text-secondary"><i class="fa-solid fa-cube me-1"></i> 1대당 구성 부품 <span class="text-muted">(수량/단가를 직접 수정할 수 있습니다)</span></div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 btn-add-bom-row" data-mod-index="${idx}" style="font-size: 0.78rem;"><i class="fa-solid fa-plus me-1"></i> 부품 추가</button>
+                                </div>
+                                <table class="table table-sm table-bordered mb-0 bom-table" data-mod-index="${idx}" style="font-size: 0.85rem; background-color: white;">
+                                    <thead><tr>
+                                        <th style="background-color: #FFFFCC !important; width: 160px;">부품명</th>
+                                        <th style="background-color: #FFFFCC !important; width: 220px;">규격</th>
+                                        <th class="text-center" style="background-color: #FFFFCC !important; width: 80px;">수량</th>
+                                        <th class="text-end" style="background-color: #FFFFCC !important; width: 110px;">단가</th>
+                                        <th class="text-end" style="background-color: #FFFFCC !important; width: 120px;">합계금액</th>
+                                        <th class="text-center" style="background-color: #FFFFCC !important; width: 50px;">삭제</th>
+                                    </tr></thead>
+                                    <tbody class="bom-tbody" data-mod-index="${idx}"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                const addRowBtn = document.getElementById('addModuleRowBtn');
+                addRowBtn.parentNode.insertBefore(moduleRow, addRowBtn);
+                addRowBtn.parentNode.insertBefore(bomCollapseRow, addRowBtn);
+
+                const collapseEl = bomCollapseRow.querySelector('.collapse');
+                collapseEl.addEventListener('show.bs.collapse', function () {
+                    const icon = moduleRow.querySelector('.toggle-icon');
+                    if (icon) { icon.classList.remove('fa-chevron-down', 'text-muted'); icon.classList.add('fa-chevron-up', 'text-danger'); }
+                    const tbody = this.querySelector(`.bom-tbody[data-mod-index="${idx}"]`);
+                    if (tbody && tbody.querySelectorAll('.bom-item-row').length === 0) {
+                        const tr = document.createElement('tr');
+                        tr.className = 'bom-item-row';
+                        tr.setAttribute('data-is-loss', '0');
+                        tr.innerHTML = `<td><input type="text" class="form-control form-control-sm bom-input bom-part-name" value="파렛트랙" placeholder="부품명 (예: 파렛트랙)"></td><td><input type="text" class="form-control form-control-sm bom-input bom-part-spec" placeholder="규격"></td><td class="text-center"><input type="number" step="any" class="form-control form-control-sm text-center bom-input bom-part-qty" value="1"></td><td class="text-end"><input type="number" step="any" class="form-control form-control-sm text-end bom-input bom-part-unit" value="0"></td><td class="text-end fw-bold bom-part-total" data-val="0">0</td><td class="text-center"><i class="fa-solid fa-trash-can btn-del-row btn-del-bom" title="삭제"></i></td>`;
+                        tbody.appendChild(tr);
+                    }
+                });
+                collapseEl.addEventListener('hide.bs.collapse', function () {
+                    const icon = moduleRow.querySelector('.toggle-icon');
+                    if (icon) { icon.classList.remove('fa-chevron-up', 'text-danger'); icon.classList.add('fa-chevron-down', 'text-muted'); }
+                });
+
+                recalculateAll();
+            });
+        }
     });
     </script>
 </body>

@@ -306,7 +306,7 @@ $isLightTheme = in_array($theme, ['light', 'white']);
 </head>
 <body class="<?= $isLightTheme ? 'theme-light' : '' ?> <?= $isEmbed ? 'is-embed' : '' ?>">
 <script>
-window.vendorUserId = <?= json_encode($vendor['user_id'] ?? 0) ?>;
+window.vendorUserId = <?= json_encode($vendor['url_slug'] ?? 0) ?>;
 window.CANVAS_THEME = <?= json_encode($isLightTheme ? 'light' : 'dark') ?>;
 window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 </script>

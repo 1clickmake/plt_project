@@ -33,7 +33,7 @@
                 <?php
                     $dbBtn = \App\Core\Database::getInstance();
                     $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
-                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $stmtBtn->execute([$user['user_id']]);
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
@@ -42,7 +42,7 @@
                 </a>
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                    <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                    <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
                 </div>
             </div>
         </div>
@@ -101,10 +101,10 @@ document.querySelector('.btn-checkout').addEventListener('click', async function
             method: '카드',
             tax_free: 0,
             user: {
-                id: '<?php echo $_SESSION['user']['user_id'] ?? $_SESSION['user']['id'] ?? 'guest'; ?>',
-                username: '<?php echo $_SESSION['user']['username'] ?? $_SESSION['user']['name'] ?? 'Guest'; ?>',
-                phone: '<?php echo $_SESSION['user']['phone'] ?? ''; ?>',
-                email: '<?php echo $_SESSION['user']['email'] ?? ''; ?>'
+                id: '<?php echo $user['user_id'] ?? $user['id'] ?? 'guest'; ?>',
+                username: '<?php echo $user['username'] ?? $user['name'] ?? 'Guest'; ?>',
+                phone: '<?php echo $user['phone'] ?? ''; ?>',
+                email: '<?php echo $user['email'] ?? ''; ?>'
             },
             items: [
                 {

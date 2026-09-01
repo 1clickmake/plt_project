@@ -21,8 +21,12 @@ class CanvasController extends BaseController {
         // 방문 기록 저장
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $vendorUserId = $vendor['user_id'];
-        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
-        $stmtVisit->execute([$vendorUserId, $ip]);
+        try {
+            $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+            $stmtVisit->execute([$vendorUserId, $ip]);
+        } catch (\Exception $e) {
+            // Ignore if table doesn't exist or other DB errors occur during visit logging
+        }
 
         $this->view('canvas/index', ['vendor' => $vendor]);
     }
@@ -41,8 +45,12 @@ class CanvasController extends BaseController {
 
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $vendorUserId = $vendor['user_id'];
-        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
-        $stmtVisit->execute([$vendorUserId, $ip]);
+        try {
+            $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+            $stmtVisit->execute([$vendorUserId, $ip]);
+        } catch (\Exception $e) {
+            // Ignore
+        }
 
         $this->view('canvas/easy', ['vendor' => $vendor]);
     }
@@ -61,8 +69,12 @@ class CanvasController extends BaseController {
 
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $vendorUserId = $vendor['user_id'];
-        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
-        $stmtVisit->execute([$vendorUserId, $ip]);
+        try {
+            $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+            $stmtVisit->execute([$vendorUserId, $ip]);
+        } catch (\Exception $e) {
+            // Ignore
+        }
 
         $this->view('canvas/board', ['vendor' => $vendor]);
     }
@@ -365,7 +377,7 @@ class CanvasController extends BaseController {
             } else {
                 $body = json_decode($_POST['json_payload'] ?? '{}', true);
             }
-            $vendorUserId = intval($body['vendor_user_id'] ?? 0);
+            $vendorUserId = $body['vendor_user_id'] ?? '';
             $company      = trim($body['company'] ?? '');
             $name         = trim($body['name'] ?? '');
             $phone        = trim($body['phone'] ?? '');
@@ -465,21 +477,32 @@ class CanvasController extends BaseController {
             }
             $extraFilesJson = !empty($extraFilesPaths) ? json_encode($extraFilesPaths, JSON_UNESCAPED_UNICODE) : null;
 
-            $db = Database::getInstance();
-
-            // 현재 벤더의 가장 최신 단가표 ID 조회
-            $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
+            $sourceMode   = $body['source_mode'] ?? '';
+              $db = Database::getInstance();
+  
+              if ($sourceMode === 'board') {
+                  $title = trim($body['title'] ?? '게시판 문의');
+                  $contentStr = trim($body['content'] ?? '');
+                  
+                  // 첨부파일や 옵션 등은 각 컬럼에 저장되므로 summary에는 순수 본문만 저장합니다.
+                $summary = $contentStr;
+              } else {
+                  $title = null;
+              }
+  
+              // 현재 벤더가 가진 최신 단가표 ID 조회
+              $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
             $ruleStmt->execute(['vid' => $vendorUserId]);
             $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
 
             $sql = "INSERT INTO quote_requests (
-                        vendor_user_id, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, extra_files, summary,
+                        vendor_user_id, source_mode, title, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, extra_files, summary,
                         edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
                         forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
                         rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
                         condition_type, self_install
                     ) VALUES (
-                        :vuid, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :extra_files, :summary,
+                        :vuid, :source_mode, :title, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :extra_files, :summary,
                         :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
                         :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
                         :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
@@ -489,6 +512,8 @@ class CanvasController extends BaseController {
             $stmt = $db->prepare($sql);
             $stmt->execute([
                 'vuid'    => $vendorUserId,
+                'source_mode' => $sourceMode,
+                'title'   => $title,
                 'prid'    => $pricingRuleId,
                 'company' => $company,
                 'name'    => $name,

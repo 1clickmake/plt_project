@@ -48,7 +48,7 @@ $pageTitle = "단가표(엑셀) 관리";
                 <?php
                     $dbBtn = \App\Core\Database::getInstance();
                     $stmtBtn = $dbBtn->prepare("SELECT plan FROM users WHERE user_id = ?");
-                    $stmtBtn->execute([$_SESSION['user']['user_id']]);
+                    $stmtBtn->execute([$user['user_id']]);
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
@@ -57,7 +57,7 @@ $pageTitle = "단가표(엑셀) 관리";
                 </a>
                 <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
-                <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
+                <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
             </div>
         </div>
 

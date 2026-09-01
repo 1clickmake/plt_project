@@ -216,7 +216,7 @@ $isLightTheme = in_array($theme, ['light', 'white']);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-window.vendorUserId = <?= (int)($vendor['id'] ?? 0) ?>;
+window.vendorUserId = <?= json_encode($vendor['url_slug'] ?? '') ?>;
 
 // --- 동적 첨부파일 (+/-) 관리 함수 ---
 function addAttachmentRow() {
@@ -278,7 +278,9 @@ function submitBoardInquiry() {
         source_mode: 'board',
         rack_indep: 0,
         rack_conn: 0,
-        image_data: ''
+        image_data: '',
+        title: title,
+        content: content
     };
 
     const formData = new FormData();
