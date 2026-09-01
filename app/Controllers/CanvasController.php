@@ -27,6 +27,46 @@ class CanvasController extends BaseController {
         $this->view('canvas/index', ['vendor' => $vendor]);
     }
 
+    public function showEasyCanvas($vars) {
+        $slug = $vars['slug'] ?? '';
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
+        $stmt->execute(['slug' => $slug]);
+        $vendor = $stmt->fetch();
+
+        if (!$vendor) {
+            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
+            return;
+        }
+
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $vendorUserId = $vendor['user_id'];
+        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+        $stmtVisit->execute([$vendorUserId, $ip]);
+
+        $this->view('canvas/easy', ['vendor' => $vendor]);
+    }
+
+    public function showBoardCanvas($vars) {
+        $slug = $vars['slug'] ?? '';
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
+        $stmt->execute(['slug' => $slug]);
+        $vendor = $stmt->fetch();
+
+        if (!$vendor) {
+            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
+            return;
+        }
+
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $vendorUserId = $vendor['user_id'];
+        $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
+        $stmtVisit->execute([$vendorUserId, $ip]);
+
+        $this->view('canvas/board', ['vendor' => $vendor]);
+    }
+
     public function showVideoManual($vars) {
         $slug = $vars['slug'] ?? '';
         $db = Database::getInstance();

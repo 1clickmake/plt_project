@@ -366,6 +366,64 @@ class VendorController extends BaseController {
         }
     }
 
+    public function deletePricingRules() {
+        $this->requireVendorEmployees();
+        header('Content-Type: application/json');
+
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $db = Database::getInstance();
+
+        $rawInput = file_get_contents('php://input');
+        $input = json_decode($rawInput, true);
+        if (!$input) {
+            $input = $_POST;
+        }
+
+        $action = $input['action'] ?? '';
+        $ids = $input['ids'] ?? [];
+
+        try {
+            if ($action === 'all') {
+                $stmt = $db->prepare("DELETE FROM vendor_pricing_rules WHERE vendor_id = :vuid");
+                $stmt->execute(['vuid' => $userId]);
+                
+                $upd = $db->prepare("UPDATE vendor_settings SET price_excel_path = NULL WHERE user_id = :vuid");
+                $upd->execute(['vuid' => $userId]);
+
+                echo json_encode(['success' => true, 'message' => '모든 업로드 이력이 삭제되었습니다.']);
+                return;
+            } else if ($action === 'select' && !empty($ids) && is_array($ids)) {
+                $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+                $sql = "DELETE FROM vendor_pricing_rules WHERE vendor_id = ? AND id IN ($placeholders)";
+                
+                $params = array_merge([$userId], $ids);
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                
+                $chk = $db->prepare("SELECT COUNT(*) FROM vendor_pricing_rules WHERE vendor_id = :vuid");
+                $chk->execute(['vuid' => $userId]);
+                if ($chk->fetchColumn() == 0) {
+                    $upd = $db->prepare("UPDATE vendor_settings SET price_excel_path = NULL WHERE user_id = :vuid");
+                    $upd->execute(['vuid' => $userId]);
+                }
+
+                echo json_encode(['success' => true, 'message' => count($ids) . '개의 이력이 삭제되었습니다.']);
+                return;
+            } else {
+                echo json_encode(['success' => false, 'message' => '잘못된 요청이거나 선택된 항목이 없습니다.']);
+                return;
+            }
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => '삭제 처리 중 오류가 발생했습니다: ' . $e->getMessage()]);
+            return;
+        }
+    }
+
     public function quotes() {
         $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
@@ -628,16 +686,39 @@ class VendorController extends BaseController {
         $depth = $nonEntryW - 100;
 
         // 모듈별 단위 BOM 계산 클로저
-        $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
-            $bom = [];
-            $totalWeight = 0;
-            $columns = $frames * 2;
-            $beams = $beamLevels * 2;
-            $tieBeams = ($beams > 0) ? ($beams / 2) * $tiePerLevel : 0;
-
-            if ($columns > 0) {
-                $col = \App\Services\SehwaPriceCalculator::calcColumn(['type' => '85바', 'height' => $rackH, 'thickness' => 1.8, 'qty' => $columns]);
-                $bom[] = $col;
+        if (empty($ruleId)) {
+            // 엑셀 단가표가 없는 소형 업체를 위한 심플 세트 단위 BOM
+            $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
+                $typeName = ($frames == 2) ? '독립형 (Starter) 세트' : '연결형 (Add-on) 세트';
+                $spec = "{$beamL} × {$depth} × {$rackH}";
+                $bom = [
+                    [
+                        'name' => $typeName,
+                        'spec' => $spec,
+                        'qty' => 1,
+                        'unit_amount' => 0,
+                        'total' => 0
+                    ]
+                ];
+                return [
+                    'bom' => $bom,
+                    'weight' => 0,
+                    'raw_price' => 0,
+                    'final_price' => 0
+                ];
+            };
+        } else {
+            // 공장 직거래 대형 업체를 위한 정밀 부품 단위 BOM
+            $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
+                $bom = [];
+                $totalWeight = 0;
+                $columns = $frames * 2;
+                $beams = $beamLevels * 2;
+                $tieBeams = ($beams > 0) ? ($beams / 2) * $tiePerLevel : 0;
+    
+                if ($columns > 0) {
+                    $col = \App\Services\SehwaPriceCalculator::calcColumn(['type' => '85바', 'height' => $rackH, 'thickness' => 1.8, 'qty' => $columns]);
+                    $bom[] = $col;
                 $totalWeight += $col['weight'] * $columns;
 
                 $base = \App\Services\SehwaPriceCalculator::calcColumnBase(['w' => 173, 'd' => 101, 'thickness' => 4, 'qty' => $columns]);
@@ -687,19 +768,20 @@ class VendorController extends BaseController {
                 $bom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
             }
 
-            $sumRaw = 0;
-            foreach ($bom as $item) {
-                $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0;
-            }
-            $finalPrice = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
-
-            return [
-                'bom' => $bom,
-                'weight' => $totalWeight,
-                'raw_price' => $sumRaw,
-                'final_price' => $finalPrice
-            ];
-        };
+                $sumRaw = 0;
+                foreach ($bom as $item) {
+                    $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0;
+                }
+                $finalPrice = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
+    
+                return [
+                    'bom' => $bom,
+                    'weight' => $totalWeight,
+                    'raw_price' => $sumRaw,
+                    'final_price' => $finalPrice
+                ];
+            };
+        }
 
         $tiePerLevel = intval($quote['rack_tie_per_level'] ?? 4);
         $modules = [];
@@ -900,23 +982,31 @@ class VendorController extends BaseController {
         // 복렬 홀더(Holder)
         $holders = intval($quote['rack_holders'] ?? 0);
         if ($holders > 0) {
-            $hBom = [];
-            $hWeight = 0;
-            
-            $h = \App\Services\SehwaPriceCalculator::calcHolder(['length' => 200, 'thickness' => 2.0, 'qty' => 1]);
-            $hBom[] = $h;
-            $hWeight += $h['weight'];
+            if (empty($ruleId)) {
+                $hFinal = 0;
+                $sumRaw = 0;
+                $hBom = [
+                    ['name' => '복렬 홀더 세트', 'spec' => '200L (복식/상하체결)', 'qty' => 1, 'unit_amount' => 0, 'total' => 0]
+                ];
+            } else {
+                $hBom = [];
+                $hWeight = 0;
+                
+                $h = \App\Services\SehwaPriceCalculator::calcHolder(['length' => 200, 'thickness' => 2.0, 'qty' => 1]);
+                $hBom[] = $h;
+                $hWeight += $h['weight'];
 
-            $hBom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', 4);
-            
-            $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($hWeight);
-            if ($lossTotal > 0) {
-                $hBom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
+                $hBom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', 4);
+                
+                $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($hWeight);
+                if ($lossTotal > 0) {
+                    $hBom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
+                }
+                
+                $sumRaw = 0;
+                foreach ($hBom as $item) { $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0; }
+                $hFinal = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
             }
-            
-            $sumRaw = 0;
-            foreach ($hBom as $item) { $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0; }
-            $hFinal = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
 
             $modules[] = [
                 'type' => '홀더',

@@ -100,12 +100,19 @@ $pageTitle = "단가표(엑셀) 관리";
 
                 <div class="col-lg-12">
                     <div class="glass-panel p-4 mt-2">
-                        <h5 class="fw-bold text-warning mb-3">과거 업로드 이력</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold text-warning mb-0">과거 업로드 이력</h5>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-danger me-2" id="btnSelectDelete">선택 삭제</button>
+                                <button type="button" class="btn btn-sm btn-danger" id="btnDeleteAll">전체 삭제</button>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03);">
                                 <thead>
                                     <tr class="text-light opacity-75 small uppercase" style="border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 600;">
-                                        <th class="py-3 ps-3 text-center" width="80">번호</th>
+                                        <th class="py-3 ps-3 text-center" width="40"><input type="checkbox" class="form-check-input" id="chkAll"></th>
+                                        <th class="py-3 text-center" width="80">번호</th>
                                         <th class="py-3">적용 월</th>
                                         <th class="py-3">데이터 요약</th>
                                         <th class="py-3 text-center" width="180">업로드 일시</th>
@@ -114,12 +121,13 @@ $pageTitle = "단가표(엑셀) 관리";
                                 <tbody>
                                     <?php if(empty($rules)): ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">업로드된 이력이 없습니다.</td>
+                                            <td colspan="5" class="text-center py-4 text-muted">업로드된 이력이 없습니다.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach($rules as $index => $rule): ?>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                                                <td class="py-3 ps-3 font-monospace text-light opacity-50 text-center"><?= $rule['id'] ?></td>
+                                                <td class="py-3 ps-3 text-center"><input type="checkbox" class="form-check-input chk-item" value="<?= $rule['id'] ?>"></td>
+                                                <td class="py-3 font-monospace text-light opacity-50 text-center"><?= $rule['id'] ?></td>
                                                 <td class="py-3 fw-bold text-light"><?= htmlspecialchars($rule['applied_month']) ?></td>
                                                 <td class="py-3 text-light">
                                                     <?php 
@@ -183,6 +191,7 @@ $pageTitle = "단가표(엑셀) 관리";
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.getElementById('pricingUploadForm').addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('button[type="submit"]');
@@ -197,6 +206,99 @@ $pageTitle = "단가표(엑셀) 관리";
             const overlay = document.getElementById('loadingOverlay');
             overlay.style.display = 'flex';
         });
+
+        // 체크박스 전체 선택/해제 로직
+        const chkAll = document.getElementById('chkAll');
+        const chkItems = document.querySelectorAll('.chk-item');
+        
+        if (chkAll) {
+            chkAll.addEventListener('change', function() {
+                chkItems.forEach(chk => {
+                    chk.checked = chkAll.checked;
+                });
+            });
+        }
+        
+        chkItems.forEach(chk => {
+            chk.addEventListener('change', function() {
+                if (!chk.checked) {
+                    chkAll.checked = false;
+                } else {
+                    const allChecked = Array.from(chkItems).every(c => c.checked);
+                    chkAll.checked = allChecked;
+                }
+            });
+        });
+
+        // 삭제 처리 공통 함수
+        function processDelete(action, ids = []) {
+            let titleText = action === 'all' ? "모든 단가표 이력을 삭제하시겠습니까?" : `${ids.length}개의 단가표 이력을 삭제하시겠습니까?`;
+            let warnText = "삭제 시 과거 견적서 중 일부가 기본값으로 초기화될 수 있습니다.";
+            
+            Swal.fire({
+                title: titleText,
+                text: warnText,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '네, 삭제합니다',
+                cancelButtonText: '취소'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/vendor/pricing/delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: action,
+                            ids: ids
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: '삭제 완료!',
+                                text: data.message,
+                                icon: 'success',
+                                confirmButtonColor: '#10b981'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire('오류', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('오류', '삭제 요청 중 문제가 발생했습니다.', 'error');
+                    });
+                }
+            });
+        }
+
+        // 전체 삭제 버튼
+        const btnDeleteAll = document.getElementById('btnDeleteAll');
+        if (btnDeleteAll) {
+            btnDeleteAll.addEventListener('click', function() {
+                processDelete('all');
+            });
+        }
+
+        // 선택 삭제 버튼
+        const btnSelectDelete = document.getElementById('btnSelectDelete');
+        if (btnSelectDelete) {
+            btnSelectDelete.addEventListener('click', function() {
+                const checkedIds = Array.from(document.querySelectorAll('.chk-item:checked')).map(chk => chk.value);
+                if (checkedIds.length === 0) {
+                    Swal.fire('알림', '삭제할 항목을 선택해 주세요.', 'info');
+                    return;
+                }
+                processDelete('select', checkedIds);
+            });
+        }
     </script>
 </body>
 </html>

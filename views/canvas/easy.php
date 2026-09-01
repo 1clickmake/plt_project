@@ -379,78 +379,23 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                     <div id="obstacle-inputs-container" class="mt-3 d-flex flex-column gap-2"></div>
                 </div>
 
-                <!-- 4단계: 파렛트 및 지게차 제원 설정 -->
+                <!-- 4단계: 랙 설치 희망 제원 -->
                 <div class="mb-4 pt-3 border-top border-secondary">
-                    <h5 class="fw-semibold mb-3"><span class="step-badge">4단계</span> 파렛트 및 지게차 제원</h5>
-                    
-                    <h6 class="text-info small fw-bold mb-2">📦 적재 파렛트 제원</h6>
-                    
-                    <div class="col-12 mb-3 px-2 py-2 rounded" style="background: rgba(255,255,255,0.05);">
-                        <label class="form-label text-info small mb-1">
-                            포크 진입 방향 (파랫트 방향)
-                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-pallet-direction')">❓</button>
-                        </label>
-                        <div class="d-flex gap-3 mt-1">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="forkDirection" id="forkW" value="W" checked>
-                                <label class="form-check-label text-white small" for="forkW">가로(W) 면으로 진입</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="forkDirection" id="forkD" value="D">
-                                <label class="form-check-label text-white small" for="forkD">세로(D) 면으로 진입</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">가로 (W) mm</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-w" value="1100" placeholder="예: 1100">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">세로/깊이 (D) mm</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-d" value="1100" placeholder="예: 1100">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">
-                                적재 높이 (H) mm
-                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-pallet-height')">❓</button>
-                            </label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-h" value="1000" placeholder="화물 포함">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">총 중량 (kg)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-weight" value="1000" placeholder="파렛트당 중량">
-                        </div>
-                    </div>
-
-                    <h6 class="text-warning small fw-bold mb-2">
-                        🚜 지게차 제원
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-forklift')">❓</button>
-                    </h6>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label text-muted small mb-1">지게차 종류</label>
-                            <select class="form-select form-select-sm bg-transparent text-white border-secondary" id="forklift-type">
-                                <option value="reach" class="text-dark">입승식 (리치형) - 좁은 통로용</option>
-                                <option value="counter" class="text-dark">좌승식 (카운터발란스) - 일반용</option>
-                                <option value="vna" class="text-dark">삼방향 지게차 (VNA) - 초소형 통로</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">최대 인상높이 (mm)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-lift-height" value="4500" placeholder="마스트 한계">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">직각교차 통로폭(AST)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-ast" value="2800" placeholder="작업 통로 폭">
-                        </div>
-                    </div>
-
-                    <h6 class="text-info small fw-bold mb-2 mt-3">
-                        📋 랙 설치 희망 제원
+                    <h5 class="fw-semibold mb-3">
+                        <span class="step-badge">4단계</span> 랙 설치 희망 제원
                         <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-rack-specs')">❓</button>
-                    </h6>
+                    </h5>
+                    
+                    <!-- 이지 모드 자동 계산용 표준값 hidden inputs -->
+                    <input type="hidden" id="pallet-w" value="1100">
+                    <input type="hidden" id="pallet-d" value="1100">
+                    <input type="hidden" id="pallet-h" value="1000">
+                    <input type="hidden" id="pallet-weight" value="1000">
+                    <input type="hidden" name="forkDirection" id="forkW" value="W">
+                    <input type="hidden" id="forklift-type" value="reach">
+                    <input type="hidden" id="forklift-lift-height" value="4500">
+                    <input type="hidden" id="forklift-ast" value="2800">
+
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 단수 <span class="text-danger">*</span></label>
@@ -458,10 +403,15 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small mb-1">설치 높이(mm)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
+                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 자동계산">
                         </div>
                     </div>
 
+                    <div class="p-2 rounded mt-2" style="background: rgba(56, 189, 248, 0.08); border: 1px dashed rgba(56, 189, 248, 0.3);">
+                        <p class="text-info small m-0" style="font-size: 0.78rem;">
+                            💡 <strong>이지 모드 안내:</strong> 가장 범용적인 표준 파렛트(1100×1100) 및 입승식 리치 지게차 제원이 기본 적용되어 자동으로 도면이 꽉 차게 계산됩니다!
+                        </p>
+                    </div>
                 </div>
 
                 <!-- 5단계: 추가 자료 및 요청사항 -->
@@ -543,8 +493,8 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                     </div>
                     <div class="flex-shrink-0 d-flex align-items-center gap-2 flex-wrap">
                         <div class="btn-group btn-group-sm" role="group">
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-primary-gradient px-3 fw-bold">👨‍💻 전문가 모드</a>
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a>
+                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-outline-info px-3">👨‍💻 전문가 모드</a>
+                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-primary-gradient px-3 fw-bold">🟢 이지 모드</a>
                             <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-outline-light px-3">📝 게시판 문의</a>
                         </div>
                         <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info">🎥 동영상메뉴얼</a>
@@ -703,8 +653,8 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/canvas2d.js?v=<?= time() ?>"></script>
-<script src="/assets/js/canvas-interactions.js?v=<?= time() ?>"></script>
+<script src="/assets/js/canvas2d-easy.js?v=<?= time() ?>"></script>
+<script src="/assets/js/canvas-interactions-easy.js?v=<?= time() ?>"></script>
 <script>
 
 // --- 도움말 오프캔버스 스크롤 ---
@@ -869,8 +819,10 @@ function runAutoLayout() {
     const remoteQuoteBtn = document.getElementById('remote-quote-btn');
     if (remoteQuoteBtn) remoteQuoteBtn.classList.remove('d-none');
 
-    // 단식 1개, 복식 1개를 중앙에 생성
-    if (typeof window.spawnInitialRacks === 'function') {
+    // 이지 모드: 창고 안을 꽉 채우는 완전 자동 배치 실행!
+    if (typeof window.spawnEasyFullLayout === 'function') {
+        window.spawnEasyFullLayout();
+    } else if (typeof window.spawnInitialRacks === 'function') {
         window.spawnInitialRacks();
     } else if (typeof draw === 'function') {
         draw();
@@ -1043,10 +995,12 @@ function submitQuoteRequest() {
         forkDir = 'D';
     }
 
-    let forkliftText = '';
+    let forkliftText = '입승식(리치) 지게차';
     const forkliftSelect = document.getElementById('forklift-type');
-    if (forkliftSelect) {
+    if (forkliftSelect && forkliftSelect.tagName === 'SELECT') {
         forkliftText = forkliftSelect.options[forkliftSelect.selectedIndex].text;
+    } else if (forkliftSelect && forkliftSelect.value) {
+        forkliftText = forkliftSelect.value === 'reach' ? '입승식(리치) 지게차' : '좌승식(카운터) 지게차';
     }
     const forkliftLiftHeight = document.getElementById('forklift-lift-height') ? document.getElementById('forklift-lift-height').value : '';
     const forkliftAst = document.getElementById('forklift-ast') ? document.getElementById('forklift-ast').value : '';
@@ -1118,8 +1072,8 @@ function submitQuoteRequest() {
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
             currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
         }),
-        summary: `[신청 모드: 전문가 모드]\n` + (details ? `[고객 요청사항]\n${details}\n\n` : '') + (window.lastAiSummary || ''),
-        source_mode: 'expert',
+        summary: `[신청 모드: 이지 모드]\n` + (details ? `[고객 요청사항]\n${details}\n\n` : '') + (window.lastAiSummary || ''),
+        source_mode: 'easy',
         edge_lengths: edge_lengths_str,
         pallet_w: pw,
         pallet_d: pd,

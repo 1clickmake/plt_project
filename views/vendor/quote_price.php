@@ -255,7 +255,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center">대</td>
       <td class="right fw-bold mod-unit-price" data-raw="<?= intval($mod['raw_price'] ?? 0) ?>"><?= number_format($mod['unit_price']) ?></td>
       <td class="right fw-bold mod-total-price"><?= number_format($mod['total_price']) ?></td>
-      <td class="center"><span class="mod-remark"><?= htmlspecialchars($mod['remark']) ?></span> <i class="fa-solid fa-chevron-down ms-1 text-muted" style="font-size: 0.8rem;"></i></td>
+      <td class="center"><span class="mod-remark"><?= htmlspecialchars($mod['remark']) ?></span> <i class="fa-solid fa-chevron-down ms-1 text-muted toggle-icon" style="font-size: 0.8rem; transition: all 0.3s ease;"></i></td>
     </tr>
     
     <!-- 모듈 상세 BOM (토글 영역) -->
@@ -339,7 +339,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
           }
       }
       $linerQty = $totalFrames * 2;
-      $linerUnitPrice = 500;
+      $linerUnitPrice = empty($quote['pricing_rule_id']) ? 0 : 500;
       $linerTotal = $linerQty * $linerUnitPrice;
 ?>
     </tbody>
@@ -502,7 +502,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             // 2. 바닥수평라이너 자동 계산
             const linerRow = document.getElementById('linerRow');
             const linerQty = totalFrames * 2;
-            const linerUnitPrice = 500;
+            const linerUnitPrice = <?= empty($quote['pricing_rule_id']) ? 0 : 500 ?>;
             const linerTotal = linerQty * linerUnitPrice;
 
             if (linerQty > 0) {
@@ -784,6 +784,26 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                             text: '초기화 처리 중 에러가 발생했습니다.'
                         });
                     });
+                }
+            });
+        });
+        // 토글 아이콘(화살표) 애니메이션 변경 로직
+        const collapsibles = document.querySelectorAll('.bom-collapse-row .collapse');
+        collapsibles.forEach(col => {
+            col.addEventListener('show.bs.collapse', function () {
+                const moduleRow = this.closest('.bom-collapse-row').previousElementSibling;
+                const icon = moduleRow.querySelector('.toggle-icon');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down', 'text-muted');
+                    icon.classList.add('fa-chevron-up', 'text-danger');
+                }
+            });
+            col.addEventListener('hide.bs.collapse', function () {
+                const moduleRow = this.closest('.bom-collapse-row').previousElementSibling;
+                const icon = moduleRow.querySelector('.toggle-icon');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up', 'text-danger');
+                    icon.classList.add('fa-chevron-down', 'text-muted');
                 }
             });
         });
