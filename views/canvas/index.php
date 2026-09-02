@@ -325,203 +325,8 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
     <?php endif; ?>
 
     <div class="row g-4 flex-grow-1" style="min-height: 0;">
-        <!-- 왼쪽: 4단계 입력 폼 -->
-        <div class="col-xl-3 col-lg-4 h-100">
-            <div class="glass-panel p-4 h-100" style="overflow-y: auto; scrollbar-width: thin;">
-                
-                <!-- 1단계: 창고 모양 그리기 -->
-                <div class="mb-4">
-                    <h5 class="fw-semibold mb-3">
-                        <span class="step-badge">1단계</span> 창고 평면도 그리기
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-step1')">❓</button>
-                    </h5>
-                    <p class="text-muted small">우측 도화지(캔버스)에 점을 찍어 창고 외곽선을 직접 그려주세요.</p>
-                </div>
-
-                <!-- 2단계: 벽면 길이 입력 -->
-                <div class="mb-4">
-                    <h5 class="fw-semibold mb-3">
-                        <span class="step-badge">2단계</span> 벽면 길이 입력 (mm)
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-step2')">❓</button>
-                    </h5>
-                    
-                    <!-- 그림 안내 영역 -->
-                    <div class="shape-diagram mb-3" id="diagram-container">
-                        <!-- SVG 다이어그램이 JS에 의해 여기에 들어갑니다. -->
-                    </div>
-
-                    <!-- 동적 입력 폼 영역 -->
-                    <div class="row g-2" id="inputs-container">
-                        <!-- 입력 폼이 JS에 의해 여기에 생성됩니다. -->
-                    </div>
-                </div>
-
-                <!-- 3단계: 입구/기둥 드래그 안내 -->
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-semibold m-0">
-                            <span class="step-badge">3단계</span> 장애물 배치
-                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-step3')">❓</button>
-                        </h5>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.location.reload();">🔄 초기화</button>
-                    </div>
-                    <p class="text-muted small mb-2">우측 도면에 나타난 창고 위로 아이콘을 끌어다 놓으세요!</p>
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-door" draggable="true" ondragstart="handleDragStart(event, 'door')">🚪 출입문</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-pillar" draggable="true" ondragstart="handleDragStart(event, 'pillar')">◼️ 기둥</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-shutter" draggable="true" ondragstart="handleDragStart(event, 'shutter')">🪟 셔터</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-machine" draggable="true" ondragstart="handleDragStart(event, 'machine')">⚙️ 기계</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-hydrant" draggable="true" ondragstart="handleDragStart(event, 'hydrant')">🧯 소화전</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-panel" draggable="true" ondragstart="handleDragStart(event, 'panel')">⚡ 전기판넬</div>
-                        <div class="drag-item bg-dark text-white p-2 rounded" id="drag-forbidden" draggable="true" ondragstart="handleDragStart(event, 'forbidden')">🚫 사용불가</div>
-                        
-                    </div>
-                    <div id="obstacle-inputs-container" class="mt-3 d-flex flex-column gap-2"></div>
-                </div>
-
-                <!-- 4단계: 파렛트 및 지게차 제원 설정 -->
-                <div class="mb-4 pt-3 border-top border-secondary">
-                    <h5 class="fw-semibold mb-3"><span class="step-badge">4단계</span> 파렛트 및 지게차 제원</h5>
-                    
-                    <h6 class="text-info small fw-bold mb-2">📦 적재 파렛트 제원</h6>
-                    
-                    <div class="col-12 mb-3 px-2 py-2 rounded" style="background: rgba(255,255,255,0.05);">
-                        <label class="form-label text-info small mb-1">
-                            포크 진입 방향 (파랫트 방향)
-                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-pallet-direction')">❓</button>
-                        </label>
-                        <div class="d-flex gap-3 mt-1">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="forkDirection" id="forkW" value="W" checked>
-                                <label class="form-check-label text-white small" for="forkW">가로(W) 면으로 진입</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="forkDirection" id="forkD" value="D">
-                                <label class="form-check-label text-white small" for="forkD">세로(D) 면으로 진입</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">가로 (W) mm</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-w" value="1100" placeholder="예: 1100">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">세로/깊이 (D) mm</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-d" value="1100" placeholder="예: 1100">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">
-                                적재 높이 (H) mm
-                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-pallet-height')">❓</button>
-                            </label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-h" value="1000" placeholder="화물 포함">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">총 중량 (kg)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="pallet-weight" value="1000" placeholder="파렛트당 중량">
-                        </div>
-                    </div>
-
-                    <h6 class="text-warning small fw-bold mb-2">
-                        🚜 지게차 제원
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-forklift')">❓</button>
-                    </h6>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label text-muted small mb-1">지게차 종류</label>
-                            <select class="form-select form-select-sm bg-transparent text-white border-secondary" id="forklift-type">
-                                <option value="reach" class="text-dark">입승식 (리치형) - 좁은 통로용</option>
-                                <option value="counter" class="text-dark">좌승식 (카운터발란스) - 일반용</option>
-                                <option value="vna" class="text-dark">삼방향 지게차 (VNA) - 초소형 통로</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">최대 인상높이 (mm)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-lift-height" value="4500" placeholder="마스트 한계">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">직각교차 통로폭(AST)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="forklift-ast" value="2800" placeholder="작업 통로 폭">
-                        </div>
-                    </div>
-
-                    <h6 class="text-info small fw-bold mb-2 mt-3">
-                        📋 랙 설치 희망 제원
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas" onclick="scrollToHelp('help-rack-specs')">❓</button>
-                    </h6>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">설치 단수 <span class="text-danger">*</span></label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-levels" value="3" placeholder="예: 3단">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small mb-1">설치 높이(mm)</label>
-                            <input type="number" onclick="this.select()" class="form-control form-control-sm bg-transparent text-white border-secondary" id="rack-height" placeholder="공란시 계산">
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- 5단계: 추가 자료 및 요청사항 -->
-                <div class="mb-4 pt-3 border-top border-secondary">
-                    <h5 class="fw-semibold mb-3">
-                        <span class="step-badge">5단계</span> 추가 자료 및 요청사항
-                        <span class="section-required-note">(필수 아님)</span>
-                    </h5>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small mb-2">📎 도면/배치 참고 파일 첨부</label>
-                        <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
-                            <div style="font-size:1.5rem;">📁</div>
-                            <div class="text-muted small mt-1">JPG, PNG, PDF 클릭하여 업로드<br><span style="font-size:0.7rem; color: #475569;">손으로 그린 스케치 도면도 환영합니다</span></div>
-                        </div>
-                        <input type="file" id="file-input" multiple accept="image/*,.pdf" style="display:none;" onchange="handleFileSelect(this.files)">
-                        <div id="file-preview-area"></div>
-                    </div>
-
-                    <input type="hidden" id="ai-request" value="">
-                </div>
-
-                <!-- 6단계: 실행 -->
-                <div class="pt-3 border-top border-secondary pb-2">
-                    <h5 class="fw-semibold mb-2"><span class="step-badge">6단계</span> 배치 실행</h5>
-                    <p class="text-muted small mb-3">모든 필수 정보가 입력되면 뿅!</p>
-                    <button id="run-layout-btn" class="btn btn-primary-gradient w-100 py-3 rounded-3 shadow-lg" onclick="runAutoLayout()">
-                        🚀 파렛트랙 배치 실행
-                    </button>
-                </div>
-
-                <!-- 하단 회사 정보 -->
-                <?php if (!empty($vendor)): ?>
-                <div class="mt-4 pt-3 border-top border-secondary text-center" style="opacity: 0.8;">
-                    <?php if (!empty($vendor['company_logo'])): ?>
-                        <img src="<?= htmlspecialchars($vendor['company_logo']) ?>" alt="Logo" class="mb-2" style="max-height: 40px; border-radius: 4px;">
-                    <?php endif; ?>
-                    <h6 class="text-info fw-bold mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h6>
-                    <?php if(!empty($vendor['contact_number'])): ?>
-                        <p class="text-muted small mb-1">
-                            <i class="fa-solid fa-phone me-1"></i> <?= htmlspecialchars($vendor['contact_number']) ?>
-                        </p>
-                    <?php endif; ?>
-                    <?php if(!empty($vendor['manager_name']) || !empty($vendor['manager_email'])): ?>
-                        <p class="text-muted small mb-0" style="font-size: 0.75rem;">
-                            <?= htmlspecialchars($vendor['manager_name'] ?? '') ?> 
-                            <?= !empty($vendor['manager_email']) ? '(' . htmlspecialchars($vendor['manager_email']) . ')' : '' ?>
-                        </p>
-                    <?php endif; ?>
-                    <div class="mt-3 text-secondary" style="font-size: 0.65rem; letter-spacing: 1px;">
-                        POWERED BY ASAMIYA SAAS
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-
-        <!-- 우측: 캔버스 및 시각화 -->
-        <div class="col-xl-9 col-lg-8 h-100">
+        <!-- 캔버스 및 시각화 -->
+        <div class="col-12 h-100">
             <div class="glass-panel p-4 h-100 d-flex flex-column">
                 <!-- 상단 배지 바 (한 줄 컴팩트) -->
                 <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
@@ -543,11 +348,11 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                     </div>
                     <div class="flex-shrink-0 d-flex align-items-center gap-2 flex-wrap">
                         <div class="btn-group btn-group-sm" role="group">
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-primary-gradient px-3 fw-bold">👨‍💻 전문가 모드</a>
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a>
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-outline-light px-3">📝 게시판 문의</a>
+                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-primary-gradient px-3 fw-bold">📐 스마트 캔버스 배치</a>
+                            <!-- <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a> -->
+                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-outline-info px-3">📝 게시판 문의</a>
                         </div>
-                        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info">🎥 동영상메뉴얼</a>
+                        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" target="_blank" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</a>
                     </div>
                 </div>
 
@@ -761,7 +566,7 @@ function checkWarehouseLengthsEntered(isSubmitting = false) {
         return false;
     }
 
-    const inputs = document.querySelectorAll('#inputs-container input[type="number"]');
+    const inputs = document.querySelectorAll('#chat-inputs-container input[id^="edge-input-"]');
     if (inputs.length === 0) {
         alert('⚠️ 1단계와 2단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!');
         return false;
@@ -857,9 +662,11 @@ function runAutoLayout() {
     }
 
     const btn = document.getElementById('run-layout-btn');
-    btn.innerHTML = '✅ 도면 활성화 완료';
-    btn.classList.remove('btn-primary-gradient');
-    btn.classList.add('btn-success');
+    if (btn) {
+        btn.innerHTML = '✅ 도면 활성화 완료';
+        btn.classList.remove('btn-primary-gradient');
+        btn.classList.add('btn-success');
+    }
 
     // 리모컨 패널 자동 표시
     const remoteCtrl = document.getElementById('canvas-remote-ctrl');
@@ -1021,7 +828,7 @@ function submitQuoteRequest() {
     }
 
     let edge_lengths_array = [];
-    const edgeInputs = document.querySelectorAll('#inputs-container input[type="number"]');
+    const edgeInputs = document.querySelectorAll('#chat-inputs-container input[id^="edge-input-"]');
     if (edgeInputs.length > 0) {
         edgeInputs.forEach(input => {
             edge_lengths_array.push(input.value || 0);
@@ -1182,9 +989,11 @@ function submitQuoteRequest() {
 // --- 도면 입력 생성 함수 ---
 window.generateCustomInputs = function(numEdges) {
     const diagramContainer = document.getElementById('diagram-container');
-    const inputsContainer  = document.getElementById('inputs-container');
+    const inputsContainer  = document.getElementById('chat-inputs-container');
 
-    diagramContainer.innerHTML = `<p class="text-success fw-bold py-3 m-0">🎉 총 ${numEdges}각형 도면이 확정되었습니다!</p>`;
+    if(diagramContainer) {
+        diagramContainer.innerHTML = `<p class="text-success fw-bold py-3 m-0">🎉 총 ${numEdges}각형 도면이 확정되었습니다!</p>`;
+    }
 
     if (typeof clearEdgeLengths === 'function') clearEdgeLengths();
 
@@ -1197,18 +1006,25 @@ window.generateCustomInputs = function(numEdges) {
         }
 
         html += `
-        <div class="col-6">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent text-info border-secondary">${i}번 선분</span>
-                <input type="number" id="edge-input-${i-1}" onclick="this.select()" class="form-control bg-transparent text-white border-secondary" value="" placeholder="길이(mm)" oninput="updateEdgeLength(${i-1}, this.value)">
-            </div>
+        <div class="col-6 mb-3">
+            <label class="form-label small mb-1 fw-bold text-secondary">${i}번 선분 (mm)</label>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="edge-input-${i-1}" onclick="this.select()" class="form-control form-control-sm bg-white text-dark border-secondary small" value="" placeholder="길이 입력" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateEdgeLength(${i-1}, this.value)">
         </div>`;
     }
-    inputsContainer.innerHTML = html;
+    
+    if(inputsContainer) {
+        inputsContainer.innerHTML = `<div class="row g-2">${html}</div>`;
+    }
     
     // 초기 정렬 및 축적 렌더링 강제 트리거
     if (typeof alignAndScalePolygon === 'function') {
         alignAndScalePolygon();
+    }
+
+    // ChatWizard 연동
+    if (typeof ChatWizard !== 'undefined') {
+        ChatWizard.step2Html = `<div class="row g-2">${html}</div>`;
+        ChatWizard.onPolygonClosed();
     }
 };
 
@@ -1294,7 +1110,7 @@ window.setInteractMode = function(mode) {
 // --- 초기 로딩 ---
 window.addEventListener('DOMContentLoaded', () => {
     const diagramContainer = document.getElementById('diagram-container');
-    const inputsContainer  = document.getElementById('inputs-container');
+    const inputsContainer  = document.getElementById('chat-inputs-container');
     const canvasGuide      = document.getElementById('canvas-guide');
     const drawingCanvas    = document.getElementById('drawingCanvas');
 
@@ -1566,5 +1382,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<!-- 플로팅 챗봇 마법사 -->
+<?php include 'chat.php'; ?>
+
 </body>
 </html>

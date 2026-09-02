@@ -1128,14 +1128,14 @@ canvas.addEventListener('drop', (e) => {
             obstacles.push({ 
                 type: draggedItemType, name: typeLabel + dCount, 
                 x: closestLine.x, y: closestLine.y, 
-                angle: closestLine.angle, length: 2000,
+                angle: closestLine.angle, length: 3500,
                 edgeIndex: closestLine.edgeIndex,
                 ratioOnEdge: closestLine.ratioOnEdge,
                 visualDistFromStart: closestLine.visualDistFromStart,
                 visualEdgeLength: closestLine.visualEdgeLength
             });
         } else {
-            obstacles.push({ type: draggedItemType, name: typeLabel + dCount, x: dropX, y: dropY, angle: 0, length: 2000, edgeIndex: -1 });
+            obstacles.push({ type: draggedItemType, name: typeLabel + dCount, x: dropX, y: dropY, angle: 0, length: 3500, edgeIndex: -1 });
         }
     } else if (draggedItemType === 'rack') {
         if (typeof window.spawnInitialRacks === 'function') {
@@ -3083,34 +3083,31 @@ window.renderObstacleInputs = function() {
 
     obstacles.forEach((obs, index) => {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'd-flex align-items-center gap-2 p-2 rounded-2 mt-2';
-        itemDiv.style.background = 'rgba(255, 255, 255, 0.05)';
-        itemDiv.style.border = '1px solid rgba(255,255,255,0.1)';
+        itemDiv.className = 'd-flex flex-column p-2 rounded-2 mt-2 bg-white border shadow-sm';
+        itemDiv.style.borderColor = '#cbd5e1';
 
         const isDoorLike = obs.type === 'door' || obs.type === 'shutter';
-        const nameColor = isDoorLike ? 'text-warning' : 'text-danger';
+        const nameColor = isDoorLike ? 'text-primary' : 'text-danger';
+
+        const headerHtml = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="${nameColor} fw-bold small">${obs.name}</span>
+                <button class="btn btn-sm text-secondary border-0 p-0 px-1 fw-bold" style="font-size: 0.85rem;" onclick="deleteObstacle(${index})" title="삭제">✕</button>
+            </div>
+        `;
 
         if (isDoorLike) {
-            itemDiv.innerHTML = `
-                <span class="${nameColor} fw-bold small" style="min-width:60px;">${obs.name}</span>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-transparent text-secondary border-secondary">길이</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.length}" onclick="this.select()" oninput="updateObstacleData(${index}, 'length', this.value)">
+            itemDiv.innerHTML = headerHtml + `
+                <div>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.length || ''}" placeholder="길이(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
                 </div>
-                <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteObstacle(${index})">✕</button>
             `;
         } else {
-            itemDiv.innerHTML = `
-                <span class="${nameColor} fw-bold small" style="min-width:60px;">${obs.name}</span>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-transparent text-secondary border-secondary">가로</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.width}" onclick="this.select()" oninput="updateObstacleData(${index}, 'width', this.value)">
+            itemDiv.innerHTML = headerHtml + `
+                <div class="d-flex gap-2">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.width || ''}" placeholder="가로(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'width', this.value)">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.height || ''}" placeholder="세로(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'height', this.value)">
                 </div>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-transparent text-secondary border-secondary">세로</span>
-                    <input type="number" class="form-control bg-transparent text-white border-secondary" value="${obs.height}" onclick="this.select()" oninput="updateObstacleData(${index}, 'height', this.value)">
-                </div>
-                <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteObstacle(${index})">✕</button>
             `;
         }
         container.appendChild(itemDiv);

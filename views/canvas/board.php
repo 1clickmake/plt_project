@@ -81,11 +81,11 @@ $isLightTheme = in_array($theme, ['light', 'white']);
         <!-- 모드 전환 버튼 & 동영상 메뉴얼 -->
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="btn-group btn-group-sm" role="group">
-                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-outline-info px-3">👨‍💻 전문가 모드</a>
-                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a>
+                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-outline-info px-3">📐 스마트 캔버스 배치</a>
+                <!-- <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a> -->
                 <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-primary-gradient px-3 fw-bold">📝 게시판 문의</a>
             </div>
-            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" class="btn btn-sm btn-outline-info">🎥 동영상메뉴얼</a>
+            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" target="_blank" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</a>
         </div>
     </div>
 
