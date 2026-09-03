@@ -21,7 +21,10 @@ files_to_upload = [
     'public/assets/js/canvas-interactions-easy.js',
     'views/canvas/index.php',
     'views/canvas/board.php',
-    'views/canvas/easy.php'
+    'views/canvas/easy.php',
+    'views/canvas/chat.php',
+    'public/asamiya_profile.png',
+    'public/assets/images/asamiya_profile.png'
 ]
 
 try:

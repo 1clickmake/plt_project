@@ -2415,8 +2415,10 @@ function drawDimensions() {
             let minDist = Infinity;
 
             racks.forEach(r => {
-                let rOuterDepth = r.rackDepth || 1100;
-                let rDepthPx = rOuterDepth * (r.isDouble ? 2 : 1) * currentScale;
+                let singleDepth = r.rackDepth || 1000;
+                let holderSize = r.holderSize || 200;
+                let totalDepthMm = r.isDouble ? (singleDepth * 2 + holderSize) : singleDepth;
+                let rDepthPx = totalDepthMm * currentScale;
                 
                 let rMinX, rMaxX, rMinY, rMaxY;
                 if (r.isHoriz) {
@@ -2618,7 +2620,12 @@ function drawWallToRackDimensions() {
 
     racksToCheck.forEach(r => {
         let isFocused = (r === window.selectedRack || r === window.hoveredRack || r === currentRackPreview);
-        let dep = (r.rackDepth || 1100) * (r.isDouble ? 2 : 1) * currentScale;
+        
+        let singleDepth = r.rackDepth || 1000;
+        let holderSize = r.holderSize || 200;
+        let totalDepthMm = r.isDouble ? (singleDepth * 2 + holderSize) : singleDepth;
+        let dep = totalDepthMm * currentScale;
+        
         let len = r.totalLengthPx;
         let angle = getRackAngle(r);
 
