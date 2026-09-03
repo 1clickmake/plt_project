@@ -85,7 +85,7 @@ $isLightTheme = in_array($theme, ['light', 'white']);
                 <!-- <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a> -->
                 <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-primary-gradient px-3 fw-bold">📝 게시판 문의</a>
             </div>
-            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? 'asamiya') ?>/video" target="_blank" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</a>
+            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>?tutorial=1" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</a>
         </div>
     </div>
 

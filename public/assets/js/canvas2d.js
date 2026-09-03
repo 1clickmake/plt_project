@@ -90,6 +90,7 @@ let dragOffsetY = 0;
 
 // 파렛트랙 드래그 배치 관련 상태
 let racks = []; // 배치된 랙 그룹들
+window.getRackCount = () => racks.length;
 let isDrawingRack = false;
 let rackStartX = 0;
 let rackStartY = 0;

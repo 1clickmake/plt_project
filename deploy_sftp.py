@@ -19,12 +19,21 @@ files_to_upload = [
     'public/assets/js/canvas-interactions.js',
     'public/assets/js/canvas2d-easy.js',
     'public/assets/js/canvas-interactions-easy.js',
+    'public/assets/js/tutorial.js',
     'views/canvas/index.php',
     'views/canvas/board.php',
     'views/canvas/easy.php',
     'views/canvas/chat.php',
     'public/asamiya_profile.png',
-    'public/assets/images/asamiya_profile.png'
+    'public/assets/images/asamiya_profile.png',
+    'public/assets/images/rotate.gif',
+    'public/assets/images/extend.gif',
+    'public/assets/images/copy.gif',
+    'public/assets/images/bypass.gif',
+    'public/assets/images/delete.gif',
+    'public/assets/images/levels.gif',
+    'public/assets/images/drag.gif',
+    'public/assets/images/storage.gif'
 ]
 
 try:

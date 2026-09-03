@@ -309,7 +309,7 @@ const ChatWizard = {
             천천히 따라오시면 멋진 도면을<br>만드실 수 있어요.💕<br><br>
             먼저 바탕화면의 넓은 도화지(캔버스)에<br>마우스로 점을 찍어<br><b>창고 외곽선(모양)</b>을 직접 그려주세요!<br>
             </span>
-            <span class="text-secondary small">(마지막에 처음 찍은 점을 클릭하면 도형이 완성됩니다.)</span>
+            <br><div style="text-align:center;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); margin-top:5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
         `);
     },
 
@@ -533,11 +533,20 @@ const ChatWizard = {
                 <small class="text-secondary">(선택사항: 이미지, PDF)</small>
             </div>
             <div id="file-preview-area" class="d-flex flex-wrap gap-2 mt-2"></div>
-            <button class="chat-btn mt-3" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 1rem; padding: 12px; border-radius: 25px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);" onclick="ChatWizard.submitFinal()">🚀 자동 배치 시작하기</button>
+            <button id="final-submit-btn" class="chat-btn mt-3" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 1rem; padding: 12px; border-radius: 25px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);" onclick="ChatWizard.submitFinal()">🚀 자동 배치 시작하기</button>
         `);
     },
 
     submitFinal() {
+        const btn = document.getElementById('final-submit-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '✅ 배치 완료';
+            btn.style.background = '#64748b';
+            btn.style.boxShadow = 'none';
+            btn.style.cursor = 'not-allowed';
+        }
+
         if(typeof window.runAutoLayout === 'function') {
             window.runAutoLayout();
             
@@ -548,10 +557,11 @@ const ChatWizard = {
                     🎉 <b>파렛트랙 배치가 성공적으로<br>실행되었습니다!</b><br><br>
                     <span class="small">
                     • 랙을 드래그해서 원하는 위치로<br>자유롭게 이동시킬 수 있어요.<br>
-                    • 리모컨을 사용해서 연장이나 회전,<br>삭제 등을 할 수 있어요! 🚀
+                    • 리모컨을 사용해서 연장이나 회전,<br>삭제 등을 할 수 있어요! 🚀<br>
+                    <span class="text-danger fw-bold">※ 주의:</span> 랙을 드래그해서 이동할 때에는<br>리모컨의 모든 버튼이 꺼져 있는지 꼭 확인하세요!
                     </span>
                     <div class="mt-3">
-                        <a href="/quote/${vendorSlug}/video" target="_blank" class="chat-btn text-decoration-none d-block text-center shadow-sm" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); font-size: 0.85rem; padding: 8px 12px;">🎮 리모콘 사용법 영상 보기</a>
+                        <button onclick="if(window.startRemoteControlTutorial) window.startRemoteControlTutorial();" class="chat-btn border-0 w-100 text-decoration-none d-block text-center shadow-sm text-white fw-bold" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); font-size: 0.85rem; padding: 8px 12px; cursor: pointer;">🎮 리모콘 사용법 (대화형 가이드)</button>
                     </div>
                 `);
             }, 400);
