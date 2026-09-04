@@ -6,37 +6,41 @@ use App\Core\Database;
 
 class VendorController extends BaseController {
     public function index() {
+        global $user;
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('/login');
             return;
         }
+        if (empty($user)) {
+            $user = $_SESSION['user'];
+        }
         
-        $vendorUserId = $_SESSION['user']['user_id'];
+        $vendorUserId = $user['id'] ?? null;
+        $vendorUserStrId = $user['user_id'] ?? '';
         $db = \App\Core\Database::getInstance();
         
         // 오늘 접수된 견적 건수
-        $todayStart = date('Y-m-d 00:00:00');
-        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND created_at >= ?");
-        $stmt->execute([$vendorUserId, $todayStart]);
+        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2) AND DATE(created_at) = CURDATE()");
+        $stmt->execute(['vuid1' => $vendorUserId, 'vuid2' => $vendorUserStrId]);
         $todayQuotesCount = intval($stmt->fetchColumn());
         
         // 발송 한도 정보
-        $balanceInfo = $this->getQuoteBalance($vendorUserId);
+        $balanceInfo = $this->getQuoteBalance($vendorUserId ?: $vendorUserStrId);
 
         // 금일 메일 발송 횟수
-        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND is_mailed = 1 AND mailed_at >= ?");
-        $stmt->execute([$vendorUserId, $todayStart]);
+        $stmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2) AND is_mailed = 1 AND DATE(mailed_at) = CURDATE()");
+        $stmt->execute(['vuid1' => $vendorUserId, 'vuid2' => $vendorUserStrId]);
         $todayMailedCount = intval($stmt->fetchColumn());
         
         // 공급사 설정 상태 확인
-        $stmtSettings = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = ?");
-        $stmtSettings->execute([$vendorUserId]);
+        $stmtSettings = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = :vuid1 OR user_id = :vuid2");
+        $stmtSettings->execute(['vuid1' => $vendorUserId, 'vuid2' => $vendorUserStrId]);
         $vendorSettings = $stmtSettings->fetch(\PDO::FETCH_ASSOC);
         $isSettingsComplete = $vendorSettings && !empty($vendorSettings['url_slug']);
 
         // 금일 폼 접속 횟수
-        $stmtVisit = $db->prepare("SELECT COUNT(*) FROM vendor_page_visits WHERE vendor_user_id = ? AND visited_at >= ?");
-        $stmtVisit->execute([$vendorUserId, $todayStart]);
+        $stmtVisit = $db->prepare("SELECT COUNT(*) FROM vendor_page_visits WHERE (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2) AND DATE(visited_at) = CURDATE()");
+        $stmtVisit->execute(['vuid1' => $vendorUserId, 'vuid2' => $vendorUserStrId]);
         $todayVisitCount = intval($stmtVisit->fetchColumn());
 
         // 최근 7일 접속 통계 (일자별)
@@ -44,11 +48,11 @@ class VendorController extends BaseController {
         $stmtStats = $db->prepare("
             SELECT DATE(visited_at) as visit_date, COUNT(*) as cnt 
             FROM vendor_page_visits 
-            WHERE vendor_user_id = ? AND visited_at >= ? 
+            WHERE (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2) AND visited_at >= :sdago 
             GROUP BY visit_date 
             ORDER BY visit_date ASC
         ");
-        $stmtStats->execute([$vendorUserId, $sevenDaysAgo]);
+        $stmtStats->execute(['vuid1' => $vendorUserId, 'vuid2' => $vendorUserStrId, 'sdago' => $sevenDaysAgo]);
         $visitStatsRaw = $stmtStats->fetchAll(\PDO::FETCH_ASSOC);
         
         // 7일치 빈 날짜 배열 채우기
@@ -722,7 +726,7 @@ class VendorController extends BaseController {
         if (empty($ruleId)) {
             // 엑셀 단가표가 없는 소형 업체를 위한 심플 세트 단위 BOM
             $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
-                $typeName = ($frames == 2) ? '독립형 (Starter) 세트' : '연결형 (Add-on) 세트';
+                $typeName = '파렛트랙';
                 $spec = "{$beamL} × {$depth} × {$rackH}";
                 $bom = [
                     [
@@ -1214,7 +1218,7 @@ class VendorController extends BaseController {
         $db = \App\Core\Database::getInstance();
         
         // 1. users 테이블에서 플랜 및 가입일 직접 조회
-        $userStmt = $db->prepare("SELECT id, plan, created_at, addon_quotes_balance FROM users WHERE user_id = ? OR id = ? LIMIT 1");
+        $userStmt = $db->prepare("SELECT id, user_id, plan, created_at, addon_quotes_balance FROM users WHERE user_id = ? OR id = ? LIMIT 1");
         $userStmt->execute([$vendorUserId, $vendorUserId]);
         $userData = $userStmt->fetch();
 
@@ -1252,8 +1256,9 @@ class VendorController extends BaseController {
         }
 
         // 4. 현재 주기 발송 메일 수 카운트
-        $countStmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE vendor_user_id = ? AND is_mailed = 1 AND mailed_at >= ?");
-        $countStmt->execute([$vendorUserId, $baseDate]);
+        $userStrId = $userData['user_id'] ?? $userData['id'];
+        $countStmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE (vendor_user_id = :v1 OR vendor_user_id = :v2) AND is_mailed = 1 AND mailed_at >= :bdate");
+        $countStmt->execute(['v1' => $userData['id'], 'v2' => $userStrId, 'bdate' => $baseDate]);
         $usedCount = intval($countStmt->fetchColumn());
 
         // 5. 남은 횟수 계산 (기본 남은 건수 + addon 누적)

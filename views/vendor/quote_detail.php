@@ -201,7 +201,7 @@
                             <span>💡</span> 시공리포트
                         </h5>
                         
-                        <div class="flex-grow-1 print-scroll-reset" style="line-height: 1.0; font-size: 0.88rem; overflow-y: auto; max-height: 700px; white-space: pre-line; word-break: keep-all; color: #e2e8f0;">
+                        <div class="flex-grow-1 print-scroll-reset" style="line-height: 1.4; font-size: 0.88rem; overflow-y: auto; max-height: 700px; word-break: keep-all; color: #e2e8f0;">
                             <?php if (($quote['source_mode'] ?? '') === 'board'): ?>
                                 <div>
                                     <h6 class="text-white fw-bold mb-2">[게시판 문의 내용]</h6>
@@ -228,8 +228,11 @@
                                     <div class="ps-2 text-light fw-bold" style="font-size: 1.05rem; color: #fff;">
                                         <?= htmlspecialchars($quote['title'] ?? '제목 없음') ?>
                                     </div>
-                                    <div class="p-2 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                                        <?= htmlspecialchars($quote['summary'] ?? '') ?>
+                                    <?php 
+                                        $cleanSummaryBoard = trim(preg_replace('/\[(신청 모드|고객 요청사항|문의 제목)[^\]]*\]/u', '', $quote['summary'] ?? ''));
+                                    ?>
+                                    <div class="p-2 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); white-space: pre-line;">
+                                        <?= htmlspecialchars($cleanSummaryBoard) ?>
                                     </div>
                                 </div>
                             <?php else: ?>
@@ -247,57 +250,50 @@
                                 ?>
 
                                 <?php if ($edgeText): ?>
-                                    <div>
-                                        <h6 class="text-white fw-bold">[창고 벽면 길이]</h6>
+                                    <div class="mb-3">
+                                        <h6 class="text-white fw-bold mb-1">[창고 벽면 길이]</h6>
                                         <div class="ps-2 text-light"><?= htmlspecialchars($edgeText) ?></div>
                                     </div>
                                 <?php endif; ?>
 
-                                <div>
-                                    <h6 class="text-white fw-bold">[랙 및 적재물 제원]</h6>
+                                <div class="mb-3">
+                                    <h6 class="text-white fw-bold mb-1">[랙 및 적재물 제원]</h6>
                                     <div class="ps-2 text-light">
                                         <div>파렛트 규격: <?= htmlspecialchars($quote['pallet_w'] ?? 0) ?>(W) x <?= htmlspecialchars($quote['pallet_d'] ?? 0) ?>(D) x <?= htmlspecialchars($quote['pallet_h'] ?? 0) ?>(H) mm</div>
                                         <div>포크 진입 방향: <?= htmlspecialchars($quote['fork_direction'] ?? '') ?></div>
                                         <div>총 중량: <?= htmlspecialchars($quote['pallet_weight'] ?? 0) ?> kg / PLT</div>
-                                        <div class="mt-2">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
+                                        <div class="mt-1">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
                                         <div>최대 인상높이: <?= htmlspecialchars($quote['forklift_lift_height'] ?? 0) ?> mm</div>
                                         <div>직각교차 통로폭(AST): <?= htmlspecialchars($quote['forklift_ast'] ?? 0) ?> mm</div>
-                                        <div class="mt-2">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
+                                        <div class="mt-1">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
                                         <div>설치 높이: <?= htmlspecialchars($quote['rack_height'] ?? '') ?></div>
                                     </div>
                                 </div>
 
                                 <?php if (!empty($quote['rack_spec'])): ?>
-                                    <div>
-                                        <h6 class="text-white fw-bold">
-                                            <?= htmlspecialchars($quote['rack_spec']) ?>
-                                            <?php if (!empty($quote['rack_type'])): ?>
-                                                (<?= htmlspecialchars($quote['rack_type']) ?>)
-                                            <?php endif; ?>
-                                        </h6>
-                                        <div class="ps-2 text-light">
-                                            독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT
-                                        </div>
-                                        <?php if (!empty($quote['rack_small_conn']) || !empty($quote['rack_bypass'])): ?>
-                                            <div class="ps-2 text-light mt-1 text-muted" style="font-size: 0.8rem; color: #e2e8f0;">
-                                                <?php if (!empty($quote['rack_bypass'])): ?>
-                                                    <div class="mt-2 pt-2 border-top border-secondary w-75">
-                                                        <?php if (!empty($quote['rack_bypass_type'])): ?>
-                                                            <div class="fw-bold mb-1" style="color: #f87171;"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></div>
-                                                        <?php endif; ?>
-                                                        <div class="text-danger fw-bold">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
-                                                    </div>
+                                    <div class="mt-3">
+                                        <h6 class="text-white fw-bold mb-1"><?= htmlspecialchars($quote['rack_spec']) ?><?php if (!empty($quote['rack_type'])): ?> (<?= htmlspecialchars($quote['rack_type']) ?>)<?php endif; ?></h6>
+                                        <div class="ps-2 text-light">독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT</div>
+                                        <?php if (!empty($quote['rack_bypass'])): ?>
+                                            <div class="mt-2">
+                                                <?php if (!empty($quote['rack_bypass_type'])): ?>
+                                                    <h6 class="text-white fw-bold mb-1"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></h6>
                                                 <?php endif; ?>
+                                                <div class="ps-2 text-light">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($quote['summary'])): ?>
-                                    <div>
-                                        <h6 class="text-white fw-bold mb-2">[AI 분석 리포트]</h6>
-                                        <div class="ps-2 text-light">
-                                            <?= htmlspecialchars(str_replace('[AI 분석 리포트]', '', $quote['summary'])) ?>
+                                <?php 
+                                    $rawSummary = $quote['summary'] ?? '';
+                                    $cleanSummary = trim(preg_replace('/\[(신청 모드|고객 요청사항|문의 제목)[^\]]*\]/u', '', $rawSummary));
+                                ?>
+                                <?php if (!empty($cleanSummary)): ?>
+                                    <div class="mt-3 pt-3 border-top border-secondary">
+                                        <h6 class="text-white fw-bold mb-0 pb-0">고객 요청 사항</h6>
+                                        <div class="ps-2 text-light" style="white-space: pre-line;">
+                                            <?= htmlspecialchars($cleanSummary) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>

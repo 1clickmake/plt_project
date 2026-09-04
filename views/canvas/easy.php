@@ -1072,7 +1072,7 @@ function submitQuoteRequest() {
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
             currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
         }),
-        summary: `[신청 모드: 이지 모드]\n` + (details ? `[고객 요청사항]\n${details}\n\n` : '') + (window.lastAiSummary || ''),
+        summary: details || (window.lastAiSummary || ''),
         source_mode: 'easy',
         edge_lengths: edge_lengths_str,
         pallet_w: pw,

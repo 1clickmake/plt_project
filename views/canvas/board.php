@@ -274,7 +274,7 @@ function submitBoardInquiry() {
         condition_type: conditionType,
         self_install: selfInstall,
         canvas_data: '',
-        summary: `[신청 모드: 게시판 문의]\n[문의 제목: ${title}]\n\n${content}`,
+        summary: content,
         source_mode: 'board',
         rack_indep: 0,
         rack_conn: 0,

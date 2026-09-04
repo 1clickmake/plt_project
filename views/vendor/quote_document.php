@@ -140,7 +140,26 @@ $indep = intval($quote['rack_indep'] ?? 0);
 $conn = intval($quote['rack_conn'] ?? 0);
 $bypass = intval($quote['rack_bypass'] ?? 0);
 $small = intval($quote['rack_small_conn'] ?? 0);
-$levels = intval($quote['rack_levels'] ?? 2);
+$levels = intval($quote['rack_levels'] ?? 0);
+$stages = 0;
+
+if ($levels <= 0 && !empty($modules)) {
+    foreach ($modules as $mod) {
+        $text = ($mod['name'] ?? '') . ' ' . ($mod['spec'] ?? '') . ' ' . ($mod['remark'] ?? '');
+        if (preg_match('/(\d+)\s*[sS]\s*(\d+)\s*단/iu', $text, $matches)) {
+            $stages = intval($matches[1]);
+            $levels = intval($matches[2]);
+            break;
+        }
+    }
+}
+
+if ($levels <= 0) {
+    $levels = 2; // Default fallback
+}
+if ($stages <= 0) {
+    $stages = max(1, $levels - 1);
+}
 
 $totalFrames = ($indep * 2) + ($bypass * 2) + $conn + $small;
 $totalColumns = $totalFrames * 2;
@@ -467,7 +486,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
     <div class="project-title">·PROJECT&nbsp;&nbsp;☆ PALLET RACK 설치 ☆</div>
     <table class="project-table">
       <tr>
-        <td class="label" style="width:170px;">·납품 가능 일자 : 추후 협의</td>
+        <td class="label" style="width:200px;">·납품 가능 일자 : 추후 협의</td>
         <td>·결제계좌: <span class="red" style="font-weight:bold;"><?= htmlspecialchars($settings['bank_account'] ?? '') ?></span></td>
       </tr>
       <tr>
@@ -483,7 +502,7 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
 
   <!-- ============ INFORMATION BLOCK ============ -->
   <div style="margin-top:10px;">
-    <div class="info-title">·Information·</div>
+    <div class="info-title py-2">·Information·</div>
     <table class="info-table">
       <colgroup>
         <col style="width:45%;">
@@ -497,8 +516,8 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
         <td>
           <div class="rack-img">
             <?php
-              $stages = max(1, $levels - 1); // 1S 2단 => 로드빔 1단, 2S 3단 => 로드빔 2단
-              
+              // $stages and $levels have already been calculated at the top
+              // using either rack_levels or falling back to the module remarks.
               $levelYs = [];
               if ($stages > 0) {
                   $startY = 25;
@@ -530,17 +549,15 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
 
               <!-- 연결 rack -->
               <g stroke="#2255aa" stroke-width="4" fill="none">
-                <line x1="150" y1="15" x2="150" y2="115"/>
-                <line x1="205" y1="15" x2="205" y2="115"/>
-                <line x1="255" y1="15" x2="255" y2="115"/>
+                <!-- 왼쪽 기둥 없음 (독립 기둥 공유) -->
+                <line x1="210" y1="15" x2="210" y2="115"/>
               </g>
               <g stroke="#c0392b" stroke-width="6">
                 <?php foreach($levelYs as $y): ?>
-                <line x1="140" y1="<?= $y ?>" x2="215" y2="<?= $y ?>"/>
-                <line x1="195" y1="<?= $y ?>" x2="260" y2="<?= $y ?>"/>
+                <line x1="140" y1="<?= $y ?>" x2="220" y2="<?= $y ?>"/>
                 <?php endforeach; ?>
               </g>
-              <text x="200" y="128" font-size="11" text-anchor="middle" fill="#000">연결</text>
+              <text x="180" y="128" font-size="11" text-anchor="middle" fill="#000">연결</text>
             </svg>
           </div>
           <div class="caution">자재 특성상 출고시 도장색상이 변동 될수 있습니다.</div>
@@ -1088,8 +1105,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // Event Listeners
-    if (inputNewPercent) inputNewPercent.addEventListener('input', calculateMargin);
-    if (inputUsedPercent) inputUsedPercent.addEventListener('input', calculateMargin);
+    if (inputNewPercent) {
+        inputNewPercent.addEventListener('input', function() {
+            if (inputNewTarget) inputNewTarget.value = '0';
+            calculateMargin();
+        });
+    }
+    if (inputUsedPercent) {
+        inputUsedPercent.addEventListener('input', function() {
+            if (inputUsedTarget) inputUsedTarget.value = '0';
+            calculateMargin();
+        });
+    }
     
     function calculatePercentFromTarget(type) {
         let targetInput = document.getElementById('calc-' + type + '-target');

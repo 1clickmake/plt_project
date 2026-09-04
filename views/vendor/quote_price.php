@@ -173,7 +173,46 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 .btn-del-row:hover {
     color: #b91c1c;
 }
+.floating-save-btn {
+    position: fixed;
+    top: 50%;
+    right: 30px;
+    transform: translateY(-50%);
+    z-index: 1050;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 15px 20px;
+    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 2px solid #198754;
+    background-color: #198754;
+    color: white;
+    cursor: pointer;
+}
+.floating-save-btn:hover {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    background-color: #157347;
+    color: white;
+}
+.floating-save-btn.disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+    transform: translateY(-50%);
+    box-shadow: none;
+}
 </style>
+<?php if (!$isCompleted): ?>
+<button type="button" id="btnSaveDetailsFloating" class="floating-save-btn shadow-lg">
+    <i class="fa-solid fa-floppy-disk fa-2x mb-1"></i>
+    <span class="fw-bold">수정사항<br>저장하기</span>
+</button>
+<?php endif; ?>
   <table class="header-table">
     <tr>
       <td class="label-cell">상 호</td>
@@ -249,7 +288,9 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center fw-bold row-no"><?= $index++ ?></td>
       <td class="center fw-bold text-primary mod-name"><?= htmlspecialchars($mod['name']) ?></td>
       <td class="center mod-spec"><?= htmlspecialchars($mod['spec']) ?></td>
-      <td class="center fw-bold text-danger mod-qty"><?= intval($mod['qty']) ?></td>
+      <td class="center">
+          <input type="number" class="form-control form-control-sm text-center fw-bold text-danger mod-qty-input" value="<?= intval($mod['qty']) ?>" style="width: 50px; margin: 0 auto; padding: 1px 4px; font-size: 0.9rem;" min="1" title="세트 수량">
+      </td>
       <td class="center">
           <input type="text" class="form-control form-control-sm text-center mod-unit-text" value="<?= htmlspecialchars($mod['unit_text'] ?? '대') ?>" style="width: 40px; margin: 0 auto; padding: 1px 4px; font-size: 0.85rem;" title="단위 수정 가능 (대/개/조 등)">
       </td>
@@ -421,7 +462,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center fw-bold" id="totalRackQtyUnit"><?= $totalRackQty > 0 ? '대' : '' ?></td>
       <td class="center"></td>
       <td class="right fw-bold" id="overallTotalText" style="color: #ef4444; font-size: 1.1rem;"><?= number_format($overallTotal ?? 0) ?></td>
-      <td class="center fw-bold">원 (네고 10% 포함)</td>
+      <td class="center fw-bold">원<?= empty($quote['pricing_rule_id']) ? '' : ' (네고 10% 포함)' ?></td>
     </tr>
   </table>
 
@@ -434,8 +475,13 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
     document.addEventListener('DOMContentLoaded', function() {
         const quoteId = <?= json_encode($quote['id']) ?>;
 
+        const hasPricingRule = <?= empty($quote['pricing_rule_id']) ? 'false' : 'true' ?>;
+
         // Sehwa Price Calculator final amount formula: round((raw * 1.1) / 100) * 100
         function calcFinalAmount(rawAmount) {
+            if (!hasPricingRule) {
+                return rawAmount;
+            }
             return Math.round((rawAmount * 1.1) / 100) * 100;
         }
 
@@ -483,7 +529,8 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                     }
                 });
 
-                let modQty = 1;
+                const qtyInput = modRow.querySelector('.mod-qty-input');
+                let modQty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
                 let modUnitPrice = 0;
                 const isDirectInput = isBoardQuote || modType === '직접입력';
 
@@ -502,25 +549,21 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                     }
 
                     if (nonLossRows.length === 1) {
-                        // 단일 품목 BOM (수량/단가를 그대로 모듈과 1:1 일치)
+                        // 단일 품목 BOM
                         const bQty = parseInt(bomQtyEl ? bomQtyEl.value : 1) || 1;
                         const bUnit = parseFloat(bomUnitEl ? bomUnitEl.value : 0) || 0;
 
-                        modQty = bQty;
-                        modUnitPrice = isDirectInput ? bUnit : calcFinalAmount(bUnit);
-
-                        if (modRow.querySelector('.mod-qty')) {
-                            modRow.querySelector('.mod-qty').innerText = modQty;
+                        if (isDirectInput) {
+                            modUnitPrice = bUnit; // 직접 입력은 부품 단가 그대로 사용
+                        } else {
+                            // 캔버스 연동 견적인 경우 1대당 부품 합계에 마진 적용
+                            modUnitPrice = calcFinalAmount(bQty * bUnit);
                         }
                     } else {
-                        // 다중 부품 BOM (구성 부품별 합산)
-                        const qtyEl = modRow.querySelector('.mod-qty');
-                        modQty = parseInt(qtyEl ? qtyEl.innerText : 1) || 1;
+                        // 다중 부품 BOM
                         modUnitPrice = isDirectInput ? bomRawSum : calcFinalAmount(bomRawSum);
                     }
                 } else {
-                    const qtyEl = modRow.querySelector('.mod-qty');
-                    modQty = parseInt(qtyEl ? qtyEl.innerText : 1) || 1;
                     const unitPriceEl = modRow.querySelector('.mod-unit-price');
                     modUnitPrice = parseInt((unitPriceEl ? unitPriceEl.innerText : '0').replace(/,/g, '')) || 0;
                 }
@@ -682,7 +725,17 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             }
         });
 
-        // 🌟 저장하기 버튼 AJAX
+        // 🌟 저장하기 버튼 AJAX (플로팅 버튼 연동)
+        const floatingSaveBtn = document.getElementById('btnSaveDetailsFloating');
+        if (floatingSaveBtn) {
+            floatingSaveBtn.addEventListener('click', function() {
+                const mainBtn = document.getElementById('btnSaveDetails');
+                if (mainBtn && !mainBtn.disabled) {
+                    mainBtn.click();
+                }
+            });
+        }
+
         document.getElementById('btnSaveDetails').addEventListener('click', function() {
             recalculateAll();
 
@@ -696,7 +749,8 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 const spec = (modRow.querySelector('.mod-spec') || {}).innerText?.trim() || '';
                 const remarkEl = modRow.querySelector('.mod-remark');
                 const remark = remarkEl ? (remarkEl.tagName === 'INPUT' ? remarkEl.value.trim() : remarkEl.innerText.trim()) : '';
-                const qty = parseInt((modRow.querySelector('.mod-qty') || {}).innerText || '0') || 0;
+                const qtyInput = modRow.querySelector('.mod-qty-input');
+                const qty = parseInt(qtyInput ? qtyInput.value : '0') || 0;
                 const unitText = (modRow.querySelector('.mod-unit-text') || {}).value?.trim() || '대';
                 const unitPriceEl = modRow.querySelector('.mod-unit-price');
                 const unitPrice = parseInt((unitPriceEl ? unitPriceEl.innerText : '0').replace(/,/g, '')) || 0;
