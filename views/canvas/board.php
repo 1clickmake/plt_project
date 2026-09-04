@@ -69,11 +69,8 @@ $isLightTheme = in_array($theme, ['light', 'white']);
     <!-- 상단 헤더 & 모드 전환 네비게이션 -->
     <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-secondary flex-wrap gap-3">
         <div>
-            <?php if (!empty($vendor['company_logo'])): ?>
-                <img src="<?= htmlspecialchars($vendor['company_logo']) ?>" alt="Logo" class="mb-1" style="max-height: 32px; border-radius: 4px;">
-            <?php endif; ?>
             <h4 class="fw-bold m-0" style="background: -webkit-linear-gradient(#38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                <?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>스마트 창고 견적 및 고객 문의
+                <?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>창고 견적 문의
             </h4>
             <p class="text-muted small m-0 mt-1">도면 작성이 번거로우신가요? 글과 파일만 남겨주시면 전문가가 도면 및 맞춤 견적서를 제작해 드립니다.</p>
         </div>

@@ -257,13 +257,38 @@ $isLightTheme = in_array($theme, ['light', 'white']);
             color: #1e293b !important;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
         }
+        /* 🎮 리모컨 패널: 화이트 모드에서도 시크하고 묵직한 프리미엄 다크 스타일 유지 */
         body.theme-light #canvas-remote-ctrl > div {
-            background: #ffffff !important;
-            border: 1px solid #bae6fd !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05) !important;
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
+            border: 1px solid rgba(56, 189, 248, 0.4) !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
         }
         body.theme-light #remote-header {
-            color: #0284c7 !important;
+            color: #38bdf8 !important;
+        }
+        body.theme-light #canvas-remote-ctrl div[style*="EDIT MODE"] {
+            color: rgba(148, 163, 184, 0.8) !important;
+        }
+        body.theme-light #canvas-remote-ctrl button[onclick*="panCanvas"] {
+            background: rgba(51, 65, 85, 0.75) !important;
+            color: #94a3b8 !important;
+            border: none !important;
+        }
+        body.theme-light #canvas-remote-ctrl button[onclick*="zoomIn"],
+        body.theme-light #canvas-remote-ctrl button[onclick*="zoomOut"] {
+            background: rgba(56, 189, 248, 0.13) !important;
+            color: #38bdf8 !important;
+        }
+        body.theme-light #canvas-remote-ctrl button[onclick*="resetZoom"] {
+            background: rgba(99, 102, 241, 0.18) !important;
+            color: #a5b4fc !important;
+        }
+        body.theme-light #canvas-remote-ctrl div[style*="width:36px"] {
+            background: rgba(22, 33, 52, 0.8) !important;
+            border-color: rgba(56, 189, 248, 0.12) !important;
+        }
+        body.theme-light #canvas-remote-ctrl div[style*="height:1px"] {
+            background: rgba(56, 189, 248, 0.18) !important;
         }
         body.theme-light .modal-content {
             background: #ffffff !important;
@@ -314,13 +339,10 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 <div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
     <?php if (!$isEmbed): ?>
     <div class="text-center mb-3 flex-shrink-0 position-relative">
-        <?php if (!empty($vendor)): ?>
-            <h4 class="fw-bold text-light mb-1"><?= htmlspecialchars($vendor['company_name']) ?></h4>
-        <?php endif; ?>
         <h2 class="fw-bold" style="background: -webkit-linear-gradient(#38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            스마트 창고 배치 견적
+           <?= htmlspecialchars($vendor['company_name']) ?> - 스마트 창고 배치 견적
         </h2>
-        <p class="text-muted small m-0">복잡한 창고 형태도 드래그 앤 드롭으로 1분 만에 완성! <?php if(!empty($vendor['contact_number'])) echo " (문의: " . htmlspecialchars($vendor['contact_number']) . ")"; ?></p>
+        <p class="text-muted small m-0">복잡한 창고 형태도 드래그 앤 드롭으로 5분 만에 완성! <?php if(!empty($vendor['contact_number'])) echo " (문의: " . htmlspecialchars($vendor['contact_number']) . ")"; ?></p>
         
     </div>
     <?php endif; ?>
@@ -765,8 +787,82 @@ function showAiResult(d) {
 }
 
 
+// 배치된 랙 유효성 검사 (겹침, 설치 불가 빨간색 상태 판별)
+function checkAllRacksValid() {
+    let currentRacks = [];
+    if (typeof window.getRacks === 'function') {
+        currentRacks = window.getRacks();
+    } else if (typeof racks !== 'undefined' && Array.isArray(racks)) {
+        currentRacks = racks;
+    } else if (window.racks && Array.isArray(window.racks)) {
+        currentRacks = window.racks;
+    }
+
+    const indep = document.getElementById('top-badge-indep') ? (parseInt(document.getElementById('top-badge-indep').innerText) || 0) : 0;
+    const conn = document.getElementById('top-badge-conn') ? (parseInt(document.getElementById('top-badge-conn').innerText) || 0) : 0;
+    const totalBays = indep + conn;
+
+    // 배열도 비어있고 상단 뱃지 랙 수량도 0일 때만 랙 없음 안내
+    if ((!currentRacks || currentRacks.length === 0) && totalBays === 0) {
+        return {
+            valid: false,
+            message: '⚠️ 도면에 배치된 랙이 없습니다. 먼저 랙을 배치해 주세요!'
+        };
+    }
+
+    let invalidCount = 0;
+    const validator = window.checkRackValidPlacement || (typeof checkRackValidPlacement === 'function' ? checkRackValidPlacement : null);
+
+    if (currentRacks && currentRacks.length > 0) {
+        for (let r of currentRacks) {
+            if (validator) {
+                r.isValid = validator(r);
+            }
+            if (r.isValid === false) {
+                invalidCount++;
+            }
+        }
+    }
+
+    if (invalidCount > 0) {
+        if (typeof draw === 'function') draw(); // 빨간색 하이라이트 화면 즉시 갱신
+        return {
+            valid: false,
+            message: `⚠️ 현재 다른 랙과 겹치거나 설치 불가능한 위치에 있는 랙(빨간색 표시)이 ${invalidCount}대 있습니다!\n\n도면에서 빨간색 테두리로 표시된 랙의 위치나 간격을 안전하게 조정한 후 다시 견적을 요청해 주세요.`
+        };
+    }
+
+    return { valid: true };
+}
+
+// 견적 요청 모달 열기 전 유효성 사전 검사
+function openQuoteRequestModal() {
+    const check = checkAllRacksValid();
+    if (!check.valid) {
+        alert(check.message);
+        return;
+    }
+    const modalEl = document.getElementById('quoteRequestModal');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
 // --- 견적 요청 모달 제출 ---
 function submitQuoteRequest() {
+    // 랙 유효성 재검사 (겹침 및 설치 불가 랙 제출 차단)
+    const check = checkAllRacksValid();
+    if (!check.valid) {
+        alert(check.message);
+        const submitBtn = document.querySelector('.quote-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 견적 요청 제출';
+        }
+        return;
+    }
+
     if (typeof updateRackFormCounts === 'function') {
         updateRackFormCounts();
     }
@@ -1267,7 +1363,7 @@ window.addEventListener('DOMContentLoaded', () => {
         <div style="height:1px; background: rgba(56,189,248,0.18); margin: 2px 0 8px;"></div>
 
         <!-- 견적 요청 버튼 (빨간색) -->
-        <button id="remote-quote-btn" class="d-none" data-bs-toggle="modal" data-bs-target="#quoteRequestModal" style="
+        <button id="remote-quote-btn" class="d-none" onclick="openQuoteRequestModal()" style="
             width:100%; border: 1px solid rgba(239,68,68,0.7); border-radius:10px;
             background: rgba(220,38,38,0.2); color:#fca5a5;
             font-size:0.7rem; font-weight:700; padding:18px 4px;

@@ -121,9 +121,15 @@ function isDoubleRow() {
     return el && el.value === 'double';
 }
 
-function getLogicalPos(e) {
+function getLogicalPos(e, forceRaw = false) {
     const rawX = e.offsetX / cameraZoom;
     const rawY = e.offsetY / cameraZoom;
+    
+    // 도면 작성 모드가 아니거나, 랙/장애물 이동 중이거나, Shift키를 누른 경우 픽셀 정밀도로 부드럽게 추적
+    if (forceRaw || !isDrawingMode || isMovingRack || (typeof isExtendingRack !== 'undefined' && isExtendingRack) || (e && e.shiftKey)) {
+        return { x: rawX, y: rawY };
+    }
+    
     if (typeof getGridSnapPx === 'function' && currentScale > 0) {
         const snapPx = getGridSnapPx();
         return {
@@ -922,8 +928,8 @@ canvas.addEventListener('mousemove', (e) => {
         let targetX = currentX + rackDragOffsetX;
         let targetY = currentY + rackDragOffsetY;
 
-        // 마그네틱 스냅 로직 적용
-        let snappedPos = calculateRackSnap(targetX, targetY, currentRackPreview);
+        // 마그네틱 스냅 로직 적용 (Shift 키 누를 시 자유 이동)
+        let snappedPos = calculateRackSnap(targetX, targetY, currentRackPreview, e.shiftKey);
         currentRackPreview.x = snappedPos.x;
         currentRackPreview.y = snappedPos.y;
 
@@ -1295,140 +1301,220 @@ function getEdgeClearance(p1, p2) {
     return maxPillarDepth + (100 * currentScale);
 }
 
-// 마그네틱 스냅 로직
-function calculateRackSnap(targetX, targetY, r) {
+// 마그네틱 스냅 로직 (부드럽고 쫀득한 지능형 마그네틱 스냅)
+function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
+    // Shift 키를 누른 상태에서는 스냅을 완전히 무시하고 부드럽고 자유롭게 이동
+    if (isShiftPressed) {
+        return { x: targetX, y: targetY };
+    }
+
     let snappedX = targetX;
     let snappedY = targetY;
-    const SNAP_DIST = 25; // 스냅 발동 픽셀 반경
-    const depthPx = getRackTotalDepthPx(r);
+    const SNAP_DIST = 14; // 부드럽고 쫀득한 스냅 반경 (기존 25px -> 14px로 축소하여 툭툭 튀는 현상 제거)
 
-    // 현재 좌표 기준 임시 랙 및 회전 바운딩 박스
+    let snappedXApplied = false;
+    let snappedYApplied = false;
+
+    // 현재 타겟 좌표 기준 임시 랙 및 정확한 회전 바운딩 박스
     const tempRack = { ...r, x: targetX, y: targetY };
     const tempBoxes = getRackBoxes(tempRack);
     let minX = tempBoxes.physical.minX;
     let maxX = tempBoxes.physical.maxX;
     let minY = tempBoxes.physical.minY;
     let maxY = tempBoxes.physical.maxY;
+    let rackCenterX = (minX + maxX) / 2;
+    let rackCenterY = (minY + maxY) / 2;
 
-    for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        let CLEARANCE = getEdgeClearance(p1, p2);
-
-        // 수직 벽면
-        if (Math.abs(p1.x - p2.x) < 5) {
-            let wallX = p1.x;
-            if (Math.abs(minX - (wallX + CLEARANCE)) < SNAP_DIST) {
-                snappedX += (wallX + CLEARANCE) - minX;
-            } else if (Math.abs(maxX - (wallX - CLEARANCE)) < SNAP_DIST) {
-                snappedX += (wallX - CLEARANCE) - maxX;
-            }
-
-            // Y축 정중앙 스냅
-            let wallCenterY = (p1.y + p2.y) / 2;
-            let rackCenterY = (minY + maxY) / 2;
-            if (Math.abs(rackCenterY - wallCenterY) < SNAP_DIST) {
-                snappedY += wallCenterY - rackCenterY;
-            }
-        }
-
-        // 수평 벽면
-        if (Math.abs(p1.y - p2.y) < 5) {
-            let wallY = p1.y;
-            if (Math.abs(minY - (wallY + CLEARANCE)) < SNAP_DIST) {
-                snappedY += (wallY + CLEARANCE) - minY;
-            } else if (Math.abs(maxY - (wallY - CLEARANCE)) < SNAP_DIST) {
-                snappedY += (wallY - CLEARANCE) - maxY;
-            }
-
-            // X축 정중앙 스냅
-            let wallCenterX = (p1.x + p2.x) / 2;
-            let rackCenterX = (minX + maxX) / 2;
-            if (Math.abs(rackCenterX - wallCenterX) < SNAP_DIST) {
-                snappedX += wallCenterX - rackCenterX;
-            }
-        }
-    }
-
-    // 랙 간 합체 스냅(머리-꼬리 연결) 및 통로 간격 스냅(2800mm)
-    const AISLE_DIST_PX = 2800 * currentScale;
-
+    // [1] 머리-꼬리 합체 스냅 (가장 우선순위 높은 스냅)
+    const curAngle = getRackAngle(r);
     for (let i = 0; i < racks.length; i++) {
         let placed = racks[i];
         if (placed === r) continue;
-
-        const placedBoxes = getRackBoxes(placed);
-
-        // --- 머리-꼬리 합체 스냅 ---
+        
         const placedAngle = getRackAngle(placed);
-        const curAngle = getRackAngle(r);
         if (Math.abs(placedAngle - curAngle) < 0.05) {
             const placedTail = getRackTailPos(placed);
-
+            
             // 내 머리가 상대방 꼬리에 스냅
             if (Math.hypot(targetX - placedTail.x, targetY - placedTail.y) < SNAP_DIST) {
                 snappedX = placedTail.x;
                 snappedY = placedTail.y;
+                snappedXApplied = true;
+                snappedYApplied = true;
                 break;
             }
-
+            
             // 내 꼬리가 상대방 머리에 스냅
             const myTail = getRackTailPos(tempRack);
             if (Math.hypot(myTail.x - placed.x, myTail.y - placed.y) < SNAP_DIST) {
                 snappedX = placed.x - (myTail.x - targetX);
                 snappedY = placed.y - (myTail.y - targetY);
+                snappedXApplied = true;
+                snappedYApplied = true;
                 break;
-            }
-        }
-
-        // --- 통로 간격(Aisle) 2800mm 스냅 ---
-        if (placed.isHoriz === r.isHoriz) {
-            const placedDepthPx = getRackTotalDepthPx(placed);
-
-            if (r.isHoriz) {
-                // X 구간 겹침 확인
-                let myMinX = minX;
-                let myMaxX = maxX;
-                let pMinX = placedBoxes.physical.minX;
-                let pMaxX = placedBoxes.physical.maxX;
-
-                if (!(myMaxX < pMinX || myMinX > pMaxX)) {
-                    let distTop = Math.abs((placed.y - placedDepthPx / 2) - (targetY + depthPx / 2));
-                    let distBottom = Math.abs((placed.y + placedDepthPx / 2) - (targetY - depthPx / 2));
-
-                    if (Math.abs(distTop - AISLE_DIST_PX) < SNAP_DIST) {
-                        snappedY = placed.y - placedDepthPx / 2 - AISLE_DIST_PX - depthPx / 2;
-                    } else if (Math.abs(distBottom - AISLE_DIST_PX) < SNAP_DIST) {
-                        snappedY = placed.y + placedDepthPx / 2 + AISLE_DIST_PX + depthPx / 2;
-                    }
-                }
-            } else {
-                // Y 구간 겹침 확인
-                let myMinY = minY;
-                let myMaxY = maxY;
-                let pMinY = placedBoxes.physical.minY;
-                let pMaxY = placedBoxes.physical.maxY;
-
-                if (!(myMaxY < pMinY || myMinY > pMaxY)) {
-                    let distLeft = Math.abs((placed.x - placedDepthPx / 2) - (targetX + depthPx / 2));
-                    let distRight = Math.abs((placed.x + placedDepthPx / 2) - (targetX - depthPx / 2));
-
-                    if (Math.abs(distLeft - AISLE_DIST_PX) < SNAP_DIST) {
-                        snappedX = placed.x - placedDepthPx / 2 - AISLE_DIST_PX - depthPx / 2;
-                    } else if (Math.abs(distRight - AISLE_DIST_PX) < SNAP_DIST) {
-                        snappedX = placed.x + placedDepthPx / 2 + AISLE_DIST_PX + depthPx / 2;
-                    }
-                }
             }
         }
     }
 
-    // --- 통로 중앙 스냅 (평균 분배) ---
-    if (r.isHoriz) {
-        let myMinX = minX;
-        let myMaxX = maxX;
+    // [2] 벽면 마그네틱 스냅 (가장 가까운 1개의 벽면에만 안정적으로 스냅)
+    if (!snappedXApplied || !snappedYApplied) {
+        let bestWallDeltaX = null;
+        let bestWallDeltaY = null;
+        let minWallDistX = SNAP_DIST;
+        let minWallDistY = SNAP_DIST;
 
-        let boundTop = null;
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            let CLEARANCE = getEdgeClearance(p1, p2);
+            
+            // 수직 벽면
+            if (Math.abs(p1.x - p2.x) < 5) {
+                let wallX = p1.x;
+                if (!snappedXApplied) {
+                    let d1 = Math.abs(minX - (wallX + CLEARANCE));
+                    if (d1 < minWallDistX) {
+                        minWallDistX = d1;
+                        bestWallDeltaX = (wallX + CLEARANCE) - minX;
+                    }
+                    let d2 = Math.abs(maxX - (wallX - CLEARANCE));
+                    if (d2 < minWallDistX) {
+                        minWallDistX = d2;
+                        bestWallDeltaX = (wallX - CLEARANCE) - maxX;
+                    }
+                }
+                
+                // Y축 정중앙 스냅
+                if (!snappedYApplied) {
+                    let wallCenterY = (p1.y + p2.y) / 2;
+                    let dCenterY = Math.abs(rackCenterY - wallCenterY);
+                    if (dCenterY < minWallDistY) {
+                        minWallDistY = dCenterY;
+                        bestWallDeltaY = wallCenterY - rackCenterY;
+                    }
+                }
+            }
+            
+            // 수평 벽면
+            if (Math.abs(p1.y - p2.y) < 5) {
+                let wallY = p1.y;
+                if (!snappedYApplied) {
+                    let d1 = Math.abs(minY - (wallY + CLEARANCE));
+                    if (d1 < minWallDistY) {
+                        minWallDistY = d1;
+                        bestWallDeltaY = (wallY + CLEARANCE) - minY;
+                    }
+                    let d2 = Math.abs(maxY - (wallY - CLEARANCE));
+                    if (d2 < minWallDistY) {
+                        minWallDistY = d2;
+                        bestWallDeltaY = (wallY - CLEARANCE) - maxY;
+                    }
+                }
+                
+                // X축 정중앙 스냅
+                if (!snappedXApplied) {
+                    let wallCenterX = (p1.x + p2.x) / 2;
+                    let dCenterX = Math.abs(rackCenterX - wallCenterX);
+                    if (dCenterX < minWallDistX) {
+                        minWallDistX = dCenterX;
+                        bestWallDeltaX = wallCenterX - rackCenterX;
+                    }
+                }
+            }
+        }
+
+        if (!snappedXApplied && bestWallDeltaX !== null) {
+            snappedX += bestWallDeltaX;
+            snappedXApplied = true;
+        }
+        if (!snappedYApplied && bestWallDeltaY !== null) {
+            snappedY += bestWallDeltaY;
+            snappedYApplied = true;
+        }
+    }
+
+    // [3] 통로 간격(Aisle) 2800mm 스냅 (가로 및 세로 회전 랙 완벽 지원)
+    const AISLE_DIST_PX = 2800 * currentScale;
+
+    // 가로 랙: Y축 통로 스냅
+    if (r.isHoriz && !snappedYApplied) {
+        let bestAisleDeltaY = null;
+        let minAisleDistY = SNAP_DIST;
+
+        for (let i = 0; i < racks.length; i++) {
+            let placed = racks[i];
+            if (placed === r || !placed.isHoriz) continue;
+
+            const placedBoxes = getRackBoxes(placed);
+            let pMinX = placedBoxes.physical.minX;
+            let pMaxX = placedBoxes.physical.maxX;
+
+            // X 구간이 서로 겹치는지 검사
+            if (!(maxX < pMinX || minX > pMaxX)) {
+                let pMinY = placedBoxes.physical.minY;
+                let pMaxY = placedBoxes.physical.maxY;
+
+                // 내 랙이 placed 아래에 있을 때
+                let dBottom = Math.abs((minY - pMaxY) - AISLE_DIST_PX);
+                if (dBottom < minAisleDistY) {
+                    minAisleDistY = dBottom;
+                    bestAisleDeltaY = (pMaxY + AISLE_DIST_PX) - minY;
+                }
+                // 내 랙이 placed 위에 있을 때
+                let dTop = Math.abs((pMinY - maxY) - AISLE_DIST_PX);
+                if (dTop < minAisleDistY) {
+                    minAisleDistY = dTop;
+                    bestAisleDeltaY = (pMinY - AISLE_DIST_PX) - maxY;
+                }
+            }
+        }
+        if (bestAisleDeltaY !== null) {
+            snappedY += bestAisleDeltaY;
+            snappedYApplied = true;
+        }
+    }
+
+    // 세로 랙: X축 통로 스냅 (실제 바운딩 박스 기준 정밀 보정)
+    if (!r.isHoriz && !snappedXApplied) {
+        let bestAisleDeltaX = null;
+        let minAisleDistX = SNAP_DIST;
+
+        for (let i = 0; i < racks.length; i++) {
+            let placed = racks[i];
+            if (placed === r || placed.isHoriz) continue;
+
+            const placedBoxes = getRackBoxes(placed);
+            let pMinY = placedBoxes.physical.minY;
+            let pMaxY = placedBoxes.physical.maxY;
+
+            // Y 구간이 서로 겹치는지 검사
+            if (!(maxY < pMinY || minY > pMaxY)) {
+                let pMinX = placedBoxes.physical.minX;
+                let pMaxX = placedBoxes.physical.maxX;
+
+                // 내 랙이 placed 오른쪽에 있을 때
+                let dRight = Math.abs((minX - pMaxX) - AISLE_DIST_PX);
+                if (dRight < minAisleDistX) {
+                    minAisleDistX = dRight;
+                    bestAisleDeltaX = (pMaxX + AISLE_DIST_PX) - minX;
+                }
+                // 내 랙이 placed 왼쪽에 있을 때
+                let dLeft = Math.abs((pMinX - maxX) - AISLE_DIST_PX);
+                if (dLeft < minAisleDistX) {
+                    minAisleDistX = dLeft;
+                    bestAisleDeltaX = (pMinX - AISLE_DIST_PX) - maxX;
+                }
+            }
+        }
+        if (bestAisleDeltaX !== null) {
+            snappedX += bestAisleDeltaX;
+            snappedXApplied = true;
+        }
+    }
+
+    // [4] 통로 중앙 스냅 (평균 분배 스냅 - 델타 방식으로 부드럽게 보정)
+    if (r.isHoriz && !snappedYApplied) {
+        let boundTop = null; 
         let boundBottom = null;
 
         // 벽면 체크
@@ -1438,8 +1524,8 @@ function calculateRackSnap(targetX, targetY, r) {
                 let wallY = p1.y;
                 let wallMinX = Math.min(p1.x, p2.x);
                 let wallMaxX = Math.max(p1.x, p2.x);
-                if (!(myMaxX < wallMinX || myMinX > wallMaxX)) {
-                    let clearance = getEdgeClearance(p1, p2);
+                if (!(maxX < wallMinX || minX > wallMaxX)) {
+                    let clearance = getEdgeClearance(p1, p2); 
                     if (wallY < targetY) {
                         let effWallY = wallY + clearance;
                         if (boundTop === null || effWallY > boundTop) boundTop = effWallY;
@@ -1460,7 +1546,7 @@ function calculateRackSnap(targetX, targetY, r) {
                 if (isHorizDoor) {
                     let obsMinX = obs.x - w / 2;
                     let obsMaxX = obs.x + w / 2;
-                    if (!(myMaxX < obsMinX || myMinX > obsMaxX)) {
+                    if (!(maxX < obsMinX || minX > obsMaxX)) {
                         if (obs.y < targetY) {
                             let effY = obs.y + clearance;
                             if (boundTop === null || effY > boundTop) boundTop = effY;
@@ -1479,14 +1565,12 @@ function calculateRackSnap(targetX, targetY, r) {
             const placedBoxes = getRackBoxes(placed);
             let pMinX = placedBoxes.physical.minX;
             let pMaxX = placedBoxes.physical.maxX;
-            if (!(myMaxX < pMinX || myMinX > pMaxX)) {
-                let placedDepthPx = getRackTotalDepthPx(placed);
-
-                if (placed.y < targetY) {
-                    let effY = placed.y + placedDepthPx / 2;
+            if (!(maxX < pMinX || minX > pMaxX)) {
+                if (placedBoxes.physical.maxY < minY) {
+                    let effY = placedBoxes.physical.maxY;
                     if (boundTop === null || effY > boundTop) boundTop = effY;
-                } else {
-                    let effY = placed.y - placedDepthPx / 2;
+                } else if (placedBoxes.physical.minY > maxY) {
+                    let effY = placedBoxes.physical.minY;
                     if (boundBottom === null || effY < boundBottom) boundBottom = effY;
                 }
             }
@@ -1494,15 +1578,14 @@ function calculateRackSnap(targetX, targetY, r) {
 
         if (boundTop !== null && boundBottom !== null) {
             let centerSpaceY = (boundTop + boundBottom) / 2;
-            if (Math.abs(targetY - centerSpaceY) < SNAP_DIST) {
-                snappedY = centerSpaceY;
+            if (Math.abs(rackCenterY - centerSpaceY) < SNAP_DIST) {
+                snappedY += (centerSpaceY - rackCenterY);
+                snappedYApplied = true;
             }
         }
-    } else { // 수직 배치
-        let myMinY = minY;
-        let myMaxY = maxY;
-
-        let boundLeft = null;
+    } else if (!r.isHoriz && !snappedXApplied) {
+        // 세로 배치 중앙 스냅
+        let boundLeft = null; 
         let boundRight = null;
 
         // 벽면 체크
@@ -1512,7 +1595,7 @@ function calculateRackSnap(targetX, targetY, r) {
                 let wallX = p1.x;
                 let wallMinY = Math.min(p1.y, p2.y);
                 let wallMaxY = Math.max(p1.y, p2.y);
-                if (!(myMaxY < wallMinY || myMinY > wallMaxY)) {
+                if (!(maxY < wallMinY || minY > wallMaxY)) {
                     let clearance = getEdgeClearance(p1, p2);
                     if (wallX < targetX) {
                         let effWallX = wallX + clearance;
@@ -1534,7 +1617,7 @@ function calculateRackSnap(targetX, targetY, r) {
                 if (!isHorizDoor) {
                     let obsMinY = obs.y - w / 2;
                     let obsMaxY = obs.y + w / 2;
-                    if (!(myMaxY < obsMinY || myMinY > obsMaxY)) {
+                    if (!(maxY < obsMinY || minY > obsMaxY)) {
                         if (obs.x < targetX) {
                             let effX = obs.x + clearance;
                             if (boundLeft === null || effX > boundLeft) boundLeft = effX;
@@ -1553,14 +1636,12 @@ function calculateRackSnap(targetX, targetY, r) {
             const placedBoxes = getRackBoxes(placed);
             let pMinY = placedBoxes.physical.minY;
             let pMaxY = placedBoxes.physical.maxY;
-            if (!(myMaxY < pMinY || myMinY > pMaxY)) {
-                let placedDepthPx = getRackTotalDepthPx(placed);
-
-                if (placed.x < targetX) {
-                    let effX = placed.x + placedDepthPx / 2;
+            if (!(maxY < pMinY || minY > pMaxY)) {
+                if (placedBoxes.physical.maxX < minX) {
+                    let effX = placedBoxes.physical.maxX;
                     if (boundLeft === null || effX > boundLeft) boundLeft = effX;
-                } else {
-                    let effX = placed.x - placedDepthPx / 2;
+                } else if (placedBoxes.physical.minX > maxX) {
+                    let effX = placedBoxes.physical.minX;
                     if (boundRight === null || effX < boundRight) boundRight = effX;
                 }
             }
@@ -1568,8 +1649,9 @@ function calculateRackSnap(targetX, targetY, r) {
 
         if (boundLeft !== null && boundRight !== null) {
             let centerSpaceX = (boundLeft + boundRight) / 2;
-            if (Math.abs(targetX - centerSpaceX) < SNAP_DIST) {
-                snappedX = centerSpaceX;
+            if (Math.abs(rackCenterX - centerSpaceX) < SNAP_DIST) {
+                snappedX += (centerSpaceX - rackCenterX);
+                snappedXApplied = true;
             }
         }
     }
@@ -4113,7 +4195,16 @@ canvas.addEventListener('mousemove', e => {
     window.lastMouseY = e.offsetY;
 });
 
-// FIXED by Heidi - global exposure
-window.racks = typeof racks !== 'undefined' ? racks : [];
+// FIXED by Heidi - global exposure (항상 최신 랙 배열을 반환하도록 getter 제공)
+try {
+    Object.defineProperty(window, 'racks', {
+        get: function() { return typeof racks !== 'undefined' ? racks : []; },
+        configurable: true
+    });
+} catch(err) {
+    window.racks = typeof racks !== 'undefined' ? racks : [];
+}
+window.getRacks = function() { return typeof racks !== 'undefined' ? racks : []; };
 window.currentScale = typeof currentScale !== 'undefined' ? currentScale : 0;
 window.cameraZoom = typeof cameraZoom !== 'undefined' ? cameraZoom : 1;
+window.checkRackValidPlacement = typeof checkRackValidPlacement !== 'undefined' ? checkRackValidPlacement : null;

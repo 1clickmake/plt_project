@@ -181,7 +181,7 @@ body { background-color: #0B1120 !important; }
                     
                     <div class="mt-5 d-flex flex-wrap gap-3">
                         <a href="#pricing" class="btn-pill btn-orange shadow">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                        <a href="https://cmake.work/quote/demo" target="_blank" class="btn-pill badge-glass"><span class="d-flex align-items-center justify-content-center btn-orange rounded-circle" style="width:28px;height:28px;"><i class="fa-solid fa-play fs-8 text-light"></i></span> 견적신청데모</a>
+                        <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill badge-glass"><span class="d-flex align-items-center justify-content-center btn-orange rounded-circle" style="width:28px;height:28px;"><i class="fa-solid fa-play fs-8 text-light"></i></span> 견적신청데모</a>
                     </div>
                     
                     <div class="mt-5 d-flex align-items-center gap-4 fs-8 text-deep-navy-50">
@@ -804,7 +804,7 @@ body { background-color: #0B1120 !important; }
             
             <div class="reveal mt-5 d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3 pb-4">
                 <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-white shadow-heavy" style="height: 52px; font-size: 16px; padding: 0 2rem;">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                <a href="https://cmake.work/quote/demo" target="_blank" class="btn-pill badge-glass text-light" style="height: 52px; font-size: 16px; padding: 0 2rem;"><i class="fa-solid fa-play"></i> 견적신청데모</a>
+                <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill badge-glass text-light" style="height: 52px; font-size: 16px; padding: 0 2rem;"><i class="fa-solid fa-play"></i> 견적신청데모</a>
             </div>
             <div class="reveal mt-4 fs-8 text-deep-navy-45 pb-5">
                 평균 온보딩 12분 • PoC 3~5곳 진행 중
