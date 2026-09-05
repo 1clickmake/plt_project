@@ -326,7 +326,8 @@ $isLightTheme = in_array($theme, ['light', 'white']);
             padding-top: 8px !important;
             padding-bottom: 8px !important;
             padding-left: 10px !important;
-        /* 📑 엑셀 시트 스타일 멀티 플로어(층/창고별) 탭 바 */
+        }
+
         /* 📑 엑셀 스타일 각진 사선 탭 바 (마진 0, 각진 폴리곤 디자인) */
         .floor-tab-bar {
             background: rgba(15, 23, 42, 0.98);
