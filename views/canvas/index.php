@@ -326,7 +326,188 @@ $isLightTheme = in_array($theme, ['light', 'white']);
             padding-top: 8px !important;
             padding-bottom: 8px !important;
             padding-left: 10px !important;
-            padding-right: 10px !important;
+        /* 📑 엑셀 시트 스타일 멀티 플로어(층/창고별) 탭 바 */
+        /* 📑 엑셀 스타일 각진 사선 탭 바 (마진 0, 각진 폴리곤 디자인) */
+        .floor-tab-bar {
+            background: rgba(15, 23, 42, 0.98);
+            border-bottom: 2px solid #0284c7;
+            padding: 6px 12px 0 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: thin;
+            z-index: 10;
+            user-select: none;
+        }
+        .excel-tab-group {
+            position: relative;
+            display: inline-flex;
+            align-items: stretch;
+            height: 32px;
+            margin: 0;
+            margin-left: -12px; /* 사선 폭만큼 자연스럽게 맞물림 (마진 없음) */
+            z-index: 1;
+            cursor: pointer;
+            filter: drop-shadow(0 -1px 2px rgba(0,0,0,0.35));
+            transition: all 0.15s ease;
+        }
+        .excel-tab-group:first-child {
+            margin-left: 0;
+        }
+        .excel-tab-group.active {
+            height: 35px;
+            z-index: 5;
+        }
+        .excel-tab-shape {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: #334155; /* 외곽선 색상 */
+            clip-path: polygon(14px 0%, 100% 0%, 100% 100%, 0% 100%);
+            padding: 1px 1px 0 1px;
+            height: 100%;
+        }
+        .excel-tab-group.active .excel-tab-shape {
+            background: #38bdf8; /* 활성 탭 외곽선 강조 */
+        }
+        .excel-tab-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 100%;
+            padding: 0 12px 0 20px;
+            background: #1e293b;
+            clip-path: polygon(13px 0%, 100% 0%, 100% 100%, 0% 100%);
+            color: #94a3b8;
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+            border-radius: 0 !important;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .excel-tab-group.active .excel-tab-inner {
+            background: #0284c7;
+            color: #ffffff;
+        }
+        .excel-tab-group:not(.active):hover .excel-tab-inner {
+            background: #243247;
+            color: #e2e8f0;
+        }
+        .excel-tab-badge {
+            background: rgba(0, 0, 0, 0.45);
+            color: #fde047;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 5px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0 !important;
+        }
+        .excel-tab-btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: inherit;
+            opacity: 0.7;
+            padding: 2px 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            border-radius: 0 !important;
+            transition: opacity 0.1s ease, background 0.1s ease;
+        }
+        .excel-tab-btn-icon:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .excel-tab-btn-del:hover {
+            background: rgba(239, 68, 68, 0.3) !important;
+            color: #fca5a5 !important;
+        }
+        /* 층/창고 추가 버튼: 엑셀 새 시트 버튼처럼 각지고 마진 없이 연결 */
+        .excel-tab-add-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            margin-left: 8px;
+            margin-bottom: 2px;
+            padding: 0 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-bottom: 2px solid #0284c7;
+            color: #38bdf8;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 0 !important;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .excel-tab-add-btn:hover {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #ffffff;
+        }
+        /* 각진 전체 층 요약 배지 */
+        .excel-tab-summary {
+            background: #1e293b;
+            color: #fde047;
+            border: 1px solid #475569;
+            border-bottom: 2px solid #eab308;
+            border-radius: 0 !important;
+            padding: 3px 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        /* 라이트 모드 지원 */
+        body.theme-light .floor-tab-bar {
+            background: #e2e8f0 !important;
+            border-bottom-color: #0284c7 !important;
+        }
+        body.theme-light .excel-tab-shape {
+            background: #cbd5e1 !important;
+        }
+        body.theme-light .excel-tab-group.active .excel-tab-shape {
+            background: #0284c7 !important;
+        }
+        body.theme-light .excel-tab-inner {
+            background: #ffffff !important;
+            color: #475569 !important;
+        }
+        body.theme-light .excel-tab-group:not(.active):hover .excel-tab-inner {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        body.theme-light .excel-tab-group.active .excel-tab-inner {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+        }
+        body.theme-light .excel-tab-badge {
+            background: rgba(0, 0, 0, 0.1) !important;
+            color: #0369a1 !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        body.theme-light .excel-tab-add-btn {
+            background: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            border-bottom-color: #0284c7 !important;
+            color: #0284c7 !important;
+        }
+        body.theme-light .excel-tab-add-btn:hover {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+        }
+        body.theme-light .excel-tab-summary {
+            background: #ffffff !important;
+            color: #854d0e !important;
+            border-color: #cbd5e1 !important;
+            border-bottom-color: #ca8a04 !important;
         }
     </style>
 </head>
@@ -377,6 +558,11 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                         </div>
                         <button type="button" onclick="startRemoteControlTutorial()" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</button>
                     </div>
+                </div>
+
+                <!-- 📑 멀티 플로어(층/창고별) 탭 바 영역 -->
+                <div class="floor-tab-bar" id="floor-tabs-container">
+                    <!-- JS renderFloorTabs()에 의해 동적 렌더링됨 -->
                 </div>
 
                 <!-- 캔버스 영역 (리모컨 패널 포함, position:relative) -->
@@ -971,12 +1157,29 @@ function submitQuoteRequest() {
         }
     }
     
-    const indep = document.getElementById('top-badge-indep') ? document.getElementById('top-badge-indep').innerText : '0';
-    const conn = document.getElementById('top-badge-conn') ? document.getElementById('top-badge-conn').innerText : '0';
-    const small_conn = document.getElementById('top-badge-small-conn') ? document.getElementById('top-badge-small-conn').innerText : '0';
-    const bypass = document.getElementById('top-badge-bypass') ? document.getElementById('top-badge-bypass').innerText : '0';
-    const holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
-    const pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
+    let indep = document.getElementById('top-badge-indep') ? document.getElementById('top-badge-indep').innerText : '0';
+    let conn = document.getElementById('top-badge-conn') ? document.getElementById('top-badge-conn').innerText : '0';
+    let small_conn = document.getElementById('top-badge-small-conn') ? document.getElementById('top-badge-small-conn').innerText : '0';
+    let bypass = document.getElementById('top-badge-bypass') ? document.getElementById('top-badge-bypass').innerText : '0';
+    let holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
+    let pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
+
+    // 📑 멀티 플로어(다중 층/창고) 전체 합산 계산
+    let floorsPayload = null;
+    if (typeof window.getCombinedFloorsSummary === 'function') {
+        const grand = window.getCombinedFloorsSummary();
+        if (grand && grand.totalFloors > 1) {
+            indep = String(grand.totalIndep);
+            conn = String(grand.totalConn);
+            small_conn = String(grand.totalSmallConn);
+            bypass = String(grand.totalBypass);
+            holders = String(grand.totalHolders);
+            pallets = String(grand.totalPallets);
+            floorsPayload = grand.floors;
+            const floorSpecs = grand.floors.map(f => f.name + ': ' + (f.spec || '기본')).join(' / ');
+            if (floorSpecs) rackSpec = floorSpecs;
+        }
+    }
 
     if (!rHeight && spec) {
         const match = spec.match(/×\s*\d+\s*×\s*(\d+)/);
@@ -1022,8 +1225,11 @@ function submitQuoteRequest() {
             racks: typeof racks !== 'undefined' ? racks : [],
             points: typeof points !== 'undefined' ? points : [],
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
-            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
+            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1,
+            floors: floorsPayload || undefined
         }),
+        floors_data: floorsPayload ? JSON.stringify(floorsPayload) : '',
+        total_floors: floorsPayload ? floorsPayload.length : 1,
         summary: details || (window.lastAiSummary || ''),
         source_mode: 'expert',
         edge_lengths: edge_lengths_str,
@@ -1070,8 +1276,17 @@ function submitQuoteRequest() {
             submitBtn.innerText = '🚀 견적 요청 제출';
         }
         if (res.success) {
-            alert(`✅ 견적 요청이 성공적으로 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n공급사 담당자가 확인 후 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
             bootstrap.Modal.getInstance(document.getElementById('quoteRequestModal'))?.hide();
+            // 1. 견적 요청 성공 안내 경고창 먼저 출력
+            alert(`✅ 견적 요청이 성공적으로 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n공급사 담당자가 확인 후 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
+
+            // 2. 확인 누른 후 서비스 경험 남기기(별점 평가) 모달 띄우기
+            if (document.getElementById('reviewModal')) {
+                document.getElementById('review-company').value = company;
+                document.getElementById('review-name').value = name;
+                const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+                reviewModal.show();
+            }
         } else {
             alert('❌ 오류: ' + res.message);
         }
@@ -1408,7 +1623,150 @@ window.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
+<!-- 📐 파렛트랙 규격(빔/깊이/단수) 실시간 변경 모달 -->
+<div class="modal fade" id="rackSpecModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content" style="background: rgba(15,23,42,0.96); border: 1px solid rgba(56,189,248,0.4); border-radius: 14px; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
+      <div class="modal-header border-bottom border-secondary pb-2">
+        <h6 class="modal-title text-info fw-bold d-flex align-items-center">
+            <i class="fa-solid fa-ruler-combined me-2 text-warning"></i> 파렛트랙 규격 변경
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-light py-3">
+        <!-- 1. 로드빔 가로 길이 -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary fw-bold mb-1">가로 로드빔 길이 (W)</label>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2585)">2,585mm</button>
+                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2785)">2,785mm</button>
+                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2985)">2,985mm</button>
+                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(3185)">3,185mm</button>
+            </div>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-dark text-secondary border-secondary">직접입력</span>
+                <input type="number" class="form-control bg-dark text-white border-secondary" id="modal-spec-beam" placeholder="예: 2985">
+                <span class="input-group-text bg-dark text-secondary border-secondary">mm</span>
+            </div>
+        </div>
+
+        <!-- 2. 랙 깊이 (프레임) -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary fw-bold mb-1">세로 랙 깊이 (D)</label>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1000)">1,000mm (표준)</button>
+                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1100)">1,100mm</button>
+                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1200)">1,200mm</button>
+            </div>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-dark text-secondary border-secondary">직접입력</span>
+                <input type="number" class="form-control bg-dark text-white border-secondary" id="modal-spec-depth" placeholder="예: 1000">
+                <span class="input-group-text bg-dark text-secondary border-secondary">mm</span>
+            </div>
+        </div>
+
+        <!-- 3. 단수 및 높이 -->
+        <div class="row g-2">
+            <div class="col-6">
+                <label class="form-label small text-secondary fw-bold mb-1">설치 단수</label>
+                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="modal-spec-levels">
+                    <option value="2">2단 (1S)</option>
+                    <option value="3">3단 (2S)</option>
+                    <option value="4">4단 (3S)</option>
+                    <option value="5">5단 (4S)</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label small text-secondary fw-bold mb-1">기둥 높이(H)</label>
+                <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="modal-spec-height" placeholder="자동(공란)">
+            </div>
+        </div>
+        <div class="form-text text-secondary mt-2" style="font-size:0.7rem;">
+            💡 변경 후 [도면에 적용]을 누르시면 배치된 랙의 치수가 즉시 새 규격으로 자동 리사이징됩니다.
+        </div>
+      </div>
+      <div class="modal-footer border-top border-secondary py-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" onclick="applyModalRackSpecs()">도면에 적용</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+window.openRackSpecModal = function() {
+    let curBeam = (typeof racks !== 'undefined' && racks.length > 0 && racks[0].beamLength) || parseInt(document.getElementById('rack-beam-length')?.value) || 2585;
+    let curDepth = (typeof racks !== 'undefined' && racks.length > 0 && racks[0].rackDepth) || parseInt(document.getElementById('rack-depth')?.value) || 1000;
+    let curLevels = parseInt(document.getElementById('rack-levels')?.value) || 3;
+    let curHeight = parseInt(document.getElementById('rack-height')?.value) || '';
+
+    const inputBeam = document.getElementById('modal-spec-beam');
+    const inputDepth = document.getElementById('modal-spec-depth');
+    const selectLevels = document.getElementById('modal-spec-levels');
+    const inputHeight = document.getElementById('modal-spec-height');
+
+    if (inputBeam) inputBeam.value = curBeam;
+    if (inputDepth) inputDepth.value = curDepth;
+    if (selectLevels) selectLevels.value = curLevels;
+    if (inputHeight) inputHeight.value = curHeight;
+
+    const modalEl = document.getElementById('rackSpecModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+    }
+};
+
+window.setModalBeam = function(val) {
+    const el = document.getElementById('modal-spec-beam');
+    if (el) el.value = val;
+};
+
+window.setModalDepth = function(val) {
+    const el = document.getElementById('modal-spec-depth');
+    if (el) el.value = val;
+};
+
+window.applyModalRackSpecs = function() {
+    const newBeam = parseInt(document.getElementById('modal-spec-beam')?.value) || 2585;
+    const newDepth = parseInt(document.getElementById('modal-spec-depth')?.value) || 1000;
+    const newLevels = parseInt(document.getElementById('modal-spec-levels')?.value) || 3;
+    const newHeight = parseInt(document.getElementById('modal-spec-height')?.value) || 0;
+
+    if (document.getElementById('rack-beam-length')) document.getElementById('rack-beam-length').value = newBeam;
+    if (document.getElementById('rack-depth')) document.getElementById('rack-depth').value = newDepth;
+    if (document.getElementById('rack-levels')) document.getElementById('rack-levels').value = newLevels;
+    if (document.getElementById('rack-height')) document.getElementById('rack-height').value = newHeight ? newHeight : '';
+
+    window.rackSpecs = window.rackSpecs || {};
+    window.rackSpecs.beamLength = newBeam;
+    window.rackSpecs.rackDepth = newDepth;
+
+    if (typeof racks !== 'undefined' && racks.length > 0 && typeof currentScale !== 'undefined' && currentScale > 0) {
+        racks.forEach(r => {
+            r.beamLength = newBeam;
+            r.smallBeamLength = (typeof getSmallBeamLength === 'function') ? getSmallBeamLength(newBeam) : Math.max(1000, newBeam - 1200);
+            r.rackDepth = newDepth;
+            const regSpans = (r.independent || 0) + (r.connected || 0);
+            const smSpans = r.smallConnected || 0;
+            const totalLenMm = 85 + (regSpans * newBeam) + (smSpans * r.smallBeamLength);
+            r.totalLengthPx = totalLenMm * currentScale;
+            if (typeof checkRackValidPlacement === 'function') {
+                r.isValid = checkRackValidPlacement(r);
+            }
+        });
+    }
+
+    if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
+    if (typeof draw === 'function') draw();
+
+    const modalEl = document.getElementById('rackSpecModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const bsModal = bootstrap.Modal.getInstance(modalEl);
+        if (bsModal) bsModal.hide();
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // 1. 바이패스 버튼 제어 로직
     const rackLevelsInput = document.getElementById('rack-levels');
@@ -1481,6 +1839,78 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<!-- 리뷰 모달 (서비스 경험 남기기) -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-light" data-bs-theme="dark">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="reviewModalLabel">💕 서비스 경험 남기기</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-center fw-bold fs-5 mb-3">견적 산출 속도와 편리함은 어떠셨나요?</p>
+        <div class="text-center mb-3">
+          <div class="star-rating fs-2" style="color: #ffc107; cursor: pointer;">
+            <span data-value="1">★</span>
+            <span data-value="2">★</span>
+            <span data-value="3">★</span>
+            <span data-value="4">★</span>
+            <span data-value="5">★</span>
+          </div>
+          <input type="hidden" id="review-rating" value="5">
+          <input type="hidden" id="review-company" value="">
+          <input type="hidden" id="review-name" value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-secondary">한 줄 피드백 (선택)</label>
+          <textarea id="review-comment" class="form-control" rows="3" placeholder="예: 3시간 걸리던 견적이 5분 만에 끝났어요!"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center border-secondary">
+        <button type="button" class="btn btn-outline-secondary text-light" data-bs-dismiss="modal">나중에 하기</button>
+        <button type="button" class="btn btn-primary px-4" onclick="submitReview()">🚀 피드백 보내기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('#reviewModal .star-rating span');
+    const ratingInput = document.getElementById('review-rating');
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const val = this.getAttribute('data-value');
+            ratingInput.value = val;
+            stars.forEach(s => {
+                if (s.getAttribute('data-value') <= val) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#e4e5e9';
+                }
+            });
+        });
+    });
+});
+function submitReview() {
+    const payload = {
+        company: document.getElementById('review-company').value,
+        name: document.getElementById('review-name').value,
+        rating: document.getElementById('review-rating').value,
+        comment: document.getElementById('review-comment').value
+    };
+    fetch('/review/submit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    }).then(res => res.json()).then(res => {
+        bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
+        alert('💕 피드백을 보내주셔서 정말 감사합니다! 더 발전하는 아사미야가 될게요!');
+    }).catch(err => {
+        bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
+    });
+}
+</script>
+
 <!-- 플로팅 챗봇 마법사 -->
 <?php include 'chat.php'; ?>
 

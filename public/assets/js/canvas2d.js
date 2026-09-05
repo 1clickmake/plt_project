@@ -5,35 +5,60 @@ function isCanvasLightMode() {
 
 function drawGridBackground() {
     if (currentScale <= 0) return;
-    const gridLineMm = cameraZoom >= 1.5 ? 100 : 500;
-    const textStepMm = cameraZoom >= 1.5 ? 500 : 1000;
-    const linePx = gridLineMm * currentScale;
-    
     const parent = canvas.parentElement;
+    if (!parent) return;
+
+    // Viewport bounds in unzoomed canvas space
     const viewTop = parent.scrollTop / cameraZoom;
     const viewLeft = parent.scrollLeft / cameraZoom;
-    
-    let startX = (0 % linePx) - linePx;
-    let startY = (0 % linePx) - linePx;
-    
-    ctx.save();
-    ctx.scale(cameraZoom, cameraZoom);
-    
+    const viewWidth = parent.clientWidth / cameraZoom;
+    const viewHeight = parent.clientHeight / cameraZoom;
+
+    // 📏 1번 사진처럼 극도로 정밀하고 디테일한 모눈종이 눈금 복원
+    // 기본: 500mm 격자선, 1,000mm(1m) 텍스트 눈금
+    // 확대 시(1.5배 이상): 100mm 격자선, 500mm 텍스트 눈금
+    let gridLineMm = (cameraZoom >= 1.5) ? 100 : 500;
+    let textStepMm = (cameraZoom >= 1.5) ? 500 : 1000;
+
+    // 만약 초대형 창고(60m~100m+) 축소로 500mm 격자가 18px 미만으로 너무 빽빽해질 때만 가변 완화
+    const effectivePx = gridLineMm * currentScale * cameraZoom;
+    if (effectivePx < 18) {
+        gridLineMm = 1000;
+        textStepMm = 2000;
+    }
+
+    const linePx = gridLineMm * currentScale; // 언줌 캔버스 기준 격자 간격 (px)
     const maxW = canvas.width / cameraZoom;
     const maxH = canvas.height / cameraZoom;
+
+    const originX = (window.canvasOriginX !== undefined) ? window.canvasOriginX : 0;
+    const originY = (window.canvasOriginY !== undefined) ? window.canvasOriginY : 0;
+
+    // originX, originY를 기준으로 스냅된 시작선 계산 (뷰포트 범위 내에서만)
+    const rawStartX = Math.max(0, viewLeft - linePx);
+    const startX = originX + Math.floor((rawStartX - originX) / linePx) * linePx;
+    const endX = Math.min(maxW, viewLeft + viewWidth + linePx);
+
+    const rawStartY = Math.max(0, viewTop - linePx);
+    const startY = originY + Math.floor((rawStartY - originY) / linePx) * linePx;
+    const endY = Math.min(maxH, viewTop + viewHeight + linePx);
+
+    ctx.save();
+    ctx.scale(cameraZoom, cameraZoom);
+
     const isLight = isCanvasLightMode();
-    
-    // 1. Grid Lines
+
+    // 1. Grid Lines - 디테일한 CAD 모눈종이 격자선
     ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1 / cameraZoom;
     ctx.beginPath();
-    for (let x = startX; x <= maxW + linePx; x += linePx) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, maxH);
+    for (let x = startX; x <= endX; x += linePx) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
     }
-    for (let y = startY; y <= maxH + linePx; y += linePx) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(maxW, y);
+    for (let y = startY; y <= endY; y += linePx) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
     }
     ctx.stroke();
 
@@ -41,29 +66,30 @@ function drawGridBackground() {
     const rulerThickTop = 22 / cameraZoom;
     const rulerThickLeft = 45 / cameraZoom;
     ctx.fillStyle = isLight ? 'rgba(241, 245, 249, 0.95)' : 'rgba(20, 25, 35, 0.9)'; 
-    
-    ctx.fillRect(viewLeft, viewTop, parent.clientWidth / cameraZoom, rulerThickTop);
-    ctx.fillRect(viewLeft, viewTop, rulerThickLeft, parent.clientHeight / cameraZoom);
+    ctx.fillRect(viewLeft, viewTop, viewWidth, rulerThickTop);
+    ctx.fillRect(viewLeft, viewTop, rulerThickLeft, viewHeight);
 
-    // 3. Ruler Text
+    // 3. Ruler Text - 1,000 단위(1m) 디테일 표기
     ctx.fillStyle = isLight ? '#334155' : 'rgba(255, 255, 255, 0.9)';
     ctx.font = (10 / cameraZoom) + 'px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    
-    for (let x = startX; x <= maxW + linePx; x += linePx) {
-        let logicalMm = Math.round(x / currentScale) - 2000;
+
+    for (let x = startX; x <= endX; x += linePx) {
+        let logicalMm = Math.round((x - originX) / currentScale);
+        logicalMm = Math.round(logicalMm / gridLineMm) * gridLineMm;
         if (Math.abs(logicalMm) % textStepMm === 0 && x > viewLeft + rulerThickLeft) {
             ctx.fillText(logicalMm, x + 4 / cameraZoom, viewTop + 6 / cameraZoom);
         }
     }
-    for (let y = startY; y <= maxH + linePx; y += linePx) {
-        let logicalMm = Math.round(y / currentScale) - 2000;
+    for (let y = startY; y <= endY; y += linePx) {
+        let logicalMm = Math.round((y - originY) / currentScale);
+        logicalMm = Math.round(logicalMm / gridLineMm) * gridLineMm;
         if (Math.abs(logicalMm) % textStepMm === 0 && y > viewTop + rulerThickTop) {
             ctx.fillText(logicalMm, viewLeft + 4 / cameraZoom, y + 4 / cameraZoom);
         }
     }
-    
+
     ctx.restore();
 }
 
@@ -155,43 +181,22 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 
-window.zoomIn = function() {
-    cameraZoom = Math.min(cameraZoom * 1.2, 5);
-    applyZoom();
-};
-
-window.zoomOut = function() {
-    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
-    applyZoom();
-};
-
-window.resetZoom = function() {
-    cameraZoom = 1;
-    applyZoom();
-};
-
-// 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
-window.panCanvas = function(dx, dy) {
-    const parent = canvas.parentElement;
-    if (parent) {
-        parent.scrollLeft = Math.max(0, parent.scrollLeft + dx);
-        parent.scrollTop  = Math.max(0, parent.scrollTop  + dy);
-    }
-};
-
-function applyZoom(oldZoom = null) {
+function applyZoom(oldZoom = null, mousePoint = null) {
     if (baseWidth === 0) return;
     const parent = canvas.parentElement;
+    if (!parent) return;
     
     let viewCenterX = parent.scrollLeft + parent.clientWidth / 2;
     let viewCenterY = parent.scrollTop + parent.clientHeight / 2;
     
-    if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
+    if (mousePoint && mousePoint.x !== undefined && mousePoint.y !== undefined) {
+        viewCenterX = mousePoint.x;
+        viewCenterY = mousePoint.y;
+    } else if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
         viewCenterX = window.lastMouseX;
         viewCenterY = window.lastMouseY;
     }
 
-    // Remember screen position of the target point
     let screenMouseX = viewCenterX - parent.scrollLeft;
     let screenMouseY = viewCenterY - parent.scrollTop;
 
@@ -218,22 +223,23 @@ function applyZoom(oldZoom = null) {
     }
 }
 
-// 전역 함수로 노출
-window.zoomIn = function() {
+// 전역 줌 컨트롤 (최대 25배 확대 지원 - 초대형 100m+ 창고도 쾌적하게 대응)
+window.zoomIn = function(mouseEvt = null) {
     const oldZoom = cameraZoom;
-    cameraZoom = Math.min(cameraZoom * 1.2, 5);
-    applyZoom(oldZoom);
+    cameraZoom = Math.min(cameraZoom * 1.25, 25.0);
+    applyZoom(oldZoom, mouseEvt);
 };
 
-window.zoomOut = function() {
+window.zoomOut = function(mouseEvt = null) {
     const oldZoom = cameraZoom;
-    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
-    applyZoom(oldZoom);
+    cameraZoom = Math.max(cameraZoom / 1.25, 0.1);
+    applyZoom(oldZoom, mouseEvt);
 };
 
 window.resetZoom = function() {
+    const oldZoom = cameraZoom;
     cameraZoom = 1;
-    applyZoom();
+    applyZoom(oldZoom);
 };
 
 // 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
@@ -244,26 +250,6 @@ window.panCanvas = function(dx, dy) {
         parent.scrollTop  = Math.max(0, parent.scrollTop  + dy);
     }
 };
-
-function applyZoom() {
-    if (baseWidth === 0) return;
-    canvas.width = baseWidth * cameraZoom;
-    canvas.height = baseHeight * cameraZoom;
-    if (points.length >= 3 && currentScale > 0) {
-        alignAndScalePolygon();
-    }
-    draw();
-    
-    // 중앙 스크롤 유지
-    const parent = canvas.parentElement;
-    if (cameraZoom > 1) {
-        parent.scrollLeft = (canvas.width - parent.clientWidth) / 2;
-        parent.scrollTop = (canvas.height - parent.clientHeight) / 2;
-    } else {
-        parent.scrollLeft = 0;
-        parent.scrollTop = 0;
-    }
-}
 
 // 전역 함수로 노출
 window.startCustomDrawing = function() {
@@ -439,22 +425,66 @@ function alignAndScalePolygon() {
         if(p.y > maxY) maxY = p.y;
     });
 
-    const viewWidth = baseWidth - 200;
-    const viewHeight = baseHeight - 200;
-    currentScale = Math.min(viewWidth / (maxX - minX || 1), viewHeight / (maxY - minY || 1));
+    const polyWidthMm = Math.max(1, maxX - minX);
+    const polyHeightMm = Math.max(1, maxY - minY);
+
+    // 부모 컨테이너(캔버스 래퍼) 실제 가시 영역 크기
+    const parent = canvas.parentElement;
+    const containerW = parent ? parent.clientWidth : (baseWidth || window.innerWidth);
+    const containerH = parent ? parent.clientHeight : (baseHeight || window.innerHeight);
+
+    // 🤖 우측 플로팅 챗봇 위젯(Chat Wizard) 감지 및 안전 영역 확보
+    const chatEl = document.getElementById('chat-wizard-container');
+    const isChatVisible = chatEl && chatEl.style.display !== 'none' && !chatEl.classList.contains('d-none');
+    
+    // 챗봇이 열려있으면 챗봇 너비(380px) + 안전 여백(40px) = 약 420px를 우측 마진으로 확보!
+    let rightMargin = 100;
+    if (isChatVisible) {
+        const chatW = chatEl.offsetWidth || 380;
+        rightMargin = chatW + 40;
+    }
+
+    const leftMargin = 90;   // 좌측 눈금자(45px) + 안전 여유(45px)
+    const topMargin = 70;    // 상단 눈금자(22px) + 안전 여유
+    const bottomMargin = 70; // 하단 안전 여유
+
+    const safeWidth = Math.max(300, containerW - leftMargin - rightMargin);
+    const safeHeight = Math.max(300, containerH - topMargin - bottomMargin);
+
+    // 📐 어떤 크기의 창고(19m×4m, 115m×35m 등)라도 챗봇을 침범하지 않고 화면 안전 틀 안에 100% 쏙 들어오도록 자동 스케일 산출
+    currentScale = Math.min(safeWidth / polyWidthMm, safeHeight / polyHeightMm);
     window.currentScale = currentScale;
 
-    const centerX = baseWidth / 2;
-    const centerY = baseHeight / 2;
-    let offsetX = (-minX + 2000) * currentScale;
-    let offsetY = (-minY + 2000) * currentScale;
-    window.globalPolyMinX = 2000;
-    window.globalPolyMinY = 2000;
+    // 안전 가시 영역의 중앙에 완벽 배치
+    const drawnWidthPx = polyWidthMm * currentScale;
+    const drawnHeightPx = polyHeightMm * currentScale;
+
+    const offsetX = leftMargin + (safeWidth - drawnWidthPx) / 2 - (minX * currentScale);
+    const offsetY = topMargin + (safeHeight - drawnHeightPx) / 2 - (minY * currentScale);
+    window.canvasOriginX = offsetX + (minX * currentScale);
+    window.canvasOriginY = offsetY + (minY * currentScale);
+    window.globalPolyMinX = Math.round(offsetX / currentScale);
+    window.globalPolyMinY = Math.round(offsetY / currentScale);
+
+    // 이전 도면 바운딩 박스 기준 장애물(기둥, 사용불가 등) 상대 위치 보정용
+    const oldMinX = points.length > 0 ? Math.min(...points.map(p => p.x)) : 0;
+    const oldMaxX = points.length > 0 ? Math.max(...points.map(p => p.x)) : 1;
+    const oldMinY = points.length > 0 ? Math.min(...points.map(p => p.y)) : 0;
+    const oldMaxY = points.length > 0 ? Math.max(...points.map(p => p.y)) : 1;
+    const oldWidth = Math.max(1, oldMaxX - oldMinX);
+    const oldHeight = Math.max(1, oldMaxY - oldMinY);
 
     for(let i = 0; i <= numEdges; i++) {
         points[i].x = mathPoints[i].x * currentScale + offsetX;
         points[i].y = mathPoints[i].y * currentScale + offsetY;
     }
+
+    const newMinX = Math.min(...points.map(p => p.x));
+    const newMaxX = Math.max(...points.map(p => p.x));
+    const newMinY = Math.min(...points.map(p => p.y));
+    const newMaxY = Math.max(...points.map(p => p.y));
+    const newWidth = Math.max(1, newMaxX - newMinX);
+    const newHeight = Math.max(1, newMaxY - newMinY);
 
     obstacles.forEach(obs => {
         const isDoorLike = obs.type === 'door' || obs.type === 'shutter';
@@ -466,8 +496,22 @@ function alignAndScalePolygon() {
             obs.angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
             obs.visualDistFromStart = Math.hypot(obs.x - p1.x, obs.y - p1.y);
             obs.visualEdgeLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        } else if (oldWidth > 10 && oldHeight > 10 && obs.x !== undefined && obs.y !== undefined) {
+            // 바닥 장애물(기둥, 기계, 사용불가구역 등)도 도면의 상대적 위치를 보존하여 함께 이동
+            const relX = (obs.x - oldMinX) / oldWidth;
+            const relY = (obs.y - oldMinY) / oldHeight;
+            obs.x = newMinX + relX * newWidth;
+            obs.y = newMinY + relY * newHeight;
         }
     });
+
+    if (cameraZoom !== 1) {
+        cameraZoom = 1;
+    }
+    if (parent) {
+        parent.scrollLeft = 0;
+        parent.scrollTop = 0;
+    }
 }
 
 // 🚪 외부 HTML 아이콘 드래그 시작
@@ -2434,14 +2478,41 @@ function draw() {
             let realOffsetMsg = "";
             let thickness = 6;
             
-            if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && edgeLengths[obs.edgeIndex]) {
+            if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && edgeLengths[obs.edgeIndex] && obs.edgeIndex < points.length - 1) {
                 const realWallLength = edgeLengths[obs.edgeIndex];
                 if (realWallLength > 0) {
                     const ratio = obs.visualEdgeLength / realWallLength;
                     visualLength = Math.max(obs.length * ratio, 10); 
                     
-                    const realOffset = Math.round(obs.visualDistFromStart / ratio);
-                    realOffsetMsg = `(좌측 ${realOffset}mm)`;
+                    const p1 = points[obs.edgeIndex];
+                    const p2 = points[obs.edgeIndex + 1];
+                    const isHorizWall = Math.abs(p1.y - p2.y) < Math.abs(p1.x - p2.x);
+
+                    if (isHorizWall) {
+                        // 수평 벽면: 시각적 진짜 좌측(X 최소값)과 우측(X 최대값) 코너 기준 거리 계산
+                        const leftCornerX = Math.min(p1.x, p2.x);
+                        const edgePixelLen = Math.abs(p1.x - p2.x) || obs.visualEdgeLength || 1;
+                        const distFromLeftMm = Math.round((Math.abs(obs.x - leftCornerX) / edgePixelLen) * realWallLength);
+                        const distFromRightMm = Math.max(0, realWallLength - distFromLeftMm);
+
+                        if (distFromLeftMm <= distFromRightMm) {
+                            realOffsetMsg = `(좌측 ${distFromLeftMm.toLocaleString()}mm)`;
+                        } else {
+                            realOffsetMsg = `(우측 ${distFromRightMm.toLocaleString()}mm)`;
+                        }
+                    } else {
+                        // 수직 벽면: 시각적 진짜 상단(Y 최소값)과 하단(Y 최대값) 코너 기준 거리 계산
+                        const topCornerY = Math.min(p1.y, p2.y);
+                        const edgePixelLen = Math.abs(p1.y - p2.y) || obs.visualEdgeLength || 1;
+                        const distFromTopMm = Math.round((Math.abs(obs.y - topCornerY) / edgePixelLen) * realWallLength);
+                        const distFromBottomMm = Math.max(0, realWallLength - distFromTopMm);
+
+                        if (distFromTopMm <= distFromBottomMm) {
+                            realOffsetMsg = `(상단 ${distFromTopMm.toLocaleString()}mm)`;
+                        } else {
+                            realOffsetMsg = `(하단 ${distFromBottomMm.toLocaleString()}mm)`;
+                        }
+                    }
                 }
             }
 
@@ -3071,8 +3142,8 @@ window.updateRackFormCounts = function() {
     // 표준 파렛트랙 규격 산출: [빔길이(W) × 깊이(D) × 높이(H) , (단수-1)S 단수단]
     const currentPalletW = parseInt(document.getElementById('pallet-w')?.value) || 1100;
     const currentPalletD = parseInt(document.getElementById('pallet-d')?.value) || 1100;
-    const beamLen = (window.rackSpecs && window.rackSpecs.beamLength) || (currentPalletW * 2) + 385;
-    const rackD = (window.rackSpecs && window.rackSpecs.rackDepth) || (currentPalletD - 100);
+    const beamLen = (racks.length > 0 && racks[0].beamLength) || (window.rackSpecs && window.rackSpecs.beamLength) || parseInt(document.getElementById('rack-beam-length')?.value) || (currentPalletW * 2) + 385;
+    const rackD = (racks.length > 0 && racks[0].rackDepth) || (window.rackSpecs && window.rackSpecs.rackDepth) || parseInt(document.getElementById('rack-depth')?.value) || 1000;
     let rackH = globalRackH;
     const spanS = Math.max(1, levels - 1); 
     const specTagText = `${beamLen}×${rackD}×${rackH} (${spanS}S ${levels}단)`;
@@ -3104,7 +3175,9 @@ window.updateRackFormCounts = function() {
     if (summaryBadge) {
         // 첫 번째 줄 빌드
         let html = `<div class="d-flex align-items-center gap-2 flex-wrap">
-            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">${specTagText}</span>
+            <span id="top-badge-spec" class="badge bg-primary text-white shadow-sm" style="font-size:0.75rem; font-weight:600; padding:4px 10px; letter-spacing:0.02em; cursor:pointer;" onclick="if(window.openRackSpecModal) window.openRackSpecModal()" title="클릭하여 랙 규격(가로빔/깊이/높이) 실시간 변경">
+                <i class="fa-solid fa-pen-to-square me-1 opacity-75"></i>${specTagText}
+            </span>
             <span class="text-secondary">|</span>
             <span>독립 <strong id="top-badge-indep" class="text-primary">${totalIndep}</strong>대</span>
             <span class="text-secondary">|</span>
@@ -3846,9 +3919,9 @@ window.spawnInitialRacks = function() {
     // 가져올 폼 값
     const palletW = parseInt(document.getElementById('pallet-w')?.value) || 1100;
     const palletD = parseInt(document.getElementById('pallet-d')?.value) || 1100;
-    const beamLength = (palletW * 2) + 385;
-    const rackDepth = palletD - 100;
-    const smallBeamLength = 1385;
+    const beamLength = parseInt(document.getElementById('rack-beam-length')?.value) || (window.rackSpecs && window.rackSpecs.beamLength) || (palletW * 2) + 385;
+    const rackDepth = parseInt(document.getElementById('rack-depth')?.value) || (window.rackSpecs && window.rackSpecs.rackDepth) || 1000;
+    const smallBeamLength = (typeof getSmallBeamLength === 'function') ? getSmallBeamLength(beamLength) : 1385;
     
     // 독립 1칸 길이
     const totalLenMm = 85 + (1 * beamLength);
@@ -4063,3 +4136,372 @@ window.getRacks = function() { return typeof racks !== 'undefined' ? racks : [];
 window.currentScale = typeof currentScale !== 'undefined' ? currentScale : 0;
 window.cameraZoom = typeof cameraZoom !== 'undefined' ? cameraZoom : 1;
 window.checkRackValidPlacement = typeof checkRackValidPlacement !== 'undefined' ? checkRackValidPlacement : null;
+
+// ===================================================================
+// [멀티 플로어 / 다중 층 캔버스 탭 상태 관리자]
+// 엑셀 시트 탭 방식으로 1층/2층/다중 창고 구역을 독립 관리 & 통합 견적
+// ===================================================================
+window.canvasFloors = [
+    {
+        id: 1,
+        name: '1층 (기본 창고)',
+        points: [],
+        obstacles: [],
+        edgeLengths: [],
+        originalAngles: [],
+        originalVisualLengths: [],
+        userEnteredEdges: [],
+        racks: [],
+        currentScale: 0,
+        isDrawingMode: true,
+        cameraZoom: 1,
+        rackCustomLevels: null,
+        capturedImage: null,
+        palletSpec: null
+    }
+];
+window.currentFloorIndex = 0;
+
+function captureFloorSnapshot() {
+    try {
+        const c = document.getElementById('drawingCanvas');
+        if (!c || c.style.display === 'none' || c.width <= 0) return null;
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = c.width;
+        tempCanvas.height = c.height;
+        const tCtx = tempCanvas.getContext('2d');
+        tCtx.fillStyle = '#ffffff';
+        tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tCtx.filter = 'invert(1)';
+        tCtx.drawImage(c, 0, 0);
+        tCtx.filter = 'none';
+        return tempCanvas.toDataURL('image/jpeg', 0.85);
+    } catch(e) {
+        return null;
+    }
+}
+
+function saveCurrentFloorState() {
+    if (!window.canvasFloors || !window.canvasFloors[window.currentFloorIndex]) return;
+    const cur = window.canvasFloors[window.currentFloorIndex];
+    cur.points = JSON.parse(JSON.stringify(points || []));
+    cur.obstacles = JSON.parse(JSON.stringify(obstacles || []));
+    cur.edgeLengths = [...(edgeLengths || [])];
+    cur.originalAngles = [...(originalAngles || [])];
+    cur.originalVisualLengths = [...(originalVisualLengths || [])];
+    cur.userEnteredEdges = [...(userEnteredEdges || [])];
+    cur.racks = JSON.parse(JSON.stringify(racks || []));
+    cur.currentScale = currentScale;
+    cur.isDrawingMode = isDrawingMode;
+    cur.cameraZoom = cameraZoom;
+    cur.rackCustomLevels = window.rackCustomLevels ? JSON.parse(JSON.stringify(window.rackCustomLevels)) : null;
+
+    // ChatWizard 상태 저장 (각 층별 독립 대화 보존)
+    if (typeof ChatWizard !== 'undefined') {
+        cur.chatStep = ChatWizard.currentStep;
+        cur.chatHtml = (ChatWizard.body) ? ChatWizard.body.innerHTML : '';
+        cur.step2Html = ChatWizard.step2Html || '';
+    }
+
+    // Save pallet specs from form inputs
+    cur.palletSpec = {
+        pw: document.getElementById('pallet-w') ? document.getElementById('pallet-w').value : '1100',
+        pd: document.getElementById('pallet-d') ? document.getElementById('pallet-d').value : '1100',
+        ph: document.getElementById('pallet-h') ? document.getElementById('pallet-h').value : '1500',
+        pWeight: document.getElementById('pallet-weight') ? document.getElementById('pallet-weight').value : '1000',
+        rowType: (document.querySelector('input[name="rowType"]:checked') || {}).value || 'single',
+        rackDepth: document.getElementById('rack-depth') ? document.getElementById('rack-depth').value : '1000',
+        rackHeight: document.getElementById('rack-height') ? document.getElementById('rack-height').value : '4000',
+        rackLoad: document.getElementById('rack-load') ? document.getElementById('rack-load').value : '2000'
+    };
+
+    // Capture snapshot for instant quotation printing
+    const snap = captureFloorSnapshot();
+    if (snap) cur.capturedImage = snap;
+}
+
+function loadFloorState(index) {
+    if (!window.canvasFloors || !window.canvasFloors[index]) return;
+    window.currentFloorIndex = index;
+    const target = window.canvasFloors[index];
+
+    points = JSON.parse(JSON.stringify(target.points || []));
+    obstacles = JSON.parse(JSON.stringify(target.obstacles || []));
+    edgeLengths = [...(target.edgeLengths || [])];
+    originalAngles = [...(target.originalAngles || [])];
+    originalVisualLengths = [...(target.originalVisualLengths || [])];
+    userEnteredEdges = [...(target.userEnteredEdges || [])];
+    racks = JSON.parse(JSON.stringify(target.racks || []));
+    currentScale = target.currentScale || 0;
+    window.currentScale = currentScale;
+    cameraZoom = target.cameraZoom || 1;
+
+    // 폐합되지 않은 상태라면 점 찍기 모드(isDrawingMode = true) 유지
+    const isClosed = points.length >= 4 && points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
+    if (!isClosed) {
+        isDrawingMode = true;
+    } else {
+        isDrawingMode = target.isDrawingMode || false;
+    }
+    window.rackCustomLevels = target.rackCustomLevels ? JSON.parse(JSON.stringify(target.rackCustomLevels)) : null;
+
+    // Restore pallet form if saved
+    if (target.palletSpec) {
+        const s = target.palletSpec;
+        if (document.getElementById('pallet-w') && s.pw) document.getElementById('pallet-w').value = s.pw;
+        if (document.getElementById('pallet-d') && s.pd) document.getElementById('pallet-d').value = s.pd;
+        if (document.getElementById('pallet-h') && s.ph) document.getElementById('pallet-h').value = s.ph;
+        if (document.getElementById('pallet-weight') && s.pWeight) document.getElementById('pallet-weight').value = s.pWeight;
+        if (document.getElementById('rack-depth') && s.rackDepth) document.getElementById('rack-depth').value = s.rackDepth;
+        if (document.getElementById('rack-height') && s.rackHeight) document.getElementById('rack-height').value = s.rackHeight;
+        if (document.getElementById('rack-load') && s.rackLoad) document.getElementById('rack-load').value = s.rackLoad;
+        if (s.rowType) {
+            const r = document.querySelector(`input[name="rowType"][value="${s.rowType}"]`);
+            if (r) r.checked = true;
+        }
+    }
+
+    // 🌟 ChatWizard 층별 대화 상태 완벽 복원 또는 새 구역 시작
+    if (typeof ChatWizard !== 'undefined') {
+        if (target.chatHtml) {
+            ChatWizard.currentStep = target.chatStep || 1;
+            ChatWizard.step2Html = target.step2Html || '';
+            if (ChatWizard.body) {
+                ChatWizard.body.innerHTML = target.chatHtml;
+                ChatWizard.scrollToBottom();
+            }
+        } else {
+            // 새로 추가된 층이거나 아직 대화가 없는 층
+            if (typeof ChatWizard.resetForNewFloor === 'function') {
+                ChatWizard.resetForNewFloor(target.name);
+            }
+            // 만약 이미 도면이 폐합되어 점이 찍혀 있다면 즉시 Step 2로 연결!
+            if (isClosed && typeof window.generateCustomInputs === 'function') {
+                setTimeout(() => {
+                    window.generateCustomInputs(points.length - 1);
+                }, 200);
+            }
+        }
+    }
+
+    // 캔버스는 항상 화면에 보여야 마우스 클릭으로 점을 찍을 수 있음
+    const guideEl = document.getElementById('canvas-guide');
+    if (guideEl) guideEl.style.display = 'none';
+    if (canvas) canvas.style.display = 'block';
+
+    resizeCanvas();
+    if (typeof draw === 'function') draw();
+    if (typeof updateRackCounts === 'function') updateRackCounts();
+    renderFloorTabs();
+}
+
+window.addNewFloor = function(customName = '') {
+    saveCurrentFloorState();
+    const nextNum = window.canvasFloors.length + 1;
+    const newFloor = {
+        id: Date.now(),
+        name: customName || `${nextNum}층 (제${nextNum}창고)`,
+        points: [],
+        obstacles: [],
+        edgeLengths: [],
+        originalAngles: [],
+        originalVisualLengths: [],
+        userEnteredEdges: [],
+        racks: [],
+        currentScale: 0,
+        isDrawingMode: true,
+        cameraZoom: 1,
+        rackCustomLevels: null,
+        capturedImage: null,
+        palletSpec: null,
+        chatStep: 1,
+        chatHtml: null,
+        step2Html: ''
+    };
+    window.canvasFloors.push(newFloor);
+    loadFloorState(window.canvasFloors.length - 1);
+
+    if (typeof window.onFloorAdded === 'function') {
+        window.onFloorAdded(newFloor.name);
+    }
+};
+
+window.switchFloor = function(index) {
+    if (index === window.currentFloorIndex) return;
+    saveCurrentFloorState();
+    loadFloorState(index);
+    if (typeof window.onFloorSwitched === 'function') {
+        window.onFloorSwitched(window.canvasFloors[index].name);
+    }
+};
+
+window.removeFloor = function(index, event) {
+    if (event) event.stopPropagation();
+    if (window.canvasFloors.length <= 1) {
+        alert('최소 1개의 층(창고)은 유지되어야 합니다.');
+        return;
+    }
+    const targetName = window.canvasFloors[index].name;
+    if (!confirm(`'${targetName}' 탭을 삭제하시겠습니까?\n해당 층에 배치된 도면과 랙 정보가 삭제됩니다.`)) {
+        return;
+    }
+
+    window.canvasFloors.splice(index, 1);
+    if (window.currentFloorIndex >= window.canvasFloors.length) {
+        window.currentFloorIndex = window.canvasFloors.length - 1;
+    }
+    loadFloorState(window.currentFloorIndex);
+};
+
+window.renameFloor = function(index, event) {
+    if (event) event.stopPropagation();
+    const currentName = window.canvasFloors[index].name;
+    const newName = prompt('층 또는 창고 구역 이름을 입력하세요:', currentName);
+    if (newName && newName.trim() !== '') {
+        window.canvasFloors[index].name = newName.trim();
+        renderFloorTabs();
+    }
+};
+
+function renderFloorTabs() {
+    const container = document.getElementById('floor-tabs-container');
+    if (!container) return;
+
+    let html = '';
+    window.canvasFloors.forEach((f, idx) => {
+        const isActive = idx === window.currentFloorIndex;
+        const activeClass = isActive ? 'active' : '';
+        const badgeCount = f.racks ? f.racks.length : 0;
+
+        html += `
+            <div class="excel-tab-group ${activeClass}" 
+                 onclick="switchFloor(${idx})" 
+                 title="클릭하여 '${f.name}' 선택 (더블클릭 시 이름 변경)"
+                 ondblclick="renameFloor(${idx}, event)">
+                <div class="excel-tab-shape">
+                    <div class="excel-tab-inner">
+                        <i class="fa-solid fa-layer-group me-1 opacity-75"></i>
+                        <span class="excel-tab-name">${f.name}</span>
+                        ${badgeCount > 0 ? `<span class="excel-tab-badge ms-1">${badgeCount}대</span>` : ''}
+                        <button type="button" class="excel-tab-btn-icon ms-1" 
+                                onclick="renameFloor(${idx}, event)" title="이름 수정">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        ${window.canvasFloors.length > 1 ? `
+                        <button type="button" class="excel-tab-btn-icon excel-tab-btn-del ms-1" 
+                                onclick="removeFloor(${idx}, event)" title="층 삭제">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        <button type="button" class="excel-tab-add-btn" 
+                onclick="addNewFloor()" title="새로운 층이나 분리된 창고 구역 추가">
+            <i class="fa-solid fa-plus me-1"></i> 층/창고 추가
+        </button>
+    `;
+
+    // 전체 다중 층 통합 뱃지 요약
+    if (window.canvasFloors.length > 1) {
+        let totalAllBays = 0;
+        let totalAllPallets = 0;
+        window.canvasFloors.forEach(f => {
+            if (f.racks) {
+                f.racks.forEach(r => {
+                    let bays = r.count || 1;
+                    let lvls = r.levels || 3;
+                    totalAllBays += bays;
+                    totalAllPallets += (bays * Math.max(1, lvls - 1) * 2);
+                });
+            }
+        });
+        html += `
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <div class="excel-tab-summary shadow-sm">
+                    <i class="fa-solid fa-building me-1"></i> 총 <strong class="text-white">${window.canvasFloors.length}개 층</strong> 통합: 
+                    <span class="text-white">랙 ${totalAllBays}대</span> / <span class="text-success fw-bold">${totalAllPallets} PLT</span>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+window.renderFloorTabs = renderFloorTabs;
+window.saveCurrentFloorState = saveCurrentFloorState;
+window.loadFloorState = loadFloorState;
+
+// 전체 층 통합 요약 데이터 산출 함수 (견적 제출 및 모달용)
+window.getCombinedFloorsSummary = function() {
+    saveCurrentFloorState();
+    let grandSummary = {
+        totalFloors: window.canvasFloors.length,
+        floors: [],
+        grandIndep: 0,
+        grandConn: 0,
+        grandSmallConn: 0,
+        grandBypass: 0,
+        grandTieHolders: 0,
+        grandPallets: 0,
+        grandBays: 0
+    };
+
+    window.canvasFloors.forEach((f, idx) => {
+        let indep = 0, conn = 0, smallConn = 0, bypass = 0, holders = 0, pallets = 0, bays = 0;
+        if (f.racks) {
+            f.racks.forEach(r => {
+                let bayCount = (r.count || 1);
+                let lvls = (r.levels || 3);
+                let spans = Math.max(1, lvls - 1);
+                bays += bayCount;
+                if (r.isBypass) {
+                    bypass += bayCount;
+                } else if (r.isSmallConn) {
+                    smallConn += bayCount;
+                } else {
+                    indep += 1;
+                    conn += (bayCount - 1);
+                }
+                pallets += (bayCount * spans * 2);
+            });
+        }
+        holders = Math.floor(pallets / 4);
+
+        grandSummary.grandIndep += indep;
+        grandSummary.grandConn += conn;
+        grandSummary.grandSmallConn += smallConn;
+        grandSummary.grandBypass += bypass;
+        grandSummary.grandTieHolders += holders;
+        grandSummary.grandPallets += pallets;
+        grandSummary.grandBays += bays;
+
+        grandSummary.floors.push({
+            id: f.id,
+            index: idx,
+            name: f.name,
+            bays: bays,
+            indep: indep,
+            conn: conn,
+            smallConn: smallConn,
+            bypass: bypass,
+            pallets: pallets,
+            palletSpec: f.palletSpec,
+            capturedImage: f.capturedImage
+        });
+    });
+
+    return grandSummary;
+};
+
+// DOM 로드 시 탭 바 자동 렌더링
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        if (typeof renderFloorTabs === 'function') renderFloorTabs();
+    }, 100);
+});
+
