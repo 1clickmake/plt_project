@@ -3162,8 +3162,13 @@ window.updateRackFormCounts = function() {
     // 3. 캔버스 상단 실시간 대시보드 뱃지 바 업데이트 (줄바꿈 두 줄 포맷 지원)
     const summaryBadge = document.getElementById('canvas-summary-badge');
     if (summaryBadge) {
+        // 현재 활성화된 층 구역명 표시
+        const curFloor = (window.canvasFloors && window.canvasFloors[window.currentFloorIndex]) ? window.canvasFloors[window.currentFloorIndex] : null;
+        const floorNameTag = curFloor ? `<span class="badge bg-info text-dark shadow-sm me-1" style="font-size:0.75rem; font-weight:700;"><i class="fa-solid fa-layer-group me-1"></i>${curFloor.name}</span>` : '';
+
         // 첫 번째 줄 빌드
         let html = `<div class="d-flex align-items-center gap-2 flex-wrap">
+            ${floorNameTag}
             <span id="top-badge-spec" class="badge bg-primary text-white shadow-sm" style="font-size:0.75rem; font-weight:600; padding:4px 10px; letter-spacing:0.02em; cursor:pointer;" onclick="if(window.openRackSpecModal) window.openRackSpecModal()" title="클릭하여 랙 규격(가로빔/깊이/높이) 실시간 변경">
                 <i class="fa-solid fa-pen-to-square me-1 opacity-75"></i>${specTagText}
             </span>
@@ -3178,8 +3183,21 @@ window.updateRackFormCounts = function() {
         
         html += ` <span class="text-secondary">|</span> <span class="text-warning">🔗 <strong id="top-badge-holders" class="text-warning">${totalTieHolders}</strong>홀더</span>
             <span class="text-secondary">|</span>
-            <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">${totalPallets.toLocaleString()}</strong> PLT</span>
-        </div>`;
+            <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">${totalPallets.toLocaleString()}</strong> PLT</span>`;
+            
+        // 멀티 플로어인 경우 전체 층 종합 집계 미니 뱃지 표시
+        if (window.canvasFloors && window.canvasFloors.length > 1 && typeof window.calculateFloorStats === 'function') {
+            let grandBays = 0, grandPallets = 0;
+            window.canvasFloors.forEach(f => {
+                let st = window.calculateFloorStats(f);
+                grandBays += st.bays;
+                grandPallets += st.pallets;
+            });
+            html += ` <span class="text-secondary">|</span> <span class="badge bg-dark border border-secondary text-warning" style="font-size:0.72rem; padding:3px 8px;" title="1층~${window.canvasFloors.length}층 전체 합산 총계">
+                <i class="fa-solid fa-building me-1"></i>전체 ${window.canvasFloors.length}개층 합계: 총 ${grandBays}대 / 📦 ${grandPallets.toLocaleString()} PLT
+            </span>`;
+        }
+        html += `</div>`;
         
         // 두 번째 줄 빌드 (바이패스가 있을 때만 혹은 바이패스 모드 활성화 시)
         if (totalBypass > 0 || window.activeInteractMode === 'bypass') {
@@ -4264,10 +4282,15 @@ function saveCurrentFloorState() {
         pd: document.getElementById('pallet-d') ? document.getElementById('pallet-d').value : '1100',
         ph: document.getElementById('pallet-h') ? document.getElementById('pallet-h').value : '1500',
         pWeight: document.getElementById('pallet-weight') ? document.getElementById('pallet-weight').value : '1000',
+        levels: document.getElementById('rack-levels') ? document.getElementById('rack-levels').value : '3',
         rowType: (document.querySelector('input[name="rowType"]:checked') || {}).value || 'single',
         rackDepth: document.getElementById('rack-depth') ? document.getElementById('rack-depth').value : '1000',
         rackHeight: document.getElementById('rack-height') ? document.getElementById('rack-height').value : '4000',
-        rackLoad: document.getElementById('rack-load') ? document.getElementById('rack-load').value : '2000'
+        rackLoad: document.getElementById('rack-load') ? document.getElementById('rack-load').value : '2000',
+        forkDir: (document.getElementById('forkD') && document.getElementById('forkD').checked) ? 'D' : 'W',
+        forkType: document.getElementById('forklift-type') ? document.getElementById('forklift-type').value : '',
+        forkLiftH: document.getElementById('forklift-lift-height') ? document.getElementById('forklift-lift-height').value : '',
+        forkAst: document.getElementById('forklift-ast') ? document.getElementById('forklift-ast').value : ''
     };
 
     // Capture snapshot for instant quotation printing
@@ -4307,6 +4330,7 @@ function loadFloorState(index) {
         if (document.getElementById('pallet-d') && s.pd) document.getElementById('pallet-d').value = s.pd;
         if (document.getElementById('pallet-h') && s.ph) document.getElementById('pallet-h').value = s.ph;
         if (document.getElementById('pallet-weight') && s.pWeight) document.getElementById('pallet-weight').value = s.pWeight;
+        if (document.getElementById('rack-levels') && s.levels) document.getElementById('rack-levels').value = s.levels;
         if (document.getElementById('rack-depth') && s.rackDepth) document.getElementById('rack-depth').value = s.rackDepth;
         if (document.getElementById('rack-height') && s.rackHeight) document.getElementById('rack-height').value = s.rackHeight;
         if (document.getElementById('rack-load') && s.rackLoad) document.getElementById('rack-load').value = s.rackLoad;
@@ -4314,6 +4338,13 @@ function loadFloorState(index) {
             const r = document.querySelector(`input[name="rowType"][value="${s.rowType}"]`);
             if (r) r.checked = true;
         }
+        if (s.forkDir) {
+            if (s.forkDir === 'D' && document.getElementById('forkD')) document.getElementById('forkD').checked = true;
+            else if (document.getElementById('forkW')) document.getElementById('forkW').checked = true;
+        }
+        if (s.forkType && document.getElementById('forklift-type')) document.getElementById('forklift-type').value = s.forkType;
+        if (s.forkLiftH && document.getElementById('forklift-lift-height')) document.getElementById('forklift-lift-height').value = s.forkLiftH;
+        if (s.forkAst && document.getElementById('forklift-ast')) document.getElementById('forklift-ast').value = s.forkAst;
     }
 
     // 🌟 ChatWizard 층별 대화 상태 완벽 복원 또는 새 구역 시작
@@ -4444,6 +4475,98 @@ window.renameFloor = function(index, event) {
     }
 };
 
+// 🌟 개별 층(Floor)의 랙 통계(독립, 연결, 바이패스, 파렛트 등) 정밀 계산 함수
+function calculateFloorStats(f) {
+    if (!f) return { bays: 0, indep: 0, conn: 0, smallConn: 0, bypass: 0, holders: 0, pallets: 0, spec: '' };
+    const fRacks = f.racks || [];
+    const pSpec = f.palletSpec || {};
+
+    const palletH = parseInt(pSpec.ph) || parseInt(document.getElementById('pallet-h')?.value) || 1000;
+    const palletW = parseInt(pSpec.pw) || parseInt(document.getElementById('pallet-w')?.value) || 1100;
+    const palletD = parseInt(pSpec.pd) || parseInt(document.getElementById('pallet-d')?.value) || 1100;
+    const levels = parseInt(pSpec.levels) || parseInt(document.getElementById('rack-levels')?.value) || 3;
+
+    let rackH = parseInt(pSpec.rackHeight) || parseInt(document.getElementById('rack-height')?.value) || 0;
+    if (rackH <= 0) {
+        const rawH = (palletH * levels) + (levels * 200) + 300;
+        rackH = Math.ceil(rawH / 500) * 500;
+    }
+    const rackD = parseInt(pSpec.rackDepth) || parseInt(document.getElementById('rack-depth')?.value) || 1000;
+    const beamLen = (fRacks.length > 0 && fRacks[0].beamLength) || (palletW * 2) + 385;
+    const spanS = Math.max(1, levels - 1);
+
+    let indep = 0;
+    let conn = 0;
+    let smallConn = 0;
+    let bypass = 0;
+    let pallets = 0;
+    let bays = 0;
+
+    fRacks.forEach(r => {
+        let reg = (r.independent || 0) + (r.connected || 0);
+        let sm = r.smallConnected || 0;
+        let spans = reg + sm;
+        let rowCount = r.isDouble ? 2 : 1;
+
+        for (let row = 0; row < rowCount; row++) {
+            let rowBypass = (r.bypassBays && Array.isArray(r.bypassBays) && Array.isArray(r.bypassBays[row])) ? r.bypassBays[row] : [];
+            let hasBayLevels = r.bayLevels && Array.isArray(r.bayLevels) && r.bayLevels.length > row && Array.isArray(r.bayLevels[row]);
+
+            for (let j = 0; j < reg; j++) {
+                let isBp = rowBypass[j] === true;
+                let bLvl = (hasBayLevels && r.bayLevels[row][j] !== undefined) ? r.bayLevels[row][j] : (r.levels || levels);
+                bays++;
+
+                if (isBp) {
+                    bypass += 1;
+                    pallets += 2 * Math.max(1, bLvl - 1);
+                } else {
+                    if (j < (r.independent || 0)) {
+                        indep += 1;
+                    } else {
+                        conn += 1;
+                    }
+                    pallets += 2 * bLvl;
+                }
+            }
+
+            for (let j = reg; j < reg + sm; j++) {
+                let isBp = rowBypass[j] === true;
+                let bLvl = (hasBayLevels && r.bayLevels[row][j] !== undefined) ? r.bayLevels[row][j] : (r.levels || levels);
+                bays++;
+
+                if (isBp) {
+                    bypass += 1;
+                    pallets += 2 * Math.max(1, bLvl - 1);
+                } else {
+                    smallConn += 1;
+                    pallets += 2 * bLvl;
+                }
+            }
+        }
+    });
+
+    let holders = Math.floor(pallets / 4);
+    let specText = `${beamLen}×${rackD}×${rackH} (${spanS}S ${levels}단)`;
+
+    return {
+        bays,
+        indep,
+        conn,
+        smallConn,
+        bypass,
+        holders,
+        pallets,
+        beamLen,
+        rackD,
+        rackH,
+        levels,
+        spanS,
+        spec: specText
+    };
+}
+window.calculateFloorStats = calculateFloorStats;
+
 function renderFloorTabs() {
     const container = document.getElementById('floor-tabs-container');
     if (!container) return;
@@ -4452,7 +4575,14 @@ function renderFloorTabs() {
     window.canvasFloors.forEach((f, idx) => {
         const isActive = idx === window.currentFloorIndex;
         const activeClass = isActive ? 'active' : '';
-        const badgeCount = f.racks ? f.racks.length : 0;
+        const stats = calculateFloorStats(f);
+        const rowCount = f.racks ? f.racks.length : 0;
+        
+        // 탭 뱃지: 실제 설치되는 총 베이 수 및 파렛트 수량 표시
+        const badgeTitle = `${f.name}: 랙 ${rowCount}개 열, 총 ${stats.bays}대 (독립 ${stats.indep}, 연결 ${stats.conn}, 바이패스 ${stats.bypass}) / ${stats.pallets.toLocaleString()} PLT`;
+        const badgeHtml = stats.bays > 0 
+            ? `<span class="excel-tab-badge ms-1" title="${badgeTitle}">${stats.bays}대</span>` 
+            : (rowCount > 0 ? `<span class="excel-tab-badge ms-1">${rowCount}열</span>` : '');
 
         html += `
             <div class="excel-tab-group ${activeClass}" 
@@ -4463,7 +4593,7 @@ function renderFloorTabs() {
                     <div class="excel-tab-inner">
                         <i class="fa-solid fa-layer-group me-1 opacity-75"></i>
                         <span class="excel-tab-name">${f.name}</span>
-                        ${badgeCount > 0 ? `<span class="excel-tab-badge ms-1">${badgeCount}대</span>` : ''}
+                        ${badgeHtml}
                         <button type="button" class="excel-tab-btn-icon ms-1" 
                                 onclick="renameFloor(${idx}, event)" title="이름 수정">
                             <i class="fa-solid fa-pen"></i>
@@ -4491,20 +4621,15 @@ function renderFloorTabs() {
         let totalAllBays = 0;
         let totalAllPallets = 0;
         window.canvasFloors.forEach(f => {
-            if (f.racks) {
-                f.racks.forEach(r => {
-                    let bays = r.count || 1;
-                    let lvls = r.levels || 3;
-                    totalAllBays += bays;
-                    totalAllPallets += (bays * Math.max(1, lvls - 1) * 2);
-                });
-            }
+            let st = calculateFloorStats(f);
+            totalAllBays += st.bays;
+            totalAllPallets += st.pallets;
         });
         html += `
             <div class="ms-auto d-flex align-items-center gap-2">
                 <div class="excel-tab-summary shadow-sm">
                     <i class="fa-solid fa-building me-1"></i> 총 <strong class="text-white">${window.canvasFloors.length}개 층</strong> 통합: 
-                    <span class="text-white">랙 ${totalAllBays}대</span> / <span class="text-success fw-bold">${totalAllPallets} PLT</span>
+                    <span class="text-white">랙 ${totalAllBays}대</span> / <span class="text-success fw-bold">${totalAllPallets.toLocaleString()} PLT</span>
                 </div>
             </div>
         `;
@@ -4556,45 +4681,31 @@ window.getCombinedFloorsSummary = function() {
     };
 
     window.canvasFloors.forEach((f, idx) => {
-        let indep = 0, conn = 0, smallConn = 0, bypass = 0, holders = 0, pallets = 0, bays = 0;
-        if (f.racks) {
-            f.racks.forEach(r => {
-                let bayCount = (r.count || 1);
-                let lvls = (r.levels || 3);
-                let spans = Math.max(1, lvls - 1);
-                bays += bayCount;
-                if (r.isBypass) {
-                    bypass += bayCount;
-                } else if (r.isSmallConn) {
-                    smallConn += bayCount;
-                } else {
-                    indep += 1;
-                    conn += (bayCount - 1);
-                }
-                pallets += (bayCount * spans * 2);
-            });
-        }
-        holders = Math.floor(pallets / 4);
+        const stats = calculateFloorStats(f);
 
-        grandSummary.grandIndep += indep;
-        grandSummary.grandConn += conn;
-        grandSummary.grandSmallConn += smallConn;
-        grandSummary.grandBypass += bypass;
-        grandSummary.grandTieHolders += holders;
-        grandSummary.grandPallets += pallets;
-        grandSummary.grandBays += bays;
+        grandSummary.grandIndep += stats.indep;
+        grandSummary.grandConn += stats.conn;
+        grandSummary.grandSmallConn += stats.smallConn;
+        grandSummary.grandBypass += stats.bypass;
+        grandSummary.grandTieHolders += stats.holders;
+        grandSummary.grandPallets += stats.pallets;
+        grandSummary.grandBays += stats.bays;
 
         grandSummary.floors.push({
             id: f.id,
             index: idx,
             name: f.name,
-            bays: bays,
-            indep: indep,
-            conn: conn,
-            smallConn: smallConn,
-            bypass: bypass,
-            pallets: pallets,
-            palletSpec: f.palletSpec,
+            bays: stats.bays,
+            indep: stats.indep,
+            conn: stats.conn,
+            smallConn: stats.smallConn,
+            bypass: stats.bypass,
+            holders: stats.holders,
+            pallets: stats.pallets,
+            spec: stats.spec,
+            edgeLengths: f.edgeLengths || [],
+            userEnteredEdges: f.userEnteredEdges || [],
+            palletSpec: f.palletSpec || {},
             capturedImage: f.capturedImage
         });
     });

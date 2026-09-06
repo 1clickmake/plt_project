@@ -520,18 +520,6 @@ class CanvasController extends BaseController {
                 }
             }
 
-            // 멀티 플로어의 개별 도면 이미지들을 extra_files 컬럼에도 등록하여 DB 테이블 직접 조회 및 다운로드 지원
-            if (!empty($floors) && is_array($floors) && count($floors) > 1) {
-                foreach ($floors as $flr) {
-                    if (!empty($flr['image_path'])) {
-                        $extraFilesPaths[] = [
-                            'path' => $flr['image_path'],
-                            'original_name' => ($flr['name'] ?? '구역') . ' 설계 도면.jpg'
-                        ];
-                    }
-                }
-            }
-
             $extraFilesJson = !empty($extraFilesPaths) ? json_encode($extraFilesPaths, JSON_UNESCAPED_UNICODE) : null;
 
             $sourceMode   = $body['source_mode'] ?? '';
