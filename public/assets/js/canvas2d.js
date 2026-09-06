@@ -1356,14 +1356,15 @@ function getEdgeClearance(p1, p2) {
 
 // 마그네틱 스냅 로직 (부드럽고 쫀득한 지능형 마그네틱 스냅)
 function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
-    // Shift 키를 누른 상태에서는 스냅을 완전히 무시하고 부드럽고 자유롭게 이동
-    if (isShiftPressed) {
+    // Shift 키를 누르거나 스냅 가이드가 꺼진 경우 스냅을 완전히 무시하고 100% 부드러운 픽셀 추적 자유 이동
+    if (isShiftPressed || (typeof snapGuideEnabled !== 'undefined' && !snapGuideEnabled)) {
         return { x: targetX, y: targetY };
     }
 
     let snappedX = targetX;
     let snappedY = targetY;
-    const SNAP_DIST = 14; // 부드럽고 쫀득한 스냅 반경 (기존 25px -> 14px로 축소하여 툭툭 튀는 현상 제거)
+    // 부드럽고 자연스러운 초미세 스냅 반경 (기존 14px -> 4~5px 이내로 정밀 제어하여 툭툭 끊기거나 튀는 현상 제거)
+    const SNAP_DIST = Math.min(5, Math.max(3, (typeof currentScale !== 'undefined' && currentScale > 0) ? 100 * currentScale : 5));
 
     let snappedXApplied = false;
     let snappedYApplied = false;
@@ -1378,7 +1379,7 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
     let rackCenterX = (minX + maxX) / 2;
     let rackCenterY = (minY + maxY) / 2;
 
-    // [1] 머리-꼬리 합체 스냅 (가장 우선순위 높은 스냅)
+    // [1] 머리-꼬리 합체 스냅 (초미세 반경에서만 정확히 흡착)
     const curAngle = getRackAngle(r);
     for (let i = 0; i < racks.length; i++) {
         let placed = racks[i];
@@ -1409,7 +1410,7 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
         }
     }
 
-    // [2] 벽면 마그네틱 스냅 (가장 가까운 1개의 벽면에만 안정적으로 스냅)
+    // [2] 벽면 마그네틱 스냅 (벽면 여유거리 CLEARANCE 위치에 가볍게 스냅, 툭툭 끊기게 만드는 벽 중앙 스냅은 제외)
     if (!snappedXApplied || !snappedYApplied) {
         let bestWallDeltaX = null;
         let bestWallDeltaY = null;
@@ -1436,16 +1437,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
                         bestWallDeltaX = (wallX - CLEARANCE) - maxX;
                     }
                 }
-                
-                // Y축 정중앙 스냅
-                if (!snappedYApplied) {
-                    let wallCenterY = (p1.y + p2.y) / 2;
-                    let dCenterY = Math.abs(rackCenterY - wallCenterY);
-                    if (dCenterY < minWallDistY) {
-                        minWallDistY = dCenterY;
-                        bestWallDeltaY = wallCenterY - rackCenterY;
-                    }
-                }
             }
             
             // 수평 벽면
@@ -1463,16 +1454,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
                         bestWallDeltaY = (wallY - CLEARANCE) - maxY;
                     }
                 }
-                
-                // X축 정중앙 스냅
-                if (!snappedXApplied) {
-                    let wallCenterX = (p1.x + p2.x) / 2;
-                    let dCenterX = Math.abs(rackCenterX - wallCenterX);
-                    if (dCenterX < minWallDistX) {
-                        minWallDistX = dCenterX;
-                        bestWallDeltaX = wallCenterX - rackCenterX;
-                    }
-                }
             }
         }
 
@@ -1486,7 +1467,7 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
         }
     }
 
-    // [3] 통로 간격(Aisle) 2800mm 스냅 (가로 및 세로 회전 랙 완벽 지원)
+    // [3] 통로 간격(Aisle) 2800mm 스냅 (가로 및 세로 회전 랙 지원)
     const AISLE_DIST_PX = 2800 * currentScale;
 
     // 가로 랙: Y축 통로 스냅
@@ -1565,12 +1546,12 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
         }
     }
 
-    // [4] 통로 중앙 스냅 (평균 분배 스냅 - 델타 방식으로 부드럽게 보정)
+    // [4] 통로 중앙 스냅 (아주 좁은 3px 이내에서만 보조)
+    const CENTER_SNAP_DIST = Math.min(3, SNAP_DIST);
     if (r.isHoriz && !snappedYApplied) {
         let boundTop = null; 
         let boundBottom = null;
 
-        // 벽면 체크
         for (let i = 0; i < points.length - 1; i++) {
             let p1 = points[i]; let p2 = points[i+1];
             if (Math.abs(p1.y - p2.y) < 5) {
@@ -1590,7 +1571,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
             }
         }
 
-        // 장애물(출입구) 체크
         obstacles.forEach(obs => {
             if (obs.type === 'door') {
                 let w = (obs.length || 2000) * currentScale;
@@ -1612,7 +1592,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
             }
         });
 
-        // 다른 랙 체크
         for (let placed of racks) {
             if (placed === r) continue;
             const placedBoxes = getRackBoxes(placed);
@@ -1631,17 +1610,15 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
 
         if (boundTop !== null && boundBottom !== null) {
             let centerSpaceY = (boundTop + boundBottom) / 2;
-            if (Math.abs(rackCenterY - centerSpaceY) < SNAP_DIST) {
+            if (Math.abs(rackCenterY - centerSpaceY) < CENTER_SNAP_DIST) {
                 snappedY += (centerSpaceY - rackCenterY);
                 snappedYApplied = true;
             }
         }
     } else if (!r.isHoriz && !snappedXApplied) {
-        // 세로 배치 중앙 스냅
         let boundLeft = null; 
         let boundRight = null;
 
-        // 벽면 체크
         for (let i = 0; i < points.length - 1; i++) {
             let p1 = points[i]; let p2 = points[i+1];
             if (Math.abs(p1.x - p2.x) < 5) {
@@ -1661,7 +1638,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
             }
         }
 
-        // 장애물(출입구) 체크
         obstacles.forEach(obs => {
             if (obs.type === 'door') {
                 let w = (obs.length || 2000) * currentScale;
@@ -1683,7 +1659,6 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
             }
         });
 
-        // 다른 랙 체크
         for (let placed of racks) {
             if (placed === r) continue;
             const placedBoxes = getRackBoxes(placed);
@@ -1702,7 +1677,7 @@ function calculateRackSnap(targetX, targetY, r, isShiftPressed = false) {
 
         if (boundLeft !== null && boundRight !== null) {
             let centerSpaceX = (boundLeft + boundRight) / 2;
-            if (Math.abs(rackCenterX - centerSpaceX) < SNAP_DIST) {
+            if (Math.abs(rackCenterX - centerSpaceX) < CENTER_SNAP_DIST) {
                 snappedX += (centerSpaceX - rackCenterX);
                 snappedXApplied = true;
             }
