@@ -3274,9 +3274,26 @@ window.renderObstacleInputs = function() {
         `;
 
         if (isDoorLike) {
+            let distVal = '';
+            if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && typeof edgeLengths !== 'undefined' && edgeLengths[obs.edgeIndex]) {
+                const p1 = points[obs.edgeIndex];
+                const p2 = points[obs.edgeIndex + 1];
+                const isHorizWall = Math.abs(p1.y - p2.y) < Math.abs(p1.x - p2.x);
+                const isP1Start = isHorizWall ? (p1.x < p2.x) : (p1.y < p2.y);
+                const distFromP1 = obs.visualDistFromStart || 0;
+                distVal = Math.round(isP1Start ? distFromP1 : (edgeLengths[obs.edgeIndex] - distFromP1));
+            }
+
             itemDiv.innerHTML = headerHtml + `
-                <div>
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.length || ''}" placeholder="길이(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
+                <div class="d-flex gap-1 mt-1">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-secondary" style="font-size:0.7rem; padding: 2px 4px;">길이</span>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${obs.length || ''}" placeholder="크기(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
+                    </div>
+                    <div class="input-group input-group-sm" title="좌측 또는 상단 기준 띄움 거리(mm)">
+                        <span class="input-group-text bg-light text-secondary" style="font-size:0.7rem; padding: 2px 4px;">위치</span>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${distVal}" placeholder="여백(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstaclePosition(${index}, this.value)">
+                    </div>
                 </div>
             `;
         } else {
@@ -3296,6 +3313,39 @@ window.updateObstacleData = function(index, field, value) {
         obstacles[index][field] = parseInt(value) || 0;
         draw(); 
     }
+};
+
+window.updateObstaclePosition = function(index, distMm) {
+    if (index < 0 || index >= obstacles.length) return;
+    const obs = obstacles[index];
+    if (obs.edgeIndex === undefined || obs.edgeIndex === -1) return;
+    
+    const p1 = points[obs.edgeIndex];
+    const p2 = points[obs.edgeIndex + 1];
+    if (!p1 || !p2) return;
+
+    const realWallLength = typeof edgeLengths !== 'undefined' ? edgeLengths[obs.edgeIndex] : 0;
+    if (!realWallLength) return;
+
+    let targetMm = parseInt(distMm);
+    if (isNaN(targetMm)) return;
+    
+    const isHorizWall = Math.abs(p1.y - p2.y) < Math.abs(p1.x - p2.x);
+    let isP1Start = isHorizWall ? (p1.x < p2.x) : (p1.y < p2.y);
+    
+    let distFromP1 = isP1Start ? targetMm : (realWallLength - targetMm);
+    
+    let param = distFromP1 / realWallLength;
+    if (param < 0) param = 0;
+    if (param > 1) param = 1;
+    
+    obs.ratioOnEdge = param;
+    obs.visualDistFromStart = param * realWallLength;
+    
+    obs.x = p1.x + param * (p2.x - p1.x);
+    obs.y = p1.y + param * (p2.y - p1.y);
+    
+    draw();
 };
 
 window.deleteObstacle = function(index) {
