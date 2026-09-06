@@ -4098,7 +4098,7 @@ window.autoAlignRacks = function() {
 
 window.getGridSnapPx = function() {
     if (currentScale <= 0) return 1;
-    const snapMm = cameraZoom >= 1.5 ? 100 : 500;
+    const snapMm = 10; // 장애물 배치 시 10mm 단위로 정밀하게 이동
     return snapMm * currentScale;
 };
 
