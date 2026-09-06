@@ -734,7 +734,7 @@ function getRackAngle(r) {
 
 function getRackRotatedCorners(r) {
     const depthPx = getRackTotalDepthPx(r);
-    const lenPx = r.totalLengthPx;
+    const lenPx = (typeof getRackTotalLengthPx === 'function') ? getRackTotalLengthPx(r) : r.totalLengthPx;
     const angle = getRackAngle(r);
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
@@ -754,8 +754,9 @@ function getRackRotatedCorners(r) {
 
 function getRackTailPos(r) {
     const angle = getRackAngle(r);
-    const tailX = r.x + Math.cos(angle) * r.totalLengthPx;
-    const tailY = r.y + Math.sin(angle) * r.totalLengthPx;
+    const lenPx = (typeof getRackTotalLengthPx === 'function') ? getRackTotalLengthPx(r) : r.totalLengthPx;
+    const tailX = r.x + Math.cos(angle) * lenPx;
+    const tailY = r.y + Math.sin(angle) * lenPx;
     return { x: tailX, y: tailY };
 }
 
@@ -2025,6 +2026,25 @@ function getSmallBeamLength(beamLength) {
     return Math.max(1000, (beamLength || 2585) - 1200);
 }
 
+// 📐 파렛트랙 총 길이 정밀 산출 (기둥 85mm 전수 반영: N개 베이 = N+1개 기둥)
+function getRackTotalLengthMm(r) {
+    if (!r) return 0;
+    const reg = (r.independent || 0) + (r.connected || 0);
+    const sm = r.smallConnected || 0;
+    const totalSpans = reg + sm;
+    if (totalSpans <= 0) return 0;
+    const beamLength = r.beamLength || 2585;
+    const smallBeamLength = r.smallBeamLength || getSmallBeamLength(beamLength);
+    // 총 외경 길이 = (일반 빔 수 * 빔길이) + (작은 빔 수 * 작은빔길이) + (총 기둥 수(스팬+1) * 기둥폭(85mm))
+    return (reg * beamLength) + (sm * smallBeamLength) + ((totalSpans + 1) * 85);
+}
+
+function getRackTotalLengthPx(r) {
+    return getRackTotalLengthMm(r) * (window.currentScale || currentScale || 1);
+}
+window.getRackTotalLengthMm = getRackTotalLengthMm;
+window.getRackTotalLengthPx = getRackTotalLengthPx;
+
 // 랙 그룹 단일 그리기 (복렬 기본 2,200mm 완벽 반영)
 function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     const singleDepth = r.rackDepth || 1000;
@@ -2039,6 +2059,9 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     const beamPx = r.beamLength * currentScale;
     const smallBeamLength = r.smallBeamLength || getSmallBeamLength(r.beamLength);
     const smallBeamPx = smallBeamLength * currentScale;
+
+    // 🌟 랙 전체 길이(totalLengthPx)를 기둥 수(totalSpans + 1)와 빔 길이에 맞춰 100% 정밀 동기화
+    r.totalLengthPx = getRackTotalLengthPx(r);
 
     ctx.save();
     ctx.translate(r.x, r.y);
@@ -2153,7 +2176,7 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
 
         // 4-3. 작은연결 치수선 (1,385 등) 표기 (작은연결이 있을 때 항상 명확히 표시)
         if (r.smallConnected > 0) {
-            const smallStartPx = colSizePx + (regularSpans * beamPx);
+            const smallStartPx = regularSpans * (colSizePx + beamPx) + colSizePx;
             drawDimensionArrow(ctx, smallStartPx, dimY, smallStartPx + smallBeamPx, dimY, Math.round(smallBeamLength).toLocaleString(), '#38bdf8', false, isFlipped);
         }
 
@@ -4012,8 +4035,8 @@ window.spawnEasyFullLayout = function () {
     const rackDepthPx = rackDepth * currentScale;
     const doubleRackDepthPx = ((rackDepth * 2) + 200) * currentScale;
     const aislePx = aisleMm * currentScale;
-    const singleBayLenPx = (85 + beamLength) * currentScale;
-    const connBayLenPx = beamLength * currentScale;
+    const singleBayLenPx = (85 + beamLength + 85) * currentScale;
+    const connBayLenPx = (beamLength + 85) * currentScale;
 
     function isInside(x, y) {
         return isPointInPoly(x, y, points);
@@ -4089,7 +4112,7 @@ window.spawnEasyFullLayout = function () {
                     curX += singleBayLenPx;
                 } else {
                     activeRack.connected++;
-                    activeRack.totalLengthPx = (85 + (1 + activeRack.connected) * beamLength) * currentScale;
+                    activeRack.totalLengthPx = getRackTotalLengthPx(activeRack);
                     curX += connBayLenPx;
                 }
             } else {
@@ -4127,8 +4150,8 @@ window.spawnInitialRacks = function () {
     const rackDepth = parseInt(document.getElementById('rack-depth')?.value) || (window.rackSpecs && window.rackSpecs.rackDepth) || 1000;
     const smallBeamLength = (typeof getSmallBeamLength === 'function') ? getSmallBeamLength(beamLength) : 1385;
 
-    // 독립 1칸 길이
-    const totalLenMm = 85 + (1 * beamLength);
+    // 독립 1칸 길이 (기둥 2개 + 빔 1개)
+    const totalLenMm = (2 * 85) + (1 * beamLength);
     const totalLenPx = totalLenMm * currentScale;
     const rackDepthPx = rackDepth * currentScale;
 

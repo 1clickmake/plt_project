@@ -33,7 +33,7 @@
         const angle = getRackAngle(r);
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
-        const len = r.totalLengthPx;
+        const len = (typeof getRackTotalLengthPx === 'function') ? getRackTotalLengthPx(r) : (r.totalLengthPx || 0);
         
         const mode = window.activeInteractMode || null;
         if (!mode) return null;
