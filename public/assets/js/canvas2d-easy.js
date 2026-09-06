@@ -1236,6 +1236,20 @@ function getClosestLineSegment(x, y) {
         if (dist < minDist) {
             minDist = dist;
             const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+            
+            if (typeof edgeLengths !== 'undefined' && edgeLengths[i] > 0) {
+                const realWallLength = edgeLengths[i];
+                let distFromP1Mm = param * realWallLength;
+                distFromP1Mm = Math.round(distFromP1Mm / 10) * 10;
+                
+                param = distFromP1Mm / realWallLength;
+                if (param < 0) param = 0;
+                if (param > 1) param = 1;
+                
+                xx = p1.x + param * C;
+                yy = p1.y + param * D;
+            }
+
             const visualDistFromStart = Math.hypot(xx - p1.x, yy - p1.y);
             const visualEdgeLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
             bestSnap = { x: xx, y: yy, angle: angle, edgeIndex: i, ratioOnEdge: param, visualDistFromStart, visualEdgeLength };
