@@ -13,6 +13,61 @@
     
     <!-- External Vendor Dashboard CSS -->
     <link href="/css/vendor_dashboard.css" rel="stylesheet">
+    <style>
+        @media print {
+            .sidebar, .top-navbar, .btn, button, #floorDetailTabs, .btn-group, .user-profile, .no-print {
+                display: none !important;
+            }
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt;
+            }
+            .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+            .content-body {
+                padding: 0 !important;
+            }
+            .glass-panel {
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+                margin-bottom: 20px !important;
+            }
+            .text-light, .text-secondary {
+                color: #334155 !important;
+            }
+            .border-secondary {
+                border-color: #cbd5e1 !important;
+            }
+            /* 📑 멀티 플로어: 탭 구조를 해제하고 모든 층의 도면을 순서대로 전체 출력 */
+            #floorDetailTabContent > .tab-pane {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                margin-bottom: 30px !important;
+                page-break-inside: avoid !important;
+            }
+            .floor-print-header {
+                display: block !important;
+            }
+            .floor-cad-img {
+                background: #ffffff !important;
+                border: 1px solid #94a3b8 !important;
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            .badge {
+                border: 1px solid #64748b !important;
+                color: #0f172a !important;
+                background: transparent !important;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -42,9 +97,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a>
+                </a> --> -->
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
@@ -114,11 +169,16 @@
                         </div>
                     </div>
 
-                    <!-- CAD 도면 시각화 캔버스 / 이미지 -->
+                    <!-- CAD 도면 시각화 캔버스 / 이미지 (멀티 플로어 지원) -->
                     <div class="glass-panel p-4">
+                        <?php
+                            $cData = json_decode($quote['canvas_data'] ?? '{}', true);
+                            $quoteFloors = $cData['floors'] ?? [];
+                            $hasMultiFloors = is_array($quoteFloors) && count($quoteFloors) > 1;
+                        ?>
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
                             <h5 class="m-0 fw-bold text-success d-flex align-items-center gap-2">
-                                <span>📐</span> 배치 설계 도면 캡쳐
+                                <span>📐</span> 배치 설계 도면 <?= $hasMultiFloors ? '(총 ' . count($quoteFloors) . '개 구역)' : '캡쳐' ?>
                             </h5>
                             <div>
                                 <button onclick="window.print()" class="btn btn-sm btn-outline-primary rounded px-2 py-1 me-2" style="font-size: 0.75rem;">
@@ -131,17 +191,87 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="text-center">
-                            <?php if (!empty($quote['image_path'])): ?>
-                                <img src="<?= htmlspecialchars($quote['image_path']) ?>" alt="도면 캡쳐" style="
-                                    background: #090d16;
-                                    border: 1px solid rgba(255,255,255,0.08);
-                                    border-radius: 12px;
-                                    width: 100%;
-                                    height: auto;
-                                ">
-                            <?php endif; ?>
-                        </div>
+
+                        <?php if ($hasMultiFloors): ?>
+                            <!-- 📑 멀티 플로어 탭 네비게이션 -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <ul class="nav nav-pills gap-1 bg-dark p-1 rounded border border-secondary flex-grow-1" id="floorDetailTabs" role="tablist">
+                                    <?php foreach ($quoteFloors as $idx => $f): ?>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link <?= $idx === 0 ? 'active' : '' ?> py-1 px-3 fw-bold" style="font-size:0.85rem;" id="floor-tab-<?= $idx ?>" data-bs-toggle="pill" data-bs-target="#floor-pane-<?= $idx ?>" type="button" role="tab">
+                                                🏢 <?= htmlspecialchars($f['name'] ?? ('구역 ' . ($idx + 1))) ?>
+                                            </button>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            
+                            <div class="tab-content" id="floorDetailTabContent">
+                                <?php foreach ($quoteFloors as $idx => $f): ?>
+                                    <div class="tab-pane fade <?= $idx === 0 ? 'show active' : '' ?>" id="floor-pane-<?= $idx ?>" role="tabpanel">
+                                        <!-- 프린트 전용 구역 타이틀 (인쇄 시 각 층 상단에 자동 출력) -->
+                                        <div class="floor-print-header d-none mb-2 pb-1 border-bottom border-dark">
+                                            <h5 class="fw-bold m-0 text-dark">🏢 <?= htmlspecialchars($f['name'] ?? ('구역 ' . ($idx + 1))) ?> 설계 도면</h5>
+                                        </div>
+
+                                        <!-- 해당 구역 스펙 요약 뱃지 -->
+                                        <div class="d-flex flex-wrap gap-2 mb-2 p-2 rounded bg-dark border border-secondary small text-light align-items-center">
+                                            <span class="badge bg-primary">독립 <?= intval($f['indep'] ?? 0) ?>대</span>
+                                            <span class="badge bg-info text-dark">연결 <?= intval($f['conn'] ?? 0) ?>대</span>
+                                            <?php if (!empty($f['bypass'])): ?>
+                                                <span class="badge bg-danger">바이패스 <?= intval($f['bypass']) ?>대</span>
+                                            <?php endif; ?>
+                                            <span class="badge bg-success">📦 <?= intval($f['pallets'] ?? 0) ?> PLT</span>
+                                            <?php if (!empty($f['spec'])): ?>
+                                                <span class="text-secondary ms-auto small">규격: <?= htmlspecialchars($f['spec']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <!-- 도면 이미지 -->
+                                        <div class="text-center position-relative mb-3">
+                                            <?php 
+                                                $fImg = !empty($f['image_path']) ? $f['image_path'] : (!empty($f['capturedImage']) ? $f['capturedImage'] : '');
+                                                // fallback: 층별 이미지가 없고 대표 이미지가 존재할 때
+                                                if (empty($fImg)) {
+                                                    if ($idx === 0 || count($quoteFloors) === 1) {
+                                                        $fImg = $quote['image_path'] ?? '';
+                                                    }
+                                                }
+                                            ?>
+                                            <?php if (!empty($fImg)): ?>
+                                                <a href="<?= htmlspecialchars($fImg) ?>" target="_blank">
+                                                    <img src="<?= htmlspecialchars($fImg) ?>" alt="<?= htmlspecialchars($f['name'] ?? '도면') ?>" class="floor-cad-img" style="
+                                                        background: #090d16;
+                                                        border: 1px solid rgba(255,255,255,0.08);
+                                                        border-radius: 12px;
+                                                        width: 100%;
+                                                        height: auto;
+                                                    ">
+                                                </a>
+                                            <?php else: ?>
+                                                <div class="p-4 text-secondary border border-secondary rounded text-center">
+                                                    <i class="fa-solid fa-image-slash fa-2x mb-2 opacity-50"></i><br>
+                                                    해당 구역의 캡처 이미지가 없습니다.
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <!-- 기존 단일 도면 이미지 표시 -->
+                            <div class="text-center">
+                                <?php if (!empty($quote['image_path'])): ?>
+                                    <img src="<?= htmlspecialchars($quote['image_path']) ?>" alt="도면 캡쳐" class="floor-cad-img" style="
+                                        background: #090d16;
+                                        border: 1px solid rgba(255,255,255,0.08);
+                                        border-radius: 12px;
+                                        width: 100%;
+                                        height: auto;
+                                    ">
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- 첨부파일 (이미지는 출력, PDF/기타는 다운로드) -->
                         <?php if (!empty($quote['extra_files'])): ?>

@@ -4195,7 +4195,12 @@ function captureFloorSnapshot() {
         const tCtx = tempCanvas.getContext('2d');
         tCtx.fillStyle = '#ffffff';
         tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tCtx.filter = 'invert(1)';
+        
+        // 다크모드/라이트모드 판별하여 반전 여부 결정 (다크모드일 때만 반전하여 CAD 인쇄 스타일 적용)
+        const isLight = document.body.classList.contains('theme-light') || (typeof window.CANVAS_THEME !== 'undefined' && window.CANVAS_THEME === 'light');
+        if (!isLight) {
+            tCtx.filter = 'invert(1)';
+        }
         tCtx.drawImage(c, 0, 0);
         tCtx.filter = 'none';
         return tempCanvas.toDataURL('image/jpeg', 0.85);
@@ -4462,6 +4467,29 @@ window.loadFloorState = loadFloorState;
 // 전체 층 통합 요약 데이터 산출 함수 (견적 제출 및 모달용)
 window.getCombinedFloorsSummary = function() {
     saveCurrentFloorState();
+
+    // 🌟 모든 층의 도면 스냅샷(capturedImage)이 빠짐없이 생성되어 있는지 전수 검사 및 보강
+    if (window.canvasFloors && window.canvasFloors.length > 1) {
+        const originalFloorIdx = window.currentFloorIndex;
+        window.canvasFloors.forEach((f, idx) => {
+            if (!f.capturedImage && f.points && f.points.length > 0) {
+                try {
+                    loadFloorState(idx);
+                    if (typeof draw === 'function') draw();
+                    const snap = captureFloorSnapshot();
+                    if (snap) f.capturedImage = snap;
+                } catch(e) {
+                    console.error("Floor snapshot capture error:", e);
+                }
+            }
+        });
+        // 원래 작업 중이던 층으로 복귀
+        if (window.currentFloorIndex !== originalFloorIdx) {
+            loadFloorState(originalFloorIdx);
+            if (typeof draw === 'function') draw();
+        }
+    }
+
     let grandSummary = {
         totalFloors: window.canvasFloors.length,
         floors: [],
@@ -4517,6 +4545,14 @@ window.getCombinedFloorsSummary = function() {
             capturedImage: f.capturedImage
         });
     });
+
+    grandSummary.totalIndep = grandSummary.grandIndep;
+    grandSummary.totalConn = grandSummary.grandConn;
+    grandSummary.totalSmallConn = grandSummary.grandSmallConn;
+    grandSummary.totalBypass = grandSummary.grandBypass;
+    grandSummary.totalHolders = grandSummary.grandTieHolders;
+    grandSummary.totalPallets = grandSummary.grandPallets;
+    grandSummary.totalBays = grandSummary.grandBays;
 
     return grandSummary;
 };

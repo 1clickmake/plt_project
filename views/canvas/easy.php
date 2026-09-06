@@ -1122,8 +1122,25 @@ function submitQuoteRequest() {
     const conn = document.getElementById('top-badge-conn') ? document.getElementById('top-badge-conn').innerText : '0';
     const small_conn = document.getElementById('top-badge-small-conn') ? document.getElementById('top-badge-small-conn').innerText : '0';
     const bypass = document.getElementById('top-badge-bypass') ? document.getElementById('top-badge-bypass').innerText : '0';
-    const holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
-    const pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
+    let holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
+    let pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
+
+    // 📑 멀티 플로어(다중 층/창고) 전체 합산 계산
+    let floorsPayload = null;
+    if (typeof window.getCombinedFloorsSummary === 'function') {
+        const grand = window.getCombinedFloorsSummary();
+        if (grand && grand.totalFloors > 1) {
+            indep = String(grand.grandIndep || grand.totalIndep || 0);
+            conn = String(grand.grandConn || grand.totalConn || 0);
+            small_conn = String(grand.grandSmallConn || grand.totalSmallConn || 0);
+            bypass = String(grand.grandBypass || grand.totalBypass || 0);
+            holders = String(grand.grandTieHolders || grand.totalHolders || 0);
+            pallets = String(grand.grandPallets || grand.totalPallets || 0);
+            floorsPayload = grand.floors;
+            const floorSpecs = grand.floors.map(f => f.name + ': ' + (f.spec || '기본')).join(' / ');
+            if (floorSpecs) rackSpec = floorSpecs;
+        }
+    }
 
     if (!rHeight && spec) {
         const match = spec.match(/×\s*\d+\s*×\s*(\d+)/);
@@ -1169,8 +1186,11 @@ function submitQuoteRequest() {
             racks: typeof racks !== 'undefined' ? racks : [],
             points: typeof points !== 'undefined' ? points : [],
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
-            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1
+            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1,
+            floors: floorsPayload || undefined
         }),
+        floors_data: floorsPayload ? JSON.stringify(floorsPayload) : '',
+        total_floors: floorsPayload ? floorsPayload.length : 1,
         summary: details || (window.lastAiSummary || ''),
         source_mode: 'easy',
         edge_lengths: edge_lengths_str,

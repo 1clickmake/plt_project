@@ -1170,12 +1170,12 @@ function submitQuoteRequest() {
     if (typeof window.getCombinedFloorsSummary === 'function') {
         const grand = window.getCombinedFloorsSummary();
         if (grand && grand.totalFloors > 1) {
-            indep = String(grand.totalIndep);
-            conn = String(grand.totalConn);
-            small_conn = String(grand.totalSmallConn);
-            bypass = String(grand.totalBypass);
-            holders = String(grand.totalHolders);
-            pallets = String(grand.totalPallets);
+            indep = String(grand.grandIndep || grand.totalIndep || 0);
+            conn = String(grand.grandConn || grand.totalConn || 0);
+            small_conn = String(grand.grandSmallConn || grand.totalSmallConn || 0);
+            bypass = String(grand.grandBypass || grand.totalBypass || 0);
+            holders = String(grand.grandTieHolders || grand.totalHolders || 0);
+            pallets = String(grand.grandPallets || grand.totalPallets || 0);
             floorsPayload = grand.floors;
             const floorSpecs = grand.floors.map(f => f.name + ': ' + (f.spec || '기본')).join(' / ');
             if (floorSpecs) rackSpec = floorSpecs;
