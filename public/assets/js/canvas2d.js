@@ -173,12 +173,12 @@ function toggleSnapGuide() {
 }
 
 // 레티나 디스플레이 및 사이즈 맞춤 설정
-function resizeCanvas() {
+function resizeCanvas(triggerAlign = true) {
     const parent = canvas.parentElement;
     if (!parent) return;
     baseWidth = parent.clientWidth;
     baseHeight = parent.clientHeight;
-    if (cameraZoom === 1 && points.length >= 3 && currentScale > 0) {
+    if (triggerAlign && cameraZoom === 1 && points.length >= 3 && currentScale > 0) {
         alignAndScalePolygon();
     } else {
         canvas.width = Math.round(baseWidth * cameraZoom);
@@ -186,7 +186,7 @@ function resizeCanvas() {
         draw();
     }
 }
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => resizeCanvas(true));
 
 // 📜 캔버스 스크롤 시 격자(Grid) 및 눈금자(Ruler) 실시간 추적 렌더링
 document.addEventListener('DOMContentLoaded', () => {
@@ -1106,6 +1106,7 @@ canvas.addEventListener('mouseup', (e) => {
 
     if (draggingObstacleIndex !== -1) {
         draggingObstacleIndex = -1;
+        renderObstacleInputs();
     }
     
     if (isDrawingRack) {
@@ -1224,11 +1225,15 @@ canvas.addEventListener('drop', (e) => {
                 angle: closestLine.angle, length: 3500,
                 edgeIndex: closestLine.edgeIndex,
                 ratioOnEdge: closestLine.ratioOnEdge,
-                visualDistFromStart: closestLine.visualDistFromStart,
+                visualDistFromStart: 10000,
                 visualEdgeLength: closestLine.visualEdgeLength
             });
+            // 출입문/셔터 드롭 시 기본 위치 10,000mm로 자동 배치
+            if (typeof updateObstaclePosition === 'function') {
+                updateObstaclePosition(obstacles.length - 1, 10000);
+            }
         } else {
-            obstacles.push({ type: draggedItemType, name: typeLabel + dCount, x: dropX, y: dropY, angle: 0, length: 3500, edgeIndex: -1 });
+            obstacles.push({ type: draggedItemType, name: typeLabel + dCount, x: dropX, y: dropY, angle: 0, length: 3500, edgeIndex: -1, visualDistFromStart: 10000 });
         }
     } else if (draggedItemType === 'rack') {
         if (typeof window.spawnInitialRacks === 'function') {
@@ -3332,24 +3337,33 @@ window.renderObstacleInputs = function() {
         `;
 
         if (isDoorLike) {
-            let distVal = '';
+            let distVal = 10000;
             if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && typeof edgeLengths !== 'undefined' && edgeLengths[obs.edgeIndex]) {
                 const p1 = points[obs.edgeIndex];
                 const p2 = points[obs.edgeIndex + 1];
+                const realWallLength = edgeLengths[obs.edgeIndex];
                 const isHorizWall = Math.abs(p1.y - p2.y) < Math.abs(p1.x - p2.x);
-                const isP1Start = isHorizWall ? (p1.x < p2.x) : (p1.y < p2.y);
-                const distFromP1 = obs.visualDistFromStart || 0;
-                distVal = Math.round(isP1Start ? distFromP1 : (edgeLengths[obs.edgeIndex] - distFromP1));
+                if (isHorizWall) {
+                    const leftCornerX = Math.min(p1.x, p2.x);
+                    const edgePixelLen = Math.abs(p1.x - p2.x) || 1;
+                    distVal = Math.round((Math.abs(obs.x - leftCornerX) / edgePixelLen) * realWallLength);
+                } else {
+                    const topCornerY = Math.min(p1.y, p2.y);
+                    const edgePixelLen = Math.abs(p1.y - p2.y) || 1;
+                    distVal = Math.round((Math.abs(obs.y - topCornerY) / edgePixelLen) * realWallLength);
+                }
+            } else if (obs.visualDistFromStart !== undefined) {
+                distVal = obs.visualDistFromStart;
             }
 
             itemDiv.innerHTML = headerHtml + `
                 <div class="d-flex gap-1 mt-1">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light text-secondary" style="font-size:0.7rem; padding: 2px 4px;">길이</span>
+                        <span class="input-group-text bg-light text-dark fw-bold" style="font-size:0.7rem; padding: 2px 4px;">길이</span>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${obs.length || ''}" placeholder="크기(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
                     </div>
                     <div class="input-group input-group-sm" title="좌측 또는 상단 기준 띄움 거리(mm)">
-                        <span class="input-group-text bg-light text-secondary" style="font-size:0.7rem; padding: 2px 4px;">위치</span>
+                        <span class="input-group-text bg-light text-dark fw-bold" style="font-size:0.7rem; padding: 2px 4px;">위치</span>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${distVal}" placeholder="여백(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstaclePosition(${index}, this.value)">
                     </div>
                 </div>
@@ -4112,27 +4126,27 @@ window.autoAlignRacks = function() {
     const alignHoriz = horizCount >= racks.length / 2;
 
     let singleRacks = racks.filter(r => !r.isDouble && r.isHoriz === alignHoriz);
-    let topY = pMinY + 100 * currentScale;
-    let bottomY = pMaxY - 100 * currentScale;
-    let leftX = pMinX + 100 * currentScale;
-    let rightX = pMaxX - 100 * currentScale;
+    let topY = pMinY;
+    let bottomY = pMaxY;
+    let leftX = pMinX;
+    let rightX = pMaxX;
 
     if (alignHoriz) {
         singleRacks.forEach(r => {
             const depth = (r.rackDepth || 1000) * currentScale;
             if (r.y < (pMinY + pMaxY) / 2) {
-                if (r.y + depth > topY) topY = r.y + depth;
+                if (r.y + depth / 2 > topY) topY = r.y + depth / 2;
             } else {
-                if (r.y < bottomY) bottomY = r.y;
+                if (r.y - depth / 2 < bottomY) bottomY = r.y - depth / 2;
             }
         });
     } else {
         singleRacks.forEach(r => {
             const depth = (r.rackDepth || 1000) * currentScale;
             if (r.x < (pMinX + pMaxX) / 2) {
-                if (r.x + depth > leftX) leftX = r.x + depth;
+                if (r.x + depth / 2 > leftX) leftX = r.x + depth / 2;
             } else {
-                if (r.x < rightX) rightX = r.x;
+                if (r.x - depth / 2 < rightX) rightX = r.x - depth / 2;
             }
         });
     }
@@ -4165,10 +4179,11 @@ window.autoAlignRacks = function() {
             const gap = (bottomY - topY - totalRowsDepth) / (rows.length + 1);
 
             rows.forEach((row, idx) => {
-                let targetY = topY + gap * (idx + 1);
+                let rowTop = topY + gap * (idx + 1);
                 for (let i = 0; i < idx; i++) {
-                    targetY += rowDepths[i];
+                    rowTop += rowDepths[i];
                 }
+                const targetY = rowTop + rowDepths[idx] / 2; // 열/행 폭의 정확한 중심 배치
                 row.forEach(r => {
                     r.y = targetY;
                     const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
@@ -4201,10 +4216,11 @@ window.autoAlignRacks = function() {
             const gap = (rightX - leftX - totalColsDepth) / (cols.length + 1);
 
             cols.forEach((col, idx) => {
-                let targetX = leftX + gap * (idx + 1);
+                let colLeft = leftX + gap * (idx + 1);
                 for (let i = 0; i < idx; i++) {
-                    targetX += colDepths[i];
+                    colLeft += colDepths[i];
                 }
+                const targetX = colLeft + colDepths[idx] / 2; // 열/행 폭의 정확한 중심 배치
                 col.forEach(r => {
                     r.x = targetX;
                     const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
@@ -4303,6 +4319,8 @@ function saveCurrentFloorState() {
     cur.userEnteredEdges = [...(userEnteredEdges || [])];
     cur.racks = JSON.parse(JSON.stringify(racks || []));
     cur.currentScale = currentScale;
+    cur.canvasOriginX = (window.canvasOriginX !== undefined) ? window.canvasOriginX : 0;
+    cur.canvasOriginY = (window.canvasOriginY !== undefined) ? window.canvasOriginY : 0;
     cur.isDrawingMode = isDrawingMode;
     cur.cameraZoom = cameraZoom;
     cur.rackCustomLevels = window.rackCustomLevels ? JSON.parse(JSON.stringify(window.rackCustomLevels)) : null;
@@ -4377,6 +4395,8 @@ function loadFloorState(index) {
     racks = JSON.parse(JSON.stringify(target.racks || []));
     currentScale = target.currentScale || 0;
     window.currentScale = currentScale;
+    window.canvasOriginX = (target.canvasOriginX !== undefined) ? target.canvasOriginX : 0;
+    window.canvasOriginY = (target.canvasOriginY !== undefined) ? target.canvasOriginY : 0;
     cameraZoom = target.cameraZoom || 1;
 
     // 폐합되지 않은 상태라면 점 찍기 모드(isDrawingMode = true) 유지
@@ -4463,8 +4483,11 @@ function loadFloorState(index) {
     if (guideEl) guideEl.style.display = 'none';
     if (canvas) canvas.style.display = 'block';
 
-    resizeCanvas();
-    if (typeof alignAndScalePolygon === 'function' && points.length >= 4 && edgeLengths.some(v => v > 0)) {
+    // 캔버스 크기(width/height)만 안전하게 세팅하고, 도면/랙 위치 재정렬(alignAndScalePolygon)은 건너뜀!
+    resizeCanvas(false);
+    
+    // 만약 한 번도 스케일링되지 않은 초기 층인 경우에만 최초 정렬 실행
+    if (typeof alignAndScalePolygon === 'function' && points.length >= 4 && edgeLengths.some(v => v > 0) && (!target.currentScale || target.currentScale <= 0)) {
         alignAndScalePolygon();
     }
     activeRack = null;

@@ -6,8 +6,8 @@
 .chat-wizard-container {
     position: fixed;
     bottom: 30px;
-    right: 30px;
-    width: 380px;
+    right: 400px;
+    width: 440px;
     height: 700px;
     max-height: calc(100vh - 60px);
     z-index: 1050;
@@ -172,10 +172,11 @@
 /* Floating Avatar Toggle Button */
 .chat-toggle-btn {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 62px;
-    height: 62px;
+    bottom: 10px;
+    right: 10px;
+    z-index: 1051;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
@@ -339,10 +340,6 @@ const ChatWizard = {
         const toggle = document.getElementById('chat-wizard-toggle');
         if (container) container.classList.add('d-none');
         if (toggle) toggle.classList.remove('d-none');
-        if (typeof alignAndScalePolygon === 'function' && typeof points !== 'undefined' && points.length >= 3 && typeof currentScale !== 'undefined' && currentScale > 0) {
-            alignAndScalePolygon();
-            if (typeof draw === 'function') draw();
-        }
     },
 
     restore() {
@@ -350,10 +347,7 @@ const ChatWizard = {
         const toggle = document.getElementById('chat-wizard-toggle');
         if (container) container.classList.remove('d-none');
         if (toggle) toggle.classList.add('d-none');
-        if (typeof alignAndScalePolygon === 'function' && typeof points !== 'undefined' && points.length >= 3 && typeof currentScale !== 'undefined' && currentScale > 0) {
-            alignAndScalePolygon();
-            if (typeof draw === 'function') draw();
-        }
+        if (typeof draw === 'function') draw();
     },
 
     appendBotMsg(html) {

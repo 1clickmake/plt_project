@@ -1443,7 +1443,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <!-- 🎮 TV 리모컨 컨트롤 패널 (position:fixed - 항상 우측 상단 고정) -->
-<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; top:80px; right:20px; z-index:9998; user-select:none;">
+<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; bottom:30px; right:100px; z-index:9998; user-select:none;">
     <div style="
         background: linear-gradient(160deg, rgba(10,15,28,0.98) 0%, rgba(22,33,52,0.98) 100%);
         border: 1px solid rgba(56,189,248,0.4);
