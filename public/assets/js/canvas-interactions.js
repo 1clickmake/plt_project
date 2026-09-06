@@ -286,8 +286,8 @@
                     const boxes = getRackBoxes(r);
                     
                     const pad = 5;
-                    if (screenX >= boxes.physical.minX - pad && screenX <= boxes.physical.maxX + pad &&
-                        screenY >= boxes.physical.minY - pad && screenY <= boxes.physical.maxY + pad) {
+                    if (logicalX >= boxes.physical.minX - pad && logicalX <= boxes.physical.maxX + pad &&
+                        logicalY >= boxes.physical.minY - pad && logicalY <= boxes.physical.maxY + pad) {
                         
                         const angle = typeof getRackAngle === 'function' ? getRackAngle(r) : 0;
                         const dx = logicalX - r.x;
@@ -531,10 +531,10 @@
                         if (typeof getRackBoxes !== 'function') continue;
                         const boxes = getRackBoxes(r);
                         
-                        // 바운딩 박스 체크 (화면 픽셀 좌표 screenX, screenY 기준 판별!)
+                        // 바운딩 박스 체크 (논리 좌표 logicalX, logicalY 기준 판별!)
                         const pad = 5;
-                        if (screenX >= boxes.physical.minX - pad && screenX <= boxes.physical.maxX + pad &&
-                            screenY >= boxes.physical.minY - pad && screenY <= boxes.physical.maxY + pad) {
+                        if (logicalX >= boxes.physical.minX - pad && logicalX <= boxes.physical.maxX + pad &&
+                            logicalY >= boxes.physical.minY - pad && logicalY <= boxes.physical.maxY + pad) {
                             
                             // 랙 로컬 좌표계로 마우스 위치 변환 (logicalX, logicalY 사용)
                             const angle = typeof getRackAngle === 'function' ? getRackAngle(r) : 0;
@@ -872,13 +872,18 @@ window.drawCopyHandleIcon = typeof drawCopyHandleIcon !== 'undefined' ? drawCopy
         const container = canvas.parentElement; 
         if (!container) return;
 
-        // Wheel Zoom
+        // Wheel Zoom - Zoom directly into mouse cursor position
         container.addEventListener('wheel', function(e) {
             e.preventDefault(); 
+            const rect = container.getBoundingClientRect();
+            const mouseX = container.scrollLeft + (e.clientX - rect.left);
+            const mouseY = container.scrollTop + (e.clientY - rect.top);
+            const mousePoint = { x: mouseX, y: mouseY, clientX: e.clientX, clientY: e.clientY };
+
             if (e.deltaY < 0) {
-                if (typeof window.zoomIn === 'function') window.zoomIn();
+                if (typeof window.zoomIn === 'function') window.zoomIn(mousePoint);
             } else if (e.deltaY > 0) {
-                if (typeof window.zoomOut === 'function') window.zoomOut();
+                if (typeof window.zoomOut === 'function') window.zoomOut(mousePoint);
             }
         }, { passive: false });
 

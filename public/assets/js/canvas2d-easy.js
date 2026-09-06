@@ -171,47 +171,66 @@ function toggleSnapGuide() {
 // 레티나 디스플레이 및 사이즈 맞춤 설정
 function resizeCanvas() {
     const parent = canvas.parentElement;
+    if (!parent) return;
     baseWidth = parent.clientWidth;
     baseHeight = parent.clientHeight;
-    applyZoom();
+    if (cameraZoom === 1 && points.length >= 3 && currentScale > 0) {
+        alignAndScalePolygon();
+    } else {
+        canvas.width = Math.round(baseWidth * cameraZoom);
+        canvas.height = Math.round(baseHeight * cameraZoom);
+        draw();
+    }
 }
 window.addEventListener('resize', resizeCanvas);
+
+// 📜 캔버스 스크롤 시 격자(Grid) 및 눈금자(Ruler) 실시간 추적 렌더링
+document.addEventListener('DOMContentLoaded', () => {
+    const parent = canvas ? canvas.parentElement : null;
+    if (parent) {
+        parent.addEventListener('scroll', () => {
+            requestAnimationFrame(draw);
+        }, { passive: true });
+    }
+});
 
 function applyZoom(oldZoom = null, mousePoint = null) {
     if (baseWidth === 0) return;
     const parent = canvas.parentElement;
     if (!parent) return;
 
-    let viewCenterX = parent.scrollLeft + parent.clientWidth / 2;
-    let viewCenterY = parent.scrollTop + parent.clientHeight / 2;
+    const rect = parent.getBoundingClientRect();
+    let cursorViewportX = parent.clientWidth / 2;
+    let cursorViewportY = parent.clientHeight / 2;
 
-    if (mousePoint && mousePoint.x !== undefined && mousePoint.y !== undefined) {
-        viewCenterX = mousePoint.x;
-        viewCenterY = mousePoint.y;
+    if (mousePoint && mousePoint.clientX !== undefined) {
+        cursorViewportX = mousePoint.clientX - rect.left;
+        cursorViewportY = mousePoint.clientY - rect.top;
+    } else if (mousePoint && mousePoint.x !== undefined) {
+        cursorViewportX = mousePoint.x - parent.scrollLeft;
+        cursorViewportY = mousePoint.y - parent.scrollTop;
     } else if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
-        viewCenterX = window.lastMouseX;
-        viewCenterY = window.lastMouseY;
+        cursorViewportX = window.lastMouseX - parent.scrollLeft;
+        cursorViewportY = window.lastMouseY - parent.scrollTop;
     }
 
-    let screenMouseX = viewCenterX - parent.scrollLeft;
-    let screenMouseY = viewCenterY - parent.scrollTop;
+    const prevZoom = (oldZoom && oldZoom > 0) ? oldZoom : 1;
+    const worldX = (parent.scrollLeft + cursorViewportX) / prevZoom;
+    const worldY = (parent.scrollTop + cursorViewportY) / prevZoom;
 
-    canvas.width = baseWidth * cameraZoom;
-    canvas.height = baseHeight * cameraZoom;
+    canvas.width = Math.round(baseWidth * cameraZoom);
+    canvas.height = Math.round(baseHeight * cameraZoom);
 
-    if (points.length >= 3 && currentScale > 0) {
-        alignAndScalePolygon();
-    }
+    // 🌟 줌 동작 시에는 도면 및 랙 좌표계를 절대 변경하지 않고 순수 카메라 확대/축소만 수행
     draw();
 
     if (oldZoom && oldZoom > 0) {
-        const zoomRatio = cameraZoom / oldZoom;
-        parent.scrollLeft = (viewCenterX * zoomRatio) - screenMouseX;
-        parent.scrollTop = (viewCenterY * zoomRatio) - screenMouseY;
+        parent.scrollLeft = Math.round(worldX * cameraZoom - cursorViewportX);
+        parent.scrollTop = Math.round(worldY * cameraZoom - cursorViewportY);
     } else {
         if (cameraZoom > 1) {
-            parent.scrollLeft = (canvas.width - parent.clientWidth) / 2;
-            parent.scrollTop = (canvas.height - parent.clientHeight) / 2;
+            parent.scrollLeft = Math.round((canvas.width - parent.clientWidth) / 2);
+            parent.scrollTop = Math.round((canvas.height - parent.clientHeight) / 2);
         } else {
             parent.scrollLeft = 0;
             parent.scrollTop = 0;
@@ -455,12 +474,32 @@ function alignAndScalePolygon() {
     const drawnWidthPx = polyWidthMm * currentScale;
     const drawnHeightPx = polyHeightMm * currentScale;
 
+    // 이전 도면 원점(0,0) 좌표 및 스케일 백업 (랙 상대 위치 보존용)
+    const oldOriginX = (window.canvasOriginX !== undefined) ? window.canvasOriginX : 0;
+    const oldOriginY = (window.canvasOriginY !== undefined) ? window.canvasOriginY : 0;
+    const oldScale = window.currentScale || currentScale;
+
     const offsetX = leftMargin + (safeWidth - drawnWidthPx) / 2 - (minX * currentScale);
     const offsetY = topMargin + (safeHeight - drawnHeightPx) / 2 - (minY * currentScale);
     window.canvasOriginX = offsetX + (minX * currentScale);
     window.canvasOriginY = offsetY + (minY * currentScale);
     window.globalPolyMinX = Math.round(offsetX / currentScale);
     window.globalPolyMinY = Math.round(offsetY / currentScale);
+
+    const newOriginX = window.canvasOriginX;
+    const newOriginY = window.canvasOriginY;
+
+    // 🌟 도면이 재정렬되거나 창 크기 변화로 스케일이 변경될 때 랙도 도면 내부의 정확한 상대 위치(mm)를 유지하도록 동기화!
+    if (oldScale > 0 && typeof racks !== 'undefined' && Array.isArray(racks) && racks.length > 0 && Math.abs(currentScale - oldScale) > 0.00001) {
+        racks.forEach(r => {
+            const relMmX = (r.x - oldOriginX) / oldScale;
+            const relMmY = (r.y - oldOriginY) / oldScale;
+            r.x = newOriginX + relMmX * currentScale;
+            r.y = newOriginY + relMmY * currentScale;
+            const totalMm = (r.totalLengthPx || 0) / oldScale;
+            r.totalLengthPx = totalMm * currentScale;
+        });
+    }
 
     // 이전 도면 바운딩 박스 기준 장애물(기둥, 사용불가 등) 상대 위치 보정용
     const oldMinX = points.length > 0 ? Math.min(...points.map(p => p.x)) : 0;
@@ -503,6 +542,8 @@ function alignAndScalePolygon() {
 
     if (cameraZoom !== 1) {
         cameraZoom = 1;
+        canvas.width = baseWidth;
+        canvas.height = baseHeight;
     }
     if (parent) {
         parent.scrollLeft = 0;
