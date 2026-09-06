@@ -184,9 +184,9 @@
                                 <button onclick="window.print()" class="btn btn-sm btn-outline-primary rounded px-2 py-1 me-2" style="font-size: 0.75rem;">
                                     <i class="fa-solid fa-print"></i> 프린트 출력
                                 </button>
-                                <?php if (!empty($quote['image_path'])): ?>
+                                <?php if (!$hasMultiFloors && !empty($quote['image_path'])): ?>
                                     <a href="<?= htmlspecialchars($quote['image_path']) ?>" target="_blank" class="btn btn-sm btn-outline-info rounded px-2 py-1 me-2" style="font-size: 0.75rem;">
-                                        <i class="fa-solid fa-magnifying-glass-plus"></i> 전체이미지 보기
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i> 도면 원본보기
                                     </a>
                                 <?php endif; ?>
                             </div>
@@ -208,6 +208,14 @@
                             
                             <div class="tab-content" id="floorDetailTabContent">
                                 <?php foreach ($quoteFloors as $idx => $f): ?>
+                                    <?php 
+                                        $fImg = !empty($f['image_path']) ? $f['image_path'] : (!empty($f['capturedImage']) ? $f['capturedImage'] : '');
+                                        if (empty($fImg)) {
+                                            if ($idx === 0 || count($quoteFloors) === 1) {
+                                                $fImg = $quote['image_path'] ?? '';
+                                            }
+                                        }
+                                    ?>
                                     <div class="tab-pane fade <?= $idx === 0 ? 'show active' : '' ?>" id="floor-pane-<?= $idx ?>" role="tabpanel">
                                         <!-- 프린트 전용 구역 타이틀 (인쇄 시 각 층 상단에 자동 출력) -->
                                         <div class="floor-print-header d-none mb-2 pb-1 border-bottom border-dark">
@@ -223,7 +231,12 @@
                                             <?php endif; ?>
                                             <span class="badge bg-success">📦 <?= intval($f['pallets'] ?? 0) ?> PLT</span>
                                             <?php if (!empty($f['spec'])): ?>
-                                                <span class="text-secondary ms-auto small">규격: <?= htmlspecialchars($f['spec']) ?></span>
+                                                <span class="text-secondary small ms-2">규격: <?= htmlspecialchars($f['spec']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($fImg)): ?>
+                                                <a href="<?= htmlspecialchars($fImg) ?>" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 ms-auto" style="font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-magnifying-glass-plus"></i> <?= htmlspecialchars($f['name'] ?? ('구역 ' . ($idx + 1))) ?> 원본 확대
+                                                </a>
                                             <?php endif; ?>
                                         </div>
                                         

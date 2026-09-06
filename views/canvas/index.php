@@ -1302,7 +1302,7 @@ function submitQuoteRequest() {
 }
 
 // --- 도면 입력 생성 함수 ---
-window.generateCustomInputs = function(numEdges) {
+window.generateCustomInputs = function(numEdges, keepExisting = false) {
     const diagramContainer = document.getElementById('diagram-container');
     const inputsContainer  = document.getElementById('chat-inputs-container');
 
@@ -1310,20 +1310,24 @@ window.generateCustomInputs = function(numEdges) {
         diagramContainer.innerHTML = `<p class="text-success fw-bold py-3 m-0">🎉 총 ${numEdges}각형 도면이 확정되었습니다!</p>`;
     }
 
-    if (typeof clearEdgeLengths === 'function') clearEdgeLengths();
+    // 기존 입력된 값이 있다면 날리지 않고 보존
+    const hasExistingLengths = (typeof edgeLengths !== 'undefined' && edgeLengths.some(v => v > 0));
+    if (!keepExisting && !hasExistingLengths && typeof clearEdgeLengths === 'function') {
+        clearEdgeLengths();
+    }
 
     let html = '';
     
     for (let i = 1; i <= numEdges; i++) {
-        // 내부 edgeLengths 배열을 초기 비움(0) 상태로 동기화
-        if (typeof edgeLengths !== 'undefined') {
+        const existingVal = (typeof edgeLengths !== 'undefined' && edgeLengths[i-1] > 0) ? edgeLengths[i-1] : '';
+        if (!existingVal && typeof edgeLengths !== 'undefined' && !hasExistingLengths) {
             edgeLengths[i-1] = 0;
         }
 
         html += `
         <div class="col-6 mb-3">
             <label class="form-label small mb-1 fw-bold text-secondary">${i}번 선분 (mm)</label>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" id="edge-input-${i-1}" onclick="this.select()" class="form-control form-control-sm bg-white text-dark border-secondary small" value="" placeholder="길이 입력" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateEdgeLength(${i-1}, this.value)">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="edge-input-${i-1}" onclick="this.select()" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${existingVal}" placeholder="길이 입력" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateEdgeLength(${i-1}, this.value)">
         </div>`;
     }
     

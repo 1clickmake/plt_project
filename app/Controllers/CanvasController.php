@@ -445,6 +445,50 @@ class CanvasController extends BaseController {
                 }
             }
 
+            // 📑 멀티 플로어(다중 층/창고) 데이터 파싱 및 개별 도면 이미지 저장
+            $floorsDataStr = $body['floors_data'] ?? '';
+            $floors = [];
+            if (!empty($floorsDataStr)) {
+                $floors = json_decode($floorsDataStr, true) ?: [];
+            } elseif (!empty($canvasData)) {
+                $decodedCData = json_decode($canvasData, true);
+                if (!empty($decodedCData['floors']) && is_array($decodedCData['floors'])) {
+                    $floors = $decodedCData['floors'];
+                }
+            }
+
+            if (!empty($floors) && is_array($floors)) {
+                $dir = __DIR__ . '/../../public/uploads/quotes';
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0755, true);
+                }
+                foreach ($floors as &$floor) {
+                    $floorImg = $floor['capturedImage'] ?? '';
+                    if (!empty($floorImg) && preg_match('/^data:image\/(\w+);base64,/', $floorImg, $fType)) {
+                        $fRawData = substr($floorImg, strpos($floorImg, ',') + 1);
+                        $fExt = strtolower($fType[1]);
+                        if (in_array($fExt, ['jpg', 'jpeg', 'png', 'gif'])) {
+                            $fDecoded = base64_decode($fRawData);
+                            if ($fDecoded !== false) {
+                                $fFilename = 'quote_' . time() . '_' . rand(1000, 9999) . '_floor_' . ($floor['id'] ?? '0') . '.' . $fExt;
+                                $fPath = $dir . '/' . $fFilename;
+                                if (@file_put_contents($fPath, $fDecoded)) {
+                                    $floor['image_path'] = '/uploads/quotes/' . $fFilename;
+                                }
+                            }
+                        }
+                    }
+                    // 원본 base64는 DB 용량 절약을 위해 제거
+                    unset($floor['capturedImage']);
+                }
+                unset($floor);
+
+                // canvasData 내 floors 데이터 업데이트
+                $cDataDecoded = json_decode($canvasData, true) ?: [];
+                $cDataDecoded['floors'] = $floors;
+                $canvasData = json_encode($cDataDecoded, JSON_UNESCAPED_UNICODE);
+            }
+
             // 추가 첨부파일(extra_files) 처리
             $extraFilesPaths = [];
             if (!empty($_FILES['extra_files']['name'][0])) {
@@ -473,8 +517,18 @@ class CanvasController extends BaseController {
                             }
                         }
                     }
+            // 멀티 플로어의 개별 도면 이미지들을 extra_files 컬럼에도 등록하여 DB 테이블 직접 조회 및 다운로드 지원
+            if (!empty($floors) && is_array($floors) && count($floors) > 1) {
+                foreach ($floors as $flr) {
+                    if (!empty($flr['image_path'])) {
+                        $extraFilesPaths[] = [
+                            'path' => $flr['image_path'],
+                            'original_name' => ($flr['name'] ?? '구역') . ' 설계 도면.jpg'
+                        ];
+                    }
                 }
             }
+
             $extraFilesJson = !empty($extraFilesPaths) ? json_encode($extraFilesPaths, JSON_UNESCAPED_UNICODE) : null;
 
             $sourceMode   = $body['source_mode'] ?? '';
@@ -549,6 +603,47 @@ class CanvasController extends BaseController {
             ]);
 
             echo json_encode(['success' => true, 'message' => '견적 요청이 성공적으로 저장되었습니다.']);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * POST /review/submit
+     */
+    public function submitReview() {
+        header('Content-Type: application/json');
+        
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
+        
+        if (!$data) {
+            $data = $_POST;
+        }
+
+        $company = isset($data['company']) ? trim($data['company']) : '';
+        $name    = isset($data['name']) ? trim($data['name']) : '';
+        $rating  = isset($data['rating']) ? (int)$data['rating'] : 5;
+        $comment = isset($data['comment']) ? trim($data['comment']) : '';
+
+        if (!$name || !$rating) {
+            echo json_encode(['success' => false, 'message' => '필수 항목이 누락되었습니다.']);
+            return;
+        }
+
+        try {
+            $db = \App\Core\Database::getInstance();
+            $sql = "INSERT INTO service_reviews (company, name, rating, comment) VALUES (:company, :name, :rating, :comment)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                'company' => $company,
+                'name'    => $name,
+                'rating'  => $rating,
+                'comment' => $comment
+            ]);
+
+            echo json_encode(['success' => true, 'message' => '리뷰가 저장되었습니다.']);
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);

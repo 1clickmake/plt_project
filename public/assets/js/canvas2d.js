@@ -4224,8 +4224,35 @@ function saveCurrentFloorState() {
     cur.cameraZoom = cameraZoom;
     cur.rackCustomLevels = window.rackCustomLevels ? JSON.parse(JSON.stringify(window.rackCustomLevels)) : null;
 
+    // 🌟 선분 입력값(edgeLengths / input.value) 실시간 캡처 및 DOM attribute 동기화
+    const savedEdgeValues = [];
+    document.querySelectorAll('input[id^="edge-input-"]').forEach(inp => {
+        const m = inp.id.match(/^edge-input-(\d+)$/);
+        if (m) {
+            const idx = parseInt(m[1]);
+            savedEdgeValues[idx] = inp.value;
+            inp.setAttribute('value', inp.value);
+            // 만약 사용자가 입력했는데 edgeLengths에 아직 미반영된 경우 보정
+            if (inp.value && (!cur.edgeLengths[idx] || cur.edgeLengths[idx] <= 0)) {
+                const valInt = parseInt(inp.value) || 0;
+                if (valInt > 0) cur.edgeLengths[idx] = valInt;
+            }
+        }
+    });
+    cur.savedEdgeValues = savedEdgeValues;
+
     // ChatWizard 상태 저장 (각 층별 독립 대화 보존)
     if (typeof ChatWizard !== 'undefined') {
+        if (ChatWizard.body) {
+            ChatWizard.body.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.type === 'checkbox' || el.type === 'radio') {
+                    if (el.checked) el.setAttribute('checked', 'checked');
+                    else el.removeAttribute('checked');
+                } else {
+                    el.setAttribute('value', el.value);
+                }
+            });
+        }
         cur.chatStep = ChatWizard.currentStep;
         cur.chatHtml = (ChatWizard.body) ? ChatWizard.body.innerHTML : '';
         cur.step2Html = ChatWizard.step2Html || '';
@@ -4306,11 +4333,34 @@ function loadFloorState(index) {
             // 만약 이미 도면이 폐합되어 점이 찍혀 있다면 즉시 Step 2로 연결!
             if (isClosed && typeof window.generateCustomInputs === 'function') {
                 setTimeout(() => {
-                    window.generateCustomInputs(points.length - 1);
+                    window.generateCustomInputs(points.length - 1, true);
                 }, 200);
             }
         }
     }
+
+    // 🌟 복원된 도면의 모든 선분 입력창(edge-input-*)에 저장된 치수값 확실하게 재주입
+    const restoreEdgeInputs = () => {
+        document.querySelectorAll('input[id^="edge-input-"]').forEach(inputEl => {
+            const m = inputEl.id.match(/^edge-input-(\d+)$/);
+            if (m) {
+                const idx = parseInt(m[1]);
+                let val = '';
+                if (target.savedEdgeValues && target.savedEdgeValues[idx] !== undefined && target.savedEdgeValues[idx] !== '') {
+                    val = target.savedEdgeValues[idx];
+                } else if (target.edgeLengths && target.edgeLengths[idx] > 0) {
+                    val = target.edgeLengths[idx];
+                }
+                if (val !== '') {
+                    inputEl.value = val;
+                    inputEl.setAttribute('value', val);
+                }
+            }
+        });
+    };
+    restoreEdgeInputs();
+    setTimeout(restoreEdgeInputs, 100);
+    setTimeout(restoreEdgeInputs, 300);
 
     // 캔버스는 항상 화면에 보여야 마우스 클릭으로 점을 찍을 수 있음
     const guideEl = document.getElementById('canvas-guide');
@@ -4318,6 +4368,9 @@ function loadFloorState(index) {
     if (canvas) canvas.style.display = 'block';
 
     resizeCanvas();
+    if (typeof alignAndScalePolygon === 'function' && points.length >= 4 && edgeLengths.some(v => v > 0)) {
+        alignAndScalePolygon();
+    }
     if (typeof draw === 'function') draw();
     if (typeof updateRackCounts === 'function') updateRackCounts();
     renderFloorTabs();
