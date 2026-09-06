@@ -5,35 +5,56 @@ function isCanvasLightMode() {
 
 function drawGridBackground() {
     if (currentScale <= 0) return;
-    const gridLineMm = cameraZoom >= 1.5 ? 100 : 500;
-    const textStepMm = cameraZoom >= 1.5 ? 500 : 1000;
-    const linePx = gridLineMm * currentScale;
-
     const parent = canvas.parentElement;
+    if (!parent) return;
+
+    // Viewport bounds in unzoomed canvas space
     const viewTop = parent.scrollTop / cameraZoom;
     const viewLeft = parent.scrollLeft / cameraZoom;
+    const viewWidth = parent.clientWidth / cameraZoom;
+    const viewHeight = parent.clientHeight / cameraZoom;
 
-    let startX = (0 % linePx) - linePx;
-    let startY = (0 % linePx) - linePx;
+    // 📏 1번 사진처럼 극도로 정밀하고 디테일한 모눈종이 눈금 복원
+    let gridLineMm = (cameraZoom >= 1.5) ? 100 : 500;
+    let textStepMm = (cameraZoom >= 1.5) ? 500 : 1000;
+
+    const effectivePx = gridLineMm * currentScale * cameraZoom;
+    if (effectivePx < 18) {
+        gridLineMm = 1000;
+        textStepMm = 2000;
+    }
+
+    const linePx = gridLineMm * currentScale;
+    const maxW = canvas.width / cameraZoom;
+    const maxH = canvas.height / cameraZoom;
+
+    const originX = (window.canvasOriginX !== undefined) ? window.canvasOriginX : 0;
+    const originY = (window.canvasOriginY !== undefined) ? window.canvasOriginY : 0;
+
+    const rawStartX = Math.max(0, viewLeft - linePx);
+    const startX = originX + Math.floor((rawStartX - originX) / linePx) * linePx;
+    const endX = Math.min(maxW, viewLeft + viewWidth + linePx);
+
+    const rawStartY = Math.max(0, viewTop - linePx);
+    const startY = originY + Math.floor((rawStartY - originY) / linePx) * linePx;
+    const endY = Math.min(maxH, viewTop + viewHeight + linePx);
 
     ctx.save();
     ctx.scale(cameraZoom, cameraZoom);
 
-    const maxW = canvas.width / cameraZoom;
-    const maxH = canvas.height / cameraZoom;
     const isLight = isCanvasLightMode();
 
-    // 1. Grid Lines
+    // 1. Grid Lines - 디테일한 CAD 모눈종이 격자선
     ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1 / cameraZoom;
     ctx.beginPath();
-    for (let x = startX; x <= maxW + linePx; x += linePx) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, maxH);
+    for (let x = startX; x <= endX; x += linePx) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
     }
-    for (let y = startY; y <= maxH + linePx; y += linePx) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(maxW, y);
+    for (let y = startY; y <= endY; y += linePx) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
     }
     ctx.stroke();
 
@@ -41,24 +62,25 @@ function drawGridBackground() {
     const rulerThickTop = 22 / cameraZoom;
     const rulerThickLeft = 45 / cameraZoom;
     ctx.fillStyle = isLight ? 'rgba(241, 245, 249, 0.95)' : 'rgba(20, 25, 35, 0.9)';
+    ctx.fillRect(viewLeft, viewTop, viewWidth, rulerThickTop);
+    ctx.fillRect(viewLeft, viewTop, rulerThickLeft, viewHeight);
 
-    ctx.fillRect(viewLeft, viewTop, parent.clientWidth / cameraZoom, rulerThickTop);
-    ctx.fillRect(viewLeft, viewTop, rulerThickLeft, parent.clientHeight / cameraZoom);
-
-    // 3. Ruler Text
+    // 3. Ruler Text - 1,000 단위(1m) 디테일 표기
     ctx.fillStyle = isLight ? '#334155' : 'rgba(255, 255, 255, 0.9)';
     ctx.font = (10 / cameraZoom) + 'px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    for (let x = startX; x <= maxW + linePx; x += linePx) {
-        let logicalMm = Math.round(x / currentScale) - 2000;
+    for (let x = startX; x <= endX; x += linePx) {
+        let logicalMm = Math.round((x - originX) / currentScale);
+        logicalMm = Math.round(logicalMm / gridLineMm) * gridLineMm;
         if (Math.abs(logicalMm) % textStepMm === 0 && x > viewLeft + rulerThickLeft) {
             ctx.fillText(logicalMm, x + 4 / cameraZoom, viewTop + 6 / cameraZoom);
         }
     }
-    for (let y = startY; y <= maxH + linePx; y += linePx) {
-        let logicalMm = Math.round(y / currentScale) - 2000;
+    for (let y = startY; y <= endY; y += linePx) {
+        let logicalMm = Math.round((y - originY) / currentScale);
+        logicalMm = Math.round(logicalMm / gridLineMm) * gridLineMm;
         if (Math.abs(logicalMm) % textStepMm === 0 && y > viewTop + rulerThickTop) {
             ctx.fillText(logicalMm, viewLeft + 4 / cameraZoom, y + 4 / cameraZoom);
         }
@@ -155,43 +177,22 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 
-window.zoomIn = function () {
-    cameraZoom = Math.min(cameraZoom * 1.2, 5);
-    applyZoom();
-};
-
-window.zoomOut = function () {
-    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
-    applyZoom();
-};
-
-window.resetZoom = function () {
-    cameraZoom = 1;
-    applyZoom();
-};
-
-// 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
-window.panCanvas = function (dx, dy) {
-    const parent = canvas.parentElement;
-    if (parent) {
-        parent.scrollLeft = Math.max(0, parent.scrollLeft + dx);
-        parent.scrollTop = Math.max(0, parent.scrollTop + dy);
-    }
-};
-
-function applyZoom(oldZoom = null) {
+function applyZoom(oldZoom = null, mousePoint = null) {
     if (baseWidth === 0) return;
     const parent = canvas.parentElement;
+    if (!parent) return;
 
     let viewCenterX = parent.scrollLeft + parent.clientWidth / 2;
     let viewCenterY = parent.scrollTop + parent.clientHeight / 2;
 
-    if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
+    if (mousePoint && mousePoint.x !== undefined && mousePoint.y !== undefined) {
+        viewCenterX = mousePoint.x;
+        viewCenterY = mousePoint.y;
+    } else if (window.lastMouseX !== undefined && window.lastMouseY !== undefined) {
         viewCenterX = window.lastMouseX;
         viewCenterY = window.lastMouseY;
     }
 
-    // Remember screen position of the target point
     let screenMouseX = viewCenterX - parent.scrollLeft;
     let screenMouseY = viewCenterY - parent.scrollTop;
 
@@ -218,22 +219,23 @@ function applyZoom(oldZoom = null) {
     }
 }
 
-// 전역 함수로 노출
-window.zoomIn = function () {
+// 전역 줌 컨트롤 (최대 25배 확대 지원 - 초대형 100m+ 창고 대응)
+window.zoomIn = function (mouseEvt = null) {
     const oldZoom = cameraZoom;
-    cameraZoom = Math.min(cameraZoom * 1.2, 5);
-    applyZoom(oldZoom);
+    cameraZoom = Math.min(cameraZoom * 1.25, 25.0);
+    applyZoom(oldZoom, mouseEvt);
 };
 
-window.zoomOut = function () {
+window.zoomOut = function (mouseEvt = null) {
     const oldZoom = cameraZoom;
-    cameraZoom = Math.max(cameraZoom / 1.2, 0.5);
-    applyZoom(oldZoom);
+    cameraZoom = Math.max(cameraZoom / 1.25, 0.1);
+    applyZoom(oldZoom, mouseEvt);
 };
 
 window.resetZoom = function () {
+    const oldZoom = cameraZoom;
     cameraZoom = 1;
-    applyZoom();
+    applyZoom(oldZoom);
 };
 
 // 리모컨 방향 이동: panCanvas(dx, dy) - 스크롤 단위(px)
@@ -244,26 +246,6 @@ window.panCanvas = function (dx, dy) {
         parent.scrollTop = Math.max(0, parent.scrollTop + dy);
     }
 };
-
-function applyZoom() {
-    if (baseWidth === 0) return;
-    canvas.width = baseWidth * cameraZoom;
-    canvas.height = baseHeight * cameraZoom;
-    if (points.length >= 3 && currentScale > 0) {
-        alignAndScalePolygon();
-    }
-    draw();
-
-    // 중앙 스크롤 유지
-    const parent = canvas.parentElement;
-    if (cameraZoom > 1) {
-        parent.scrollLeft = (canvas.width - parent.clientWidth) / 2;
-        parent.scrollTop = (canvas.height - parent.clientHeight) / 2;
-    } else {
-        parent.scrollLeft = 0;
-        parent.scrollTop = 0;
-    }
-}
 
 // 전역 함수로 노출
 window.startCustomDrawing = function () {
@@ -439,22 +421,66 @@ function alignAndScalePolygon() {
         if (p.y > maxY) maxY = p.y;
     });
 
-    const viewWidth = baseWidth - 200;
-    const viewHeight = baseHeight - 200;
-    currentScale = Math.min(viewWidth / (maxX - minX || 1), viewHeight / (maxY - minY || 1));
+    const polyWidthMm = Math.max(1, maxX - minX);
+    const polyHeightMm = Math.max(1, maxY - minY);
+
+    // 부모 컨테이너(캔버스 래퍼) 실제 가시 영역 크기
+    const parent = canvas.parentElement;
+    const containerW = parent ? parent.clientWidth : (baseWidth || window.innerWidth);
+    const containerH = parent ? parent.clientHeight : (baseHeight || window.innerHeight);
+
+    // 🤖 우측 플로팅 챗봇 위젯(Chat Wizard) 감지 및 안전 영역 확보
+    const chatEl = document.getElementById('chat-wizard-container');
+    const isChatVisible = chatEl && chatEl.style.display !== 'none' && !chatEl.classList.contains('d-none');
+    
+    // 챗봇이 열려있으면 챗봇 너비(380px) + 안전 여백(40px) = 약 420px를 우측 마진으로 확보!
+    let rightMargin = 100;
+    if (isChatVisible) {
+        const chatW = chatEl.offsetWidth || 380;
+        rightMargin = chatW + 40;
+    }
+
+    const leftMargin = 90;   // 좌측 눈금자(45px) + 안전 여유(45px)
+    const topMargin = 70;    // 상단 눈금자(22px) + 안전 여유
+    const bottomMargin = 70; // 하단 안전 여유
+
+    const safeWidth = Math.max(300, containerW - leftMargin - rightMargin);
+    const safeHeight = Math.max(300, containerH - topMargin - bottomMargin);
+
+    // 📐 어떤 크기의 창고(19m×4m, 115m×35m 등)라도 챗봇을 침범하지 않고 화면 안전 틀 안에 100% 쏙 들어오도록 자동 스케일 산출
+    currentScale = Math.min(safeWidth / polyWidthMm, safeHeight / polyHeightMm);
     window.currentScale = currentScale;
 
-    const centerX = baseWidth / 2;
-    const centerY = baseHeight / 2;
-    let offsetX = (-minX + 2000) * currentScale;
-    let offsetY = (-minY + 2000) * currentScale;
-    window.globalPolyMinX = 2000;
-    window.globalPolyMinY = 2000;
+    // 안전 가시 영역의 중앙에 완벽 배치
+    const drawnWidthPx = polyWidthMm * currentScale;
+    const drawnHeightPx = polyHeightMm * currentScale;
+
+    const offsetX = leftMargin + (safeWidth - drawnWidthPx) / 2 - (minX * currentScale);
+    const offsetY = topMargin + (safeHeight - drawnHeightPx) / 2 - (minY * currentScale);
+    window.canvasOriginX = offsetX + (minX * currentScale);
+    window.canvasOriginY = offsetY + (minY * currentScale);
+    window.globalPolyMinX = Math.round(offsetX / currentScale);
+    window.globalPolyMinY = Math.round(offsetY / currentScale);
+
+    // 이전 도면 바운딩 박스 기준 장애물(기둥, 사용불가 등) 상대 위치 보정용
+    const oldMinX = points.length > 0 ? Math.min(...points.map(p => p.x)) : 0;
+    const oldMaxX = points.length > 0 ? Math.max(...points.map(p => p.x)) : 1;
+    const oldMinY = points.length > 0 ? Math.min(...points.map(p => p.y)) : 0;
+    const oldMaxY = points.length > 0 ? Math.max(...points.map(p => p.y)) : 1;
+    const oldWidth = Math.max(1, oldMaxX - oldMinX);
+    const oldHeight = Math.max(1, oldMaxY - oldMinY);
 
     for (let i = 0; i <= numEdges; i++) {
         points[i].x = mathPoints[i].x * currentScale + offsetX;
         points[i].y = mathPoints[i].y * currentScale + offsetY;
     }
+
+    const newMinX = Math.min(...points.map(p => p.x));
+    const newMaxX = Math.max(...points.map(p => p.x));
+    const newMinY = Math.min(...points.map(p => p.y));
+    const newMaxY = Math.max(...points.map(p => p.y));
+    const newWidth = Math.max(1, newMaxX - newMinX);
+    const newHeight = Math.max(1, newMaxY - newMinY);
 
     obstacles.forEach(obs => {
         const isDoorLike = obs.type === 'door' || obs.type === 'shutter';
@@ -466,8 +492,22 @@ function alignAndScalePolygon() {
             obs.angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
             obs.visualDistFromStart = Math.hypot(obs.x - p1.x, obs.y - p1.y);
             obs.visualEdgeLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        } else if (oldWidth > 10 && oldHeight > 10 && obs.x !== undefined && obs.y !== undefined) {
+            // 바닥 장애물(기둥, 기계, 사용불가구역 등)도 도면의 상대적 위치를 보존하여 함께 이동
+            const relX = (obs.x - oldMinX) / oldWidth;
+            const relY = (obs.y - oldMinY) / oldHeight;
+            obs.x = newMinX + relX * newWidth;
+            obs.y = newMinY + relY * newHeight;
         }
     });
+
+    if (cameraZoom !== 1) {
+        cameraZoom = 1;
+    }
+    if (parent) {
+        parent.scrollLeft = 0;
+        parent.scrollTop = 0;
+    }
 }
 
 // 🚪 외부 HTML 아이콘 드래그 시작
@@ -2439,14 +2479,41 @@ function draw() {
             let realOffsetMsg = "";
             let thickness = 6;
 
-            if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && edgeLengths[obs.edgeIndex]) {
+            if (obs.edgeIndex !== undefined && obs.edgeIndex !== -1 && edgeLengths[obs.edgeIndex] && obs.edgeIndex < points.length - 1) {
                 const realWallLength = edgeLengths[obs.edgeIndex];
                 if (realWallLength > 0) {
                     const ratio = obs.visualEdgeLength / realWallLength;
                     visualLength = Math.max(obs.length * ratio, 10);
 
-                    const realOffset = Math.round(obs.visualDistFromStart / ratio);
-                    realOffsetMsg = `(좌측 ${realOffset}mm)`;
+                    const p1 = points[obs.edgeIndex];
+                    const p2 = points[obs.edgeIndex + 1];
+                    const isHorizWall = Math.abs(p1.y - p2.y) < Math.abs(p1.x - p2.x);
+
+                    if (isHorizWall) {
+                        // 수평 벽면: 시각적 진짜 좌측(X 최소값)과 우측(X 최대값) 코너 기준 거리 계산
+                        const leftCornerX = Math.min(p1.x, p2.x);
+                        const edgePixelLen = Math.abs(p1.x - p2.x) || obs.visualEdgeLength || 1;
+                        const distFromLeftMm = Math.round((Math.abs(obs.x - leftCornerX) / edgePixelLen) * realWallLength);
+                        const distFromRightMm = Math.max(0, realWallLength - distFromLeftMm);
+
+                        if (distFromLeftMm <= distFromRightMm) {
+                            realOffsetMsg = `(좌측 ${distFromLeftMm.toLocaleString()}mm)`;
+                        } else {
+                            realOffsetMsg = `(우측 ${distFromRightMm.toLocaleString()}mm)`;
+                        }
+                    } else {
+                        // 수직 벽면: 시각적 진짜 상단(Y 최소값)과 하단(Y 최대값) 코너 기준 거리 계산
+                        const topCornerY = Math.min(p1.y, p2.y);
+                        const edgePixelLen = Math.abs(p1.y - p2.y) || obs.visualEdgeLength || 1;
+                        const distFromTopMm = Math.round((Math.abs(obs.y - topCornerY) / edgePixelLen) * realWallLength);
+                        const distFromBottomMm = Math.max(0, realWallLength - distFromTopMm);
+
+                        if (distFromTopMm <= distFromBottomMm) {
+                            realOffsetMsg = `(상단 ${distFromTopMm.toLocaleString()}mm)`;
+                        } else {
+                            realOffsetMsg = `(하단 ${distFromBottomMm.toLocaleString()}mm)`;
+                        }
+                    }
                 }
             }
 
@@ -3074,8 +3141,8 @@ window.updateRackFormCounts = function () {
     // 표준 파렛트랙 규격 산출: [빔길이(W) × 깊이(D) × 높이(H) , (단수-1)S 단수단]
     const currentPalletW = parseInt(document.getElementById('pallet-w')?.value) || 1100;
     const currentPalletD = parseInt(document.getElementById('pallet-d')?.value) || 1100;
-    const beamLen = (window.rackSpecs && window.rackSpecs.beamLength) || (currentPalletW * 2) + 385;
-    const rackD = (window.rackSpecs && window.rackSpecs.rackDepth) || (currentPalletD - 100);
+    const beamLen = (racks.length > 0 && racks[0].beamLength) || (window.rackSpecs && window.rackSpecs.beamLength) || parseInt(document.getElementById('rack-beam-length')?.value) || (currentPalletW * 2) + 385;
+    const rackD = (racks.length > 0 && racks[0].rackDepth) || (window.rackSpecs && window.rackSpecs.rackDepth) || parseInt(document.getElementById('rack-depth')?.value) || 1000;
     let rackH = globalRackH;
     const spanS = Math.max(1, levels - 1);
     const specTagText = `${beamLen}×${rackD}×${rackH} (${spanS}S ${levels}단)`;
@@ -3107,7 +3174,9 @@ window.updateRackFormCounts = function () {
     if (summaryBadge) {
         // 첫 번째 줄 빌드
         let html = `<div class="d-flex align-items-center gap-2 flex-wrap">
-            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">${specTagText}</span>
+            <span id="top-badge-spec" class="badge bg-primary text-white shadow-sm" style="font-size:0.75rem; font-weight:600; padding:4px 10px; letter-spacing:0.02em; cursor:pointer;" onclick="if(window.openRackSpecModal) window.openRackSpecModal()" title="클릭하여 랙 규격(가로빔/깊이/높이) 실시간 변경">
+                <i class="fa-solid fa-pen-to-square me-1 opacity-75"></i>${specTagText}
+            </span>
             <span class="text-secondary">|</span>
             <span>독립 <strong id="top-badge-indep" class="text-primary">${totalIndep}</strong>대</span>
             <span class="text-secondary">|</span>
@@ -3991,9 +4060,9 @@ window.spawnInitialRacks = function () {
     // 가져올 폼 값
     const palletW = parseInt(document.getElementById('pallet-w')?.value) || 1100;
     const palletD = parseInt(document.getElementById('pallet-d')?.value) || 1100;
-    const beamLength = (palletW * 2) + 385;
-    const rackDepth = palletD - 100;
-    const smallBeamLength = 1385;
+    const beamLength = parseInt(document.getElementById('rack-beam-length')?.value) || (window.rackSpecs && window.rackSpecs.beamLength) || (palletW * 2) + 385;
+    const rackDepth = parseInt(document.getElementById('rack-depth')?.value) || (window.rackSpecs && window.rackSpecs.rackDepth) || 1000;
+    const smallBeamLength = (typeof getSmallBeamLength === 'function') ? getSmallBeamLength(beamLength) : 1385;
 
     // 독립 1칸 길이
     const totalLenMm = 85 + (1 * beamLength);
@@ -4103,36 +4172,28 @@ window.autoAlignRacks = function () {
             }
             rows.push(currentRow);
 
-            let maxDepthBottom = 0;
-            rows[rows.length - 1].forEach(r => {
-                const depth = ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale;
-                if (depth > maxDepthBottom) maxDepthBottom = depth;
+            let totalRowsDepth = 0;
+            let rowDepths = [];
+            rows.forEach(row => {
+                let d = 0;
+                row.forEach(r => d = Math.max(d, ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale));
+                rowDepths.push(d);
+                totalRowsDepth += d;
             });
-            bottomY -= maxDepthBottom;
             const wCenter = (pMinX + pMaxX) / 2;
+            const gap = (bottomY - topY - totalRowsDepth) / (rows.length + 1);
 
-            if (rows.length === 1) {
-                rows[0].forEach(r => {
-                    r.y = (topY + bottomY) / 2;
+            rows.forEach((row, idx) => {
+                let targetY = topY + gap * (idx + 1);
+                for (let i = 0; i < idx; i++) {
+                    targetY += rowDepths[i];
+                }
+                row.forEach(r => {
+                    r.y = targetY;
                     const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
                     r.x = isFlipped ? wCenter + r.totalLengthPx / 2 : wCenter - r.totalLengthPx / 2;
                 });
-            } else {
-                const gap = (bottomY - topY) / (rows.length + 1);
-                rows.forEach((row, idx) => {
-                    let targetY = topY + gap * (idx + 1);
-                    for (let i = 0; i < idx; i++) {
-                        let d = 0;
-                        rows[i].forEach(r => d = Math.max(d, ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale));
-                        targetY += d;
-                    }
-                    row.forEach(r => {
-                        r.y = targetY;
-                        const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
-                        r.x = isFlipped ? wCenter + r.totalLengthPx / 2 : wCenter - r.totalLengthPx / 2;
-                    });
-                });
-            }
+            });
         } else {
             doubleRacks.sort((a, b) => a.x - b.x);
             let cols = [];
@@ -4147,36 +4208,28 @@ window.autoAlignRacks = function () {
             }
             cols.push(currentCol);
 
-            let maxDepthRight = 0;
-            cols[cols.length - 1].forEach(r => {
-                const depth = ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale;
-                if (depth > maxDepthRight) maxDepthRight = depth;
+            let totalColsDepth = 0;
+            let colDepths = [];
+            cols.forEach(col => {
+                let d = 0;
+                col.forEach(r => d = Math.max(d, ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale));
+                colDepths.push(d);
+                totalColsDepth += d;
             });
-            rightX -= maxDepthRight;
             const wCenterY = (pMinY + pMaxY) / 2;
+            const gap = (rightX - leftX - totalColsDepth) / (cols.length + 1);
 
-            if (cols.length === 1) {
-                cols[0].forEach(r => {
-                    r.x = (leftX + rightX) / 2;
+            cols.forEach((col, idx) => {
+                let targetX = leftX + gap * (idx + 1);
+                for (let i = 0; i < idx; i++) {
+                    targetX += colDepths[i];
+                }
+                col.forEach(r => {
+                    r.x = targetX;
                     const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
                     r.y = isFlippedVert ? wCenterY + r.totalLengthPx / 2 : wCenterY - r.totalLengthPx / 2;
                 });
-            } else {
-                const gap = (rightX - leftX) / (cols.length + 1);
-                cols.forEach((col, idx) => {
-                    let targetX = leftX + gap * (idx + 1);
-                    for (let i = 0; i < idx; i++) {
-                        let d = 0;
-                        cols[i].forEach(r => d = Math.max(d, ((r.rackDepth || 1000) * 2 + (r.holderSize || 200)) * currentScale));
-                        targetX += d;
-                    }
-                    col.forEach(r => {
-                        r.x = targetX;
-                        const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
-                        r.y = isFlippedVert ? wCenterY + r.totalLengthPx / 2 : wCenterY - r.totalLengthPx / 2;
-                    });
-                });
-            }
+            });
         }
     }
 

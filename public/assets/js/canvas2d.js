@@ -4031,36 +4031,28 @@ window.autoAlignRacks = function() {
             }
             rows.push(currentRow);
 
-            let maxDepthBottom = 0;
-            rows[rows.length-1].forEach(r => {
-                const depth = ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale;
-                if(depth > maxDepthBottom) maxDepthBottom = depth;
+            let totalRowsDepth = 0;
+            let rowDepths = [];
+            rows.forEach(row => {
+                let d = 0;
+                row.forEach(r => d = Math.max(d, ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale));
+                rowDepths.push(d);
+                totalRowsDepth += d;
             });
-            bottomY -= maxDepthBottom;
             const wCenter = (pMinX + pMaxX)/2;
+            const gap = (bottomY - topY - totalRowsDepth) / (rows.length + 1);
 
-            if (rows.length === 1) {
-                rows[0].forEach(r => {
-                    r.y = (topY + bottomY) / 2;
+            rows.forEach((row, idx) => {
+                let targetY = topY + gap * (idx + 1);
+                for (let i = 0; i < idx; i++) {
+                    targetY += rowDepths[i];
+                }
+                row.forEach(r => {
+                    r.y = targetY;
                     const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
                     r.x = isFlipped ? wCenter + r.totalLengthPx/2 : wCenter - r.totalLengthPx/2;
                 });
-            } else {
-                const gap = (bottomY - topY) / (rows.length + 1);
-                rows.forEach((row, idx) => {
-                    let targetY = topY + gap * (idx + 1);
-                    for(let i=0; i<idx; i++) {
-                        let d = 0;
-                        rows[i].forEach(r => d = Math.max(d, ((r.rackDepth||1000)*2 + (r.holderSize||200))*currentScale));
-                        targetY += d;
-                    }
-                    row.forEach(r => {
-                        r.y = targetY;
-                        const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
-                        r.x = isFlipped ? wCenter + r.totalLengthPx/2 : wCenter - r.totalLengthPx/2;
-                    });
-                });
-            }
+            });
         } else {
             doubleRacks.sort((a, b) => a.x - b.x);
             let cols = [];
@@ -4075,36 +4067,28 @@ window.autoAlignRacks = function() {
             }
             cols.push(currentCol);
 
-            let maxDepthRight = 0;
-            cols[cols.length-1].forEach(r => {
-                const depth = ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale;
-                if(depth > maxDepthRight) maxDepthRight = depth;
+            let totalColsDepth = 0;
+            let colDepths = [];
+            cols.forEach(col => {
+                let d = 0;
+                col.forEach(r => d = Math.max(d, ((r.rackDepth||1000) * 2 + (r.holderSize||200)) * currentScale));
+                colDepths.push(d);
+                totalColsDepth += d;
             });
-            rightX -= maxDepthRight;
             const wCenterY = (pMinY + pMaxY)/2;
+            const gap = (rightX - leftX - totalColsDepth) / (cols.length + 1);
 
-            if (cols.length === 1) {
-                cols[0].forEach(r => {
-                    r.x = (leftX + rightX) / 2;
+            cols.forEach((col, idx) => {
+                let targetX = leftX + gap * (idx + 1);
+                for (let i = 0; i < idx; i++) {
+                    targetX += colDepths[i];
+                }
+                col.forEach(r => {
+                    r.x = targetX;
                     const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
                     r.y = isFlippedVert ? wCenterY + r.totalLengthPx/2 : wCenterY - r.totalLengthPx/2;
                 });
-            } else {
-                const gap = (rightX - leftX) / (cols.length + 1);
-                cols.forEach((col, idx) => {
-                    let targetX = leftX + gap * (idx + 1);
-                    for(let i=0; i<idx; i++) {
-                        let d = 0;
-                        cols[i].forEach(r => d = Math.max(d, ((r.rackDepth||1000)*2 + (r.holderSize||200))*currentScale));
-                        targetX += d;
-                    }
-                    col.forEach(r => {
-                        r.x = targetX;
-                        const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
-                        r.y = isFlippedVert ? wCenterY + r.totalLengthPx/2 : wCenterY - r.totalLengthPx/2;
-                    });
-                });
-            }
+            });
         }
     }
     
