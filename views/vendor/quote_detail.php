@@ -172,9 +172,23 @@
                     <!-- CAD 도면 시각화 캔버스 / 이미지 (멀티 플로어 지원) -->
                     <div class="glass-panel p-4">
                         <?php
-                            $cData = json_decode($quote['canvas_data'] ?? '{}', true);
-                            $quoteFloors = $cData['floors'] ?? [];
-                            $hasMultiFloors = is_array($quoteFloors) && count($quoteFloors) > 1;
+                            $rawCData = $quote['canvas_data'] ?? '';
+                            $cData = [];
+                            if (!empty($rawCData)) {
+                                if (is_array($rawCData)) {
+                                    $cData = $rawCData;
+                                } else {
+                                    $cData = json_decode($rawCData, true);
+                                    if (!is_array($cData)) {
+                                        $cData = json_decode(stripslashes($rawCData), true);
+                                    }
+                                    if (!is_array($cData)) {
+                                        $cData = json_decode(htmlspecialchars_decode($rawCData, ENT_QUOTES), true);
+                                    }
+                                }
+                            }
+                            $quoteFloors = (is_array($cData) && !empty($cData['floors']) && is_array($cData['floors'])) ? $cData['floors'] : [];
+                            $hasMultiFloors = count($quoteFloors) > 1;
                         ?>
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
                             <h5 class="m-0 fw-bold text-success d-flex align-items-center gap-2">
@@ -361,27 +375,8 @@
                                 </div>
                             <?php else: ?>
                                 <?php if ($hasMultiFloors): ?>
-                                    <!-- 🏢 전체 층 통합 합계 카드 -->
-                                    <div class="p-3 mb-3 rounded" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.3);">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="fw-bold text-info" style="font-size: 0.95rem;">
-                                                <i class="fa-solid fa-layer-group me-1"></i> 전체 <?= count($quoteFloors) ?>개 층 통합 견적 합계
-                                            </span>
-                                            <span class="badge bg-primary fs-7">총 <?= intval($quote['rack_bays'] ?? ($quote['rack_indep'] + $quote['rack_conn'])) ?>대</span>
-                                        </div>
-                                        <div class="ps-1 text-light small">
-                                            독립 <strong class="text-white"><?= $quote['rack_indep'] ?? 0 ?></strong>대 | 
-                                            연결 <strong class="text-white"><?= $quote['rack_conn'] ?? 0 ?></strong>대 
-                                            <?php if (!empty($quote['rack_small_conn'])): ?>
-                                                | 작은연결 <?= $quote['rack_small_conn'] ?>대
-                                            <?php endif; ?>
-                                            | 🔗 <strong class="text-warning"><?= $quote['rack_holders'] ?? 0 ?></strong>홀더 
-                                            | 📦 <strong class="text-success"><?= number_format($quote['rack_pallets'] ?? 0) ?></strong> PLT
-                                        </div>
-                                    </div>
-
-                                    <!-- 📑 각 층별 독립 시공 리포트 카드 목록 -->
-                                    <div class="d-flex flex-column gap-3">
+                                    <!-- 📑 1. 각 층별 독립 시공 리포트 카드 목록 (1번 창고 정보 따로, 2번 창고 정보 따로) -->
+                                    <div class="d-flex flex-column gap-3 mb-3">
                                         <?php foreach ($quoteFloors as $idx => $f): ?>
                                             <?php
                                                 $fSpec = $f['palletSpec'] ?? [];
@@ -405,15 +400,35 @@
                                                     $fEdgeText = implode(', ', $edgeArr);
                                                 }
 
-                                                // 랙 스펙 명칭
-                                                $rackSpecTitle = $f['spec'] ?? '';
-                                                if (empty($rackSpecTitle) || $rackSpecTitle === '기본') {
-                                                    $beamW = $fSpec['beamLen'] ?? ($quote['pallet_w'] ? ($quote['pallet_w'] * 2 + 385) : 2585);
-                                                    $rD = $fSpec['rackDepth'] ?? ($quote['rack_depth'] ?? 1000);
-                                                    $rH = $fSpec['rackHeight'] ?? ($quote['rack_height'] ?? 4000);
-                                                    $lvl = $fSpec['levels'] ?? ($quote['rack_levels'] ?? 3);
-                                                    $rackSpecTitle = "{$beamW}×{$rD}×{$rH} (2S {$lvl}단)";
+                                                // 랙 스펙 명칭 계산
+                                                $fBeamW = $fSpec['beamLen'] ?? (!empty($quote['pallet_w']) ? ($quote['pallet_w'] * 2 + 385) : 2585);
+                                                $fRD = !empty($fSpec['rackDepth']) ? $fSpec['rackDepth'] : ($quote['rack_depth'] ?? 1000);
+                                                $fLvl = intval(!empty($fSpec['levels']) ? $fSpec['levels'] : ($quote['rack_levels'] ?? 3));
+                                                if ($fLvl <= 0) $fLvl = 3;
+                                                $fSpanS = max(1, $fLvl - 1);
+                                                
+                                                $fPh = intval(!empty($fSpec['ph']) ? $fSpec['ph'] : ($quote['pallet_h'] ?? 1000));
+                                                if ($fPh <= 0) $fPh = 1000;
+                                                $rawFRH = !empty($fSpec['rackHeight']) ? $fSpec['rackHeight'] : (!empty($quote['rack_height']) ? $quote['rack_height'] : '');
+                                                if (preg_match('/^(\d+)/', (string)$rawFRH, $mH)) {
+                                                    $fRH = intval($mH[1]);
+                                                } else {
+                                                    $calcH = ($fPh * $fLvl) + ($fLvl * 200) + 300;
+                                                    $fRH = ceil($calcH / 500) * 500;
                                                 }
+                                                if ($fRH <= 0) $fRH = 4000;
+
+                                                $rackSpecTitle = "{$fBeamW}×{$fRD}×{$fRH} ({$fSpanS}S {$fLvl}단)";
+
+                                                $fBpLvl = max(1, $fLvl - 1);
+                                                $fBpSpanS = max(1, $fSpanS - 1);
+                                                $fBypassSpecTitle = "{$fBeamW}×{$fRD}×{$fRH} ({$fBpSpanS}S {$fBpLvl}단)";
+
+                                                // 지게차 라벨 매핑
+                                                $forkName = $fSpec['forkType'] ?? ($quote['forklift_type'] ?? '');
+                                                if ($forkName === 'reach') $forkName = '입승식 (Reach)';
+                                                else if ($forkName === 'counter') $forkName = '좌승식 (Counter)';
+                                                else if ($forkName === 'stacker') $forkName = '보행식 (Stacker)';
                                             ?>
                                             <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
                                                 <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-secondary">
@@ -436,8 +451,8 @@
                                                         <div>파렛트 규격: <?= htmlspecialchars($fSpec['pw'] ?? ($quote['pallet_w'] ?? 1100)) ?>(W) x <?= htmlspecialchars($fSpec['pd'] ?? ($quote['pallet_d'] ?? 1100)) ?>(D) x <?= htmlspecialchars($fSpec['ph'] ?? ($quote['pallet_h'] ?? 1000)) ?>(H) mm</div>
                                                         <div>포크 진입 방향: <?= htmlspecialchars($fSpec['forkDir'] ?? ($quote['fork_direction'] ?? 'D')) ?></div>
                                                         <div>총 중량: <?= htmlspecialchars($fSpec['pWeight'] ?? ($quote['pallet_weight'] ?? 1000)) ?> kg / PLT</div>
-                                                        <?php if (!empty($fSpec['forkType']) || !empty($quote['forklift_type'])): ?>
-                                                            <div class="mt-1">지게차 종류: <?= htmlspecialchars($fSpec['forkType'] ?? $quote['forklift_type']) ?></div>
+                                                        <?php if (!empty($forkName)): ?>
+                                                            <div class="mt-1">지게차 종류: <?= htmlspecialchars($forkName) ?></div>
                                                         <?php endif; ?>
                                                         <?php if (!empty($fSpec['forkLiftH']) || !empty($quote['forklift_lift_height'])): ?>
                                                             <div>최대 인상높이: <?= htmlspecialchars($fSpec['forkLiftH'] ?? $quote['forklift_lift_height']) ?> mm</div>
@@ -445,30 +460,111 @@
                                                         <?php if (!empty($fSpec['forkAst']) || !empty($quote['forklift_ast'])): ?>
                                                             <div>직각교차 통로폭(AST): <?= htmlspecialchars($fSpec['forkAst'] ?? $quote['forklift_ast']) ?> mm</div>
                                                         <?php endif; ?>
-                                                        <div class="mt-1">설치 단수: <?= htmlspecialchars($fSpec['levels'] ?? ($quote['rack_levels'] ?? 3)) ?>단</div>
-                                                        <div>설치 높이: <?= htmlspecialchars($fSpec['rackHeight'] ?? ($quote['rack_height'] ?? '4000 (자동 계산)')) ?></div>
+                                                        <div class="mt-1">설치 단수: <?= htmlspecialchars($fLvl) ?>단</div>
+                                                        <div>설치 높이: <?= htmlspecialchars($fRH) ?> (자동 계산)</div>
                                                     </div>
                                                 </div>
 
                                                 <div>
                                                     <div class="text-secondary small fw-bold mb-1">[랙 설치 수량]</div>
                                                     <div class="ps-2 text-light small">
-                                                        독립 <strong class="text-white"><?= intval($f['indep'] ?? 0) ?></strong>대 | 
-                                                        연결 <strong class="text-white"><?= intval($f['conn'] ?? 0) ?></strong>대 
-                                                        <?php if (!empty($f['smallConn'])): ?>
-                                                            | 작은연결 <?= intval($f['smallConn']) ?>대
-                                                        <?php endif; ?>
-                                                        | 🔗 <strong class="text-warning"><?= intval($f['holders'] ?? 0) ?></strong>홀더 
-                                                        | 📦 <strong class="text-success"><?= number_format(intval($f['pallets'] ?? 0)) ?></strong> PLT
-                                                    </div>
-                                                    <?php if (!empty($f['bypass'])): ?>
-                                                        <div class="ps-2 text-light small mt-1">
-                                                            연결 <?= htmlspecialchars($f['bypass']) ?>대 (바이패스)
+                                                        <div>
+                                                            <span class="text-info fw-semibold"><?= $rackSpecTitle ?></span> 
+                                                            독립 <strong class="text-white"><?= intval($f['indep'] ?? 0) ?></strong>대 | 
+                                                            연결 <strong class="text-white"><?= intval($f['conn'] ?? 0) ?></strong>대 
+                                                            <?php if (!empty($f['smallConn'])): ?>
+                                                                | 작은연결 <?= intval($f['smallConn']) ?>대
+                                                            <?php endif; ?>
+                                                            | 🔗 <strong class="text-warning"><?= intval($f['holders'] ?? 0) ?></strong>홀더 
+                                                            | 📦 <strong class="text-success"><?= number_format(intval($f['pallets'] ?? 0)) ?></strong> PLT
                                                         </div>
-                                                    <?php endif; ?>
+                                                        <?php if (!empty($f['bypass'])): ?>
+                                                            <div class="mt-1">
+                                                                <span class="text-danger fw-semibold"><?= $fBypassSpecTitle ?></span> 
+                                                                연결 <strong class="text-danger"><?= htmlspecialchars($f['bypass']) ?></strong>대 (바이패스)
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </div>
                                             </div>
                                         <?php endforeach; ?>
+                                    </div>
+
+                                    <!-- 🏢 2. 마지막에 1, 2층 합산해서 (전체 층 통합 합계 카드) -->
+                                    <?php
+                                        $grandIndep = 0;
+                                        $grandConn = 0;
+                                        $grandSmallConn = 0;
+                                        $grandBypass = 0;
+                                        $grandHolders = 0;
+                                        $grandPallets = 0;
+                                        foreach ($quoteFloors as $f) {
+                                            $grandIndep += intval($f['indep'] ?? 0);
+                                            $grandConn += intval($f['conn'] ?? 0);
+                                            $grandSmallConn += intval($f['smallConn'] ?? 0);
+                                            $grandBypass += intval($f['bypass'] ?? 0);
+                                            $grandHolders += intval($f['holders'] ?? 0);
+                                            $grandPallets += intval($f['pallets'] ?? 0);
+                                        }
+                                        if ($grandIndep === 0 && $grandConn === 0) {
+                                            $grandIndep = intval($quote['rack_indep'] ?? 0);
+                                            $grandConn = intval($quote['rack_conn'] ?? 0);
+                                            $grandSmallConn = intval($quote['rack_small_conn'] ?? 0);
+                                            $grandBypass = intval($quote['rack_bypass'] ?? 0);
+                                            $grandHolders = intval($quote['rack_holders'] ?? 0);
+                                            $grandPallets = intval($quote['rack_pallets'] ?? 0);
+                                        }
+                                        $grandTotalBays = $grandIndep + $grandConn + $grandSmallConn + $grandBypass;
+
+                                        $firstFSpec = $quoteFloors[0]['palletSpec'] ?? [];
+                                        $gBeamW = $firstFSpec['beamLen'] ?? (!empty($quote['pallet_w']) ? ($quote['pallet_w'] * 2 + 385) : 2585);
+                                        $gRD = !empty($firstFSpec['rackDepth']) ? $firstFSpec['rackDepth'] : ($quote['rack_depth'] ?? 1000);
+                                        $gLvl = intval(!empty($firstFSpec['levels']) ? $firstFSpec['levels'] : ($quote['rack_levels'] ?? 3));
+                                        if ($gLvl <= 0) $gLvl = 3;
+                                        $gSpanS = max(1, $gLvl - 1);
+
+                                        $gPh = intval(!empty($firstFSpec['ph']) ? $firstFSpec['ph'] : ($quote['pallet_h'] ?? 1000));
+                                        if ($gPh <= 0) $gPh = 1000;
+                                        $rawGRH = !empty($firstFSpec['rackHeight']) ? $firstFSpec['rackHeight'] : (!empty($quote['rack_height']) ? $quote['rack_height'] : '');
+                                        if (preg_match('/^(\d+)/', (string)$rawGRH, $gmH)) {
+                                            $gRH = intval($gmH[1]);
+                                        } else {
+                                            $calcH = ($gPh * $gLvl) + ($gLvl * 200) + 300;
+                                            $gRH = ceil($calcH / 500) * 500;
+                                        }
+                                        if ($gRH <= 0) $gRH = 4000;
+
+                                        $grandSpecTitle = "{$gBeamW}×{$gRD}×{$gRH} ({$gSpanS}S {$gLvl}단)";
+
+                                        $gBpLvl = max(1, $gLvl - 1);
+                                        $gBpSpanS = max(1, $gSpanS - 1);
+                                        $grandBypassSpecTitle = "{$gBeamW}×{$gRD}×{$gRH} ({$gBpSpanS}S {$gBpLvl}단)";
+                                    ?>
+                                    <div class="p-3 mb-3 rounded" style="background: rgba(14, 165, 233, 0.12); border: 1.5px solid rgba(14, 165, 233, 0.4);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-secondary">
+                                            <span class="fw-bold text-info" style="font-size: 0.98rem;">
+                                                <i class="fa-solid fa-layer-group me-1"></i> 전체 <?= count($quoteFloors) ?>개 층 통합 견적 합계
+                                            </span>
+                                            <span class="badge bg-primary fs-7">총 <?= $grandTotalBays ?>대 / 📦 <?= number_format($grandPallets) ?> PLT</span>
+                                        </div>
+                                        <div class="ps-1 text-light" style="line-height: 1.6;">
+                                            <div class="fw-semibold text-white mb-1">
+                                                <span class="text-info"><?= $grandSpecTitle ?></span> 
+                                                독립 <strong class="text-white"><?= $grandIndep ?></strong>대 | 
+                                                연결 <strong class="text-white"><?= $grandConn ?></strong>대 
+                                                <?php if ($grandSmallConn > 0): ?>
+                                                    | 작은연결 <strong class="text-white"><?= $grandSmallConn ?></strong>대
+                                                <?php endif; ?>
+                                                | 🔗 <strong class="text-warning"><?= $grandHolders ?></strong>홀더 
+                                                | 📦 <strong class="text-success"><?= number_format($grandPallets) ?></strong> PLT
+                                            </div>
+                                            <?php if ($grandBypass > 0): ?>
+                                                <div class="fw-semibold text-danger">
+                                                    <span><?= $grandBypassSpecTitle ?></span> 
+                                                    연결 <strong class="text-danger"><?= $grandBypass ?></strong>대 (바이패스)
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 <?php else: ?>
                                     <?php
@@ -482,6 +578,21 @@
                                             }
                                             $edgeText = implode(', ', $edgeArr);
                                         }
+
+                                        $sBeamW = !empty($quote['pallet_w']) ? ($quote['pallet_w'] * 2 + 385) : 2585;
+                                        $sRD = $quote['rack_depth'] ?? 1000;
+                                        $sRH = $quote['rack_height'] ?? 4000;
+                                        if (preg_match('/^(\d+)/', (string)$sRH, $smH)) {
+                                            $sRH = $smH[1];
+                                        }
+                                        $sLvl = intval($quote['rack_levels'] ?? 3);
+                                        if ($sLvl <= 0) $sLvl = 3;
+                                        $sSpanS = max(1, $sLvl - 1);
+                                        $singleSpecTitle = "{$sBeamW}×{$sRD}×{$sRH} ({$sSpanS}S {$sLvl}단)";
+
+                                        $sBpLvl = max(1, $sLvl - 1);
+                                        $sBpSpanS = max(1, $sSpanS - 1);
+                                        $singleBypassSpecTitle = "{$sBeamW}×{$sRD}×{$sRH} ({$sBpSpanS}S {$sBpLvl}단)";
                                     ?>
 
                                     <?php if ($edgeText): ?>
@@ -500,25 +611,30 @@
                                             <div class="mt-1">지게차 종류: <?= htmlspecialchars($quote['forklift_type'] ?? '') ?></div>
                                             <div>최대 인상높이: <?= htmlspecialchars($quote['forklift_lift_height'] ?? 0) ?> mm</div>
                                             <div>직각교차 통로폭(AST): <?= htmlspecialchars($quote['forklift_ast'] ?? 0) ?> mm</div>
-                                            <div class="mt-1">설치 단수: <?= htmlspecialchars($quote['rack_levels'] ?? 0) ?>단</div>
-                                            <div>설치 높이: <?= htmlspecialchars($quote['rack_height'] ?? '') ?></div>
+                                            <div class="mt-1">설치 단수: <?= htmlspecialchars($sLvl) ?>단</div>
+                                            <div>설치 높이: <?= htmlspecialchars($sRH) ?>mm</div>
                                         </div>
                                     </div>
 
-                                    <?php if (!empty($quote['rack_spec'])): ?>
-                                        <div class="mt-3">
-                                            <h6 class="text-white fw-bold mb-1"><?= htmlspecialchars($quote['rack_spec']) ?><?php if (!empty($quote['rack_type'])): ?> (<?= htmlspecialchars($quote['rack_type']) ?>)<?php endif; ?></h6>
-                                            <div class="ps-2 text-light">독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 연결 <?= $quote['rack_conn'] ?? 0 ?>대 <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 | 📦 <?= $quote['rack_pallets'] ?? 0 ?> PLT</div>
+                                    <div class="mt-3">
+                                        <h6 class="text-white fw-bold mb-1">[랙 설치 수량]</h6>
+                                        <div class="ps-2 text-light">
+                                            <div>
+                                                <span class="text-info fw-semibold"><?= $singleSpecTitle ?></span> 
+                                                독립 <?= $quote['rack_indep'] ?? 0 ?>대 | 
+                                                연결 <?= $quote['rack_conn'] ?? 0 ?>대 
+                                                <?php if (!empty($quote['rack_small_conn'])): ?>| 작은연결 <?= $quote['rack_small_conn'] ?>대<?php endif; ?> 
+                                                | 🔗 <?= $quote['rack_holders'] ?? 0 ?>홀더 
+                                                | 📦 <?= number_format($quote['rack_pallets'] ?? 0) ?> PLT
+                                            </div>
                                             <?php if (!empty($quote['rack_bypass'])): ?>
-                                                <div class="mt-2">
-                                                    <?php if (!empty($quote['rack_bypass_type'])): ?>
-                                                        <h6 class="text-white fw-bold mb-1"><?= htmlspecialchars($quote['rack_spec'] . ' (' . $quote['rack_bypass_type'] . ')') ?></h6>
-                                                    <?php endif; ?>
-                                                    <div class="ps-2 text-light">연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)</div>
+                                                <div class="mt-1">
+                                                    <span class="text-danger fw-semibold"><?= $singleBypassSpecTitle ?></span> 
+                                                    연결 <?= htmlspecialchars($quote['rack_bypass']) ?>대 (바이패스)
                                                 </div>
                                             <?php endif; ?>
                                         </div>
-                                    <?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
 
                                 <?php 

@@ -3307,6 +3307,7 @@ window.updateRackFormCounts = function() {
         summaryBadge.style.alignItems = 'flex-start';
     }
 };
+window.updateRackCounts = window.updateRackFormCounts;
 
 // 좌측 폼 영역에 장애물 설정 UI 동적 렌더링
 window.renderObstacleInputs = function() {
@@ -4466,8 +4467,11 @@ function loadFloorState(index) {
     if (typeof alignAndScalePolygon === 'function' && points.length >= 4 && edgeLengths.some(v => v > 0)) {
         alignAndScalePolygon();
     }
+    activeRack = null;
+    selectedRackIndices = [];
     if (typeof draw === 'function') draw();
-    if (typeof updateRackCounts === 'function') updateRackCounts();
+    if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
+    else if (typeof updateRackCounts === 'function') updateRackCounts();
     renderFloorTabs();
 }
 
