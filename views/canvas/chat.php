@@ -317,6 +317,8 @@ body.theme-light .step-indicator {
     <input type="number" id="forklift-ast" value="2800">
     <input type="number" id="rack-levels" value="3">
     <input type="number" id="rack-height" value="">
+    <input type="number" id="rack-beam-length" value="2585">
+    <input type="number" id="rack-depth" value="1000">
     <!-- The file input must be available for JS -->
     <input type="file" id="file-input" multiple accept="image/*,.pdf" style="display:none;" onchange="handleFileSelect(this.files)">
 </div>
@@ -337,6 +339,10 @@ const ChatWizard = {
         const toggle = document.getElementById('chat-wizard-toggle');
         if (container) container.classList.add('d-none');
         if (toggle) toggle.classList.remove('d-none');
+        if (typeof alignAndScalePolygon === 'function' && typeof points !== 'undefined' && points.length >= 3 && typeof currentScale !== 'undefined' && currentScale > 0) {
+            alignAndScalePolygon();
+            if (typeof draw === 'function') draw();
+        }
     },
 
     restore() {
@@ -344,6 +350,10 @@ const ChatWizard = {
         const toggle = document.getElementById('chat-wizard-toggle');
         if (container) container.classList.remove('d-none');
         if (toggle) toggle.classList.add('d-none');
+        if (typeof alignAndScalePolygon === 'function' && typeof points !== 'undefined' && points.length >= 3 && typeof currentScale !== 'undefined' && currentScale > 0) {
+            alignAndScalePolygon();
+            if (typeof draw === 'function') draw();
+        }
     },
 
     appendBotMsg(html) {
@@ -386,13 +396,27 @@ const ChatWizard = {
         `);
     },
 
+    resetForNewFloor(floorName) {
+        this.currentStep = 1;
+        this.step2Html = '';
+        if (this.body) {
+            this.body.innerHTML = '';
+            this.appendBotMsg(`
+                <span class="step-indicator">Step 1/7</span><br>
+                📍 <b>[${floorName}]</b> 도면 작성을 시작합니다! 💕<br>
+                <span class="small">
+                바탕화면의 넓은 도화지(캔버스)에<br>마우스로 점을 찍어<br><b>[${floorName}] 외곽선(모양)</b>을 직접 그려주세요!<br>
+                </span>
+                <br><div style="text-align:center;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); margin-top:5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
+            `);
+        }
+    },
+
     // Called externally when polygon is closed by canvas-interactions.js
     onPolygonClosed() {
-        if(this.currentStep === 1) {
-            this.appendUserMsg("도면 그리기 완료!");
-            this.currentStep = 2;
-            setTimeout(() => this.startStep2(), 800);
-        }
+        this.appendUserMsg("도면 그리기 완료!");
+        this.currentStep = 2;
+        setTimeout(() => this.startStep2(), 500);
     },
 
     startStep2() {
@@ -410,11 +434,15 @@ const ChatWizard = {
                 ${inputsHtml}
             </div>
             
-            <button class="chat-btn" onclick="ChatWizard.submitStep2()">입력 완료</button>
+            <button class="chat-btn" onclick="ChatWizard.submitStep2(this)">입력 완료</button>
         `);
     },
 
-    submitStep2() {
+    submitStep2(btn) {
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+        }
         this.appendUserMsg("벽면 길이 입력 완료!");
         
         // Trigger actual calculation update
@@ -423,7 +451,7 @@ const ChatWizard = {
         }
         
         this.currentStep = 3;
-        setTimeout(() => this.startStep3(), 800);
+        setTimeout(() => this.startStep3(), 600);
     },
 
     startStep3() {
@@ -465,8 +493,8 @@ const ChatWizard = {
                 <div class="mb-3">
                     <label class="small text-secondary mb-1 fw-bold">가로(W) / 세로(D) mm</label>
                     <div class="d-flex gap-2">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="chat-pallet-w" class="chat-input-custom small" value="1100" placeholder="W" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, '');">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="chat-pallet-d" class="chat-input-custom small" value="1100" placeholder="D" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, '');">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="chat-pallet-w" class="chat-input-custom small" value="1100" placeholder="W" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); ChatWizard.updateRackSpecOptions();">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="chat-pallet-d" class="chat-input-custom small" value="1100" placeholder="D" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); ChatWizard.updateRackSpecOptions();">
                     </div>
                 </div>
                 <div class="mb-3">
@@ -481,21 +509,199 @@ const ChatWizard = {
                     <label class="small text-secondary mb-1 fw-bold d-block">포크 진입 방향</label>
                     <div class="d-flex gap-3 mt-1">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="chatForkDirection" id="chatForkW" value="W" checked>
+                            <input class="form-check-input" type="radio" name="chatForkDirection" id="chatForkW" value="W" checked onchange="ChatWizard.updateRackSpecOptions()">
                             <label class="form-check-label small text-secondary fw-bold" for="chatForkW">가로(W)</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="chatForkDirection" id="chatForkD" value="D">
+                            <input class="form-check-input" type="radio" name="chatForkDirection" id="chatForkD" value="D" onchange="ChatWizard.updateRackSpecOptions()">
                             <label class="form-check-label small text-secondary fw-bold" for="chatForkD">세로(D)</label>
                         </div>
                     </div>
                 </div>
+
+                <!-- 💡 스마트 추천 랙 규격 섹션 -->
+                <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-50 mt-2" id="chat-rack-spec-recommendation-box">
+                    <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-secondary border-opacity-25">
+                        <span class="small fw-bold text-info" style="font-size: 0.8rem;">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1 text-warning"></i> 아사미야 추천 랙 규격
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-50 text-light" style="font-size:0.65rem;">기성품 최적화</span>
+                    </div>
+
+                    <!-- 가로 로드빔 길이 -->
+                    <div class="mb-2">
+                        <label class="small text-secondary d-block mb-1 fw-bold" style="font-size: 0.73rem;">가로 로드빔 길이 (W)</label>
+                        <div id="chat-beam-options-container" class="d-flex flex-column gap-1"></div>
+                    </div>
+
+                    <!-- 세로 랙 깊이 (프레임) -->
+                    <div class="mb-1">
+                        <label class="small text-secondary d-block mb-1 fw-bold" style="font-size: 0.73rem;">세로 랙 깊이 (D)</label>
+                        <div id="chat-depth-options-container" class="d-flex flex-column gap-1"></div>
+                    </div>
+                </div>
             </div>
-            <button class="chat-btn" onclick="ChatWizard.submitStep4()">입력 완료</button>
+            <button class="chat-btn mt-2" onclick="ChatWizard.submitStep4()">입력 완료</button>
         `);
+        setTimeout(() => this.updateRackSpecOptions(), 80);
+    },
+
+    updateRackSpecOptions() {
+        const pwInput = document.getElementById('chat-pallet-w');
+        const pdInput = document.getElementById('chat-pallet-d');
+        if (!pwInput || !pdInput) return;
+
+        let pw = parseInt(pwInput.value) || 1100;
+        let pd = parseInt(pdInput.value) || 1100;
+
+        const forkDir = document.querySelector('input[name="chatForkDirection"]:checked')?.value || 'W';
+        if (forkDir === 'D') {
+            const temp = pw;
+            pw = pd;
+            pd = temp;
+        }
+
+        const beamContainer = document.getElementById('chat-beam-options-container');
+        const depthContainer = document.getElementById('chat-depth-options-container');
+        if (!beamContainer || !depthContainer) return;
+
+        // 1. 로드빔 가로(W) 후보
+        let beamOptions = [];
+        if (pw <= 1100) {
+            beamOptions = [
+                { val: 2585, label: '2,585mm (국내 표준 기성품 ⭐)', isRec: true },
+                { val: 2385, label: '2,385mm (초슬림 밀착형)', isRec: false }
+            ];
+        } else if (pw === 1200) {
+            beamOptions = [
+                { val: 2585, label: '2,585mm (대중적 기성품·공간절약 ⭐)', isRec: true },
+                { val: 2785, label: '2,785mm (광폭 여유형 95mm 유격)', isRec: false }
+            ];
+        } else if (pw === 1300) {
+            beamOptions = [
+                { val: 2785, label: '2,785mm (기성품·공간절약 ⭐)', isRec: true },
+                { val: 2985, label: '2,985mm (광폭 여유형 95mm 유격)', isRec: false }
+            ];
+        } else if (pw === 1400) {
+            beamOptions = [
+                { val: 2985, label: '2,985mm (기성품 표준·공간절약 ⭐)', isRec: true },
+                { val: 3185, label: '3,185mm (광폭 여유형 95mm 유격)', isRec: false }
+            ];
+        } else {
+            const compactVal = (pw * 2) + 185;
+            const standardVal = (pw * 2) + 385;
+            beamOptions = [
+                { val: compactVal, label: `${compactVal.toLocaleString()}mm (알뜰 밀착형 ⭐)`, isRec: true },
+                { val: standardVal, label: `${standardVal.toLocaleString()}mm (표준 여유형)`, isRec: false }
+            ];
+        }
+
+        const currentSelectedBeam = document.querySelector('input[name="chatRackBeam"]:checked')?.value || (beamOptions[0] ? beamOptions[0].val : 2585);
+
+        let beamHtml = '';
+        beamOptions.forEach((opt, idx) => {
+            const isChecked = String(opt.val) === String(currentSelectedBeam) || (idx === 0 && !currentSelectedBeam);
+            beamHtml += `
+                <div class="form-check" style="font-size:0.75rem; margin-bottom:2px;">
+                    <input class="form-check-input" type="radio" name="chatRackBeam" id="chatBeam_${opt.val}" value="${opt.val}" ${isChecked ? 'checked' : ''} onchange="ChatWizard.syncSelectedSpecs()">
+                    <label class="form-check-label ${opt.isRec ? 'text-warning fw-bold' : 'text-light'}" for="chatBeam_${opt.val}">
+                        ${opt.label}
+                    </label>
+                </div>
+            `;
+        });
+        beamHtml += `
+            <div class="d-flex align-items-center gap-1 mt-1" style="font-size:0.75rem;">
+                <input class="form-check-input" type="radio" name="chatRackBeam" id="chatBeam_custom" value="custom" onchange="ChatWizard.syncSelectedSpecs()">
+                <label class="form-check-label text-secondary me-1" for="chatBeam_custom">직접입력:</label>
+                <input type="text" inputmode="numeric" id="chat-beam-custom-input" class="form-control form-control-sm bg-dark text-light border-secondary p-1" style="width:75px; font-size:0.75rem; height:24px;" placeholder="mm" onfocus="document.getElementById('chatBeam_custom').checked=true" oninput="this.value=this.value.replace(/[^0-9]/g, ''); document.getElementById('chatBeam_custom').checked=true; ChatWizard.syncSelectedSpecs()">
+            </div>
+        `;
+        beamContainer.innerHTML = beamHtml;
+
+        // 2. 랙 깊이(D) 후보
+        let depthOptions = [];
+        if (pd <= 1100) {
+            depthOptions = [
+                { val: 1000, label: '1,000mm (국내 90% 표준 기성품 ⭐)', isRec: true },
+                { val: 900,  label: '900mm (소형 기성품)', isRec: false }
+            ];
+        } else if (pd === 1200) {
+            depthOptions = [
+                { val: 1000, label: '1,000mm (표준 기성품 + 타이바 권장 ⭐)', isRec: true },
+                { val: 1100, label: '1,100mm (100mm 여유형)', isRec: false }
+            ];
+        } else if (pd === 1300) {
+            depthOptions = [
+                { val: 1000, label: '1,000mm (표준 기성품 + 타이바 적용 ⭐)', isRec: true },
+                { val: 1200, label: '1,200mm (안정형 기성품)', isRec: false }
+            ];
+        } else if (pd >= 1400) {
+            depthOptions = [
+                { val: 1000, label: '1,000mm (국내 표준 기성품 + 타이바 ⭐최저가)', isRec: true },
+                { val: 1200, label: '1,200mm (안정형 기성품)', isRec: false },
+                { val: 1300, label: '1,300mm (주문제작)', isRec: false }
+            ];
+        } else {
+            depthOptions = [
+                { val: 1000, label: '1,000mm (국내 표준 기성품 ⭐)', isRec: true },
+                { val: pd - 100, label: `${pd - 100}mm (파렛트 - 100mm)`, isRec: false }
+            ];
+        }
+
+        const currentSelectedDepth = document.querySelector('input[name="chatRackDepth"]:checked')?.value || (depthOptions[0] ? depthOptions[0].val : 1000);
+
+        let depthHtml = '';
+        depthOptions.forEach((opt, idx) => {
+            const isChecked = String(opt.val) === String(currentSelectedDepth) || (idx === 0 && !currentSelectedDepth);
+            depthHtml += `
+                <div class="form-check" style="font-size:0.75rem; margin-bottom:2px;">
+                    <input class="form-check-input" type="radio" name="chatRackDepth" id="chatDepth_${opt.val}" value="${opt.val}" ${isChecked ? 'checked' : ''} onchange="ChatWizard.syncSelectedSpecs()">
+                    <label class="form-check-label ${opt.isRec ? 'text-warning fw-bold' : 'text-light'}" for="chatDepth_${opt.val}">
+                        ${opt.label}
+                    </label>
+                </div>
+            `;
+        });
+        depthHtml += `
+            <div class="d-flex align-items-center gap-1 mt-1" style="font-size:0.75rem;">
+                <input class="form-check-input" type="radio" name="chatRackDepth" id="chatDepth_custom" value="custom" onchange="ChatWizard.syncSelectedSpecs()">
+                <label class="form-check-label text-secondary me-1" for="chatDepth_custom">직접입력:</label>
+                <input type="text" inputmode="numeric" id="chat-depth-custom-input" class="form-control form-control-sm bg-dark text-light border-secondary p-1" style="width:75px; font-size:0.75rem; height:24px;" placeholder="mm" onfocus="document.getElementById('chatDepth_custom').checked=true" oninput="this.value=this.value.replace(/[^0-9]/g, ''); document.getElementById('chatDepth_custom').checked=true; ChatWizard.syncSelectedSpecs()">
+            </div>
+        `;
+        depthContainer.innerHTML = depthHtml;
+
+        this.syncSelectedSpecs();
+    },
+
+    syncSelectedSpecs() {
+        const selectedBeam = document.querySelector('input[name="chatRackBeam"]:checked')?.value;
+        const selectedDepth = document.querySelector('input[name="chatRackDepth"]:checked')?.value;
+
+        let finalBeam = parseInt(selectedBeam) || 2585;
+        let finalDepth = parseInt(selectedDepth) || 1000;
+
+        if (selectedBeam === 'custom') {
+            finalBeam = parseInt(document.getElementById('chat-beam-custom-input')?.value) || finalBeam;
+        }
+        if (selectedDepth === 'custom') {
+            finalDepth = parseInt(document.getElementById('chat-depth-custom-input')?.value) || finalDepth;
+        }
+
+        const hBeam = document.getElementById('rack-beam-length');
+        const hDepth = document.getElementById('rack-depth');
+        if (hBeam) hBeam.value = finalBeam;
+        if (hDepth) hDepth.value = finalDepth;
+
+        window.rackSpecs = window.rackSpecs || {};
+        window.rackSpecs.beamLength = finalBeam;
+        window.rackSpecs.rackDepth = finalDepth;
     },
 
     submitStep4() {
+        this.syncSelectedSpecs();
+
         document.getElementById('pallet-w').value = document.getElementById('chat-pallet-w').value;
         document.getElementById('pallet-d').value = document.getElementById('chat-pallet-d').value;
         document.getElementById('pallet-h').value = document.getElementById('chat-pallet-h').value;
@@ -509,9 +715,12 @@ const ChatWizard = {
             document.getElementById('forkD').checked = true;
         }
 
-        this.appendUserMsg("파렛트 사이즈 입력 완료!");
+        const bLen = document.getElementById('rack-beam-length')?.value || 2585;
+        const rDepth = document.getElementById('rack-depth')?.value || 1000;
+
+        this.appendUserMsg(`파렛트(${document.getElementById('pallet-w').value}×${document.getElementById('pallet-d').value}) 및 랙규격(${bLen}×${rDepth}) 선택 완료!`);
         this.currentStep = 5;
-        setTimeout(() => this.startStep5(), 800);
+        setTimeout(() => this.startStep5(), 600);
     },
 
     startStep5() {
@@ -701,4 +910,18 @@ function chatDragEnd(e) {
     isChatDragging = false;
     chatWizardDOM.classList.remove('dragging');
 }
+
+// 📑 멀티 플로어 전환/추가 챗봇 연동 훅
+window.onFloorSwitched = function(floorName) {
+    if (typeof ChatWizard !== 'undefined' && typeof ChatWizard.appendBotMsg === 'function') {
+        ChatWizard.appendBotMsg(`
+            📍 <b>[${floorName}]</b> 구역으로 화면을 전환했어요!<br>
+            <span class="small text-secondary">이 층/구역의 치수와 배치된 랙을 확인 및 수정하실 수 있습니다 💕</span>
+        `);
+    }
+};
+
+window.onFloorAdded = function(floorName) {
+    // ChatWizard.resetForNewFloor에 의해 Step 1 안내가 자동으로 렌더링됩니다.
+};
 </script>
