@@ -1,785 +1,488 @@
-<?php $title = '물류 파렛트랙 B2B SaaS'; include_header($title, $siteConfig); ?>
+<?php 
+$title = '물류 파렛트랙 B2B SaaS 자동설계 & 견적 솔루션'; 
+include_header($title, $siteConfig ?? []); 
+?>
 <script>
     // 페이지 로드 시 라이트 모드 강제 적용 (랜딩 전용)
     document.documentElement.setAttribute('data-bs-theme', 'light');
 </script>
 <style>
-/* 🎨 커스텀 CSS - Premium SaaS Landing Page */
+/* 🎨 Premium SaaS Minimal Landing Page */
 .landing-wrapper {
     font-family: 'Inter', 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: #1e293b;
     background-color: #ffffff;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
-    padding-top: 0;
 }
 
-/* Custom Colors & Utilities */
+/* Colors */
 .landing-wrapper .bg-brand-orange { background-color: #f16819 !important; }
 .landing-wrapper .text-brand-orange { color: #f16819 !important; }
-.landing-wrapper .bg-light-gray { background-color: #f4f6f8 !important; }
+.landing-wrapper .bg-light-gray { background-color: #f8fafc !important; }
 .landing-wrapper .bg-deep-navy { background-color: #0f172a !important; }
 .landing-wrapper .text-deep-navy { color: #0f172a !important; }
-.landing-wrapper .btn-orange { background: #f16819; color: #fff; border: none; }
-.landing-wrapper .btn-orange:hover { background: #e05300; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(241,104,25,0.3); }
 
-.landing-wrapper .text-dark-blue { color: #0B1733; }
-.landing-wrapper .text-deep-navy { color: #1e293b; }
-.landing-wrapper .text-primary-blue { color: #2A5BDA; }
-.landing-wrapper .text-light-blue { color: #62D6FF; }
-.landing-wrapper .bg-dark-blue { background-color: #0B1733; }
-.landing-wrapper .bg-navy { background-color: #0F1E3D; }
-.landing-wrapper .bg-black { background-color: #0B1120 !important; }
-.landing-wrapper .bg-primary-blue { background-color: #2A5BDA; }
-.landing-wrapper .bg-light-blue { background-color: #62D6FF; }
-.landing-wrapper .bg-dark-surface { background-color: #111827; }
-
-.landing-wrapper .text-deep-navy-45 { color: rgba(255,255,255,0.45); }
-.landing-wrapper .text-deep-navy-50 { color: rgba(255,255,255,0.50); }
-.landing-wrapper .text-deep-navy-60 { color: rgba(255,255,255,0.60); }
-.landing-wrapper .text-deep-navy-70 { color: rgba(255,255,255,0.70); }
-.landing-wrapper .text-deep-navy-80 { color: rgba(255,255,255,0.80); }
-.landing-wrapper .text-deep-navy-90 { color: rgba(255,255,255,0.90); }
-
-.landing-wrapper .border-white-10 { border-color: rgba(255,255,255,0.1) !important; }
-.landing-wrapper .border-white-15 { border-color: rgba(255,255,255,0.15) !important; }
-
-/* Gradients */
-.landing-wrapper .bg-gradient-primary {
-    background: linear-gradient(to right, #62D6FF, #2A5BDA);
+/* 🌟 어두운 배경(bg-deep-navy) 내부 텍스트 밝은 색상 보장 */
+.landing-wrapper .bg-deep-navy,
+.landing-wrapper .bg-deep-navy h1,
+.landing-wrapper .bg-deep-navy h2,
+.landing-wrapper .bg-deep-navy h3,
+.landing-wrapper .bg-deep-navy h4,
+.landing-wrapper .bg-deep-navy p,
+.landing-wrapper .bg-deep-navy span:not(.badge):not(.btn-pill):not(.text-brand-orange),
+.landing-wrapper .bg-deep-navy .text-light,
+.landing-wrapper .bg-deep-navy .text-white,
+.landing-wrapper .bg-deep-navy .btn-outline-light {
+    color: #ffffff !important;
 }
-.landing-wrapper .text-gradient-primary {
-    background: linear-gradient(to right, #62D6FF, #2A5BDA);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.landing-wrapper .text-light {
+    color: #ffffff !important;
 }
-.landing-wrapper .text-gradient-navy-blue {
-    background: linear-gradient(to right, #2A5BDA, #62D6FF);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.landing-wrapper .text-white {
+    color: #ffffff !important;
 }
-.landing-wrapper .bg-gradient-popular {
-    background: linear-gradient(to bottom right, #2A5BDA, #62D6FF);
+.landing-wrapper .bg-deep-navy p,
+.landing-wrapper .bg-deep-navy .text-light-muted {
+    color: rgba(255, 255, 255, 0.88) !important;
 }
 
-/* Patterns */
-.landing-wrapper .grid-pattern {
-    background-image:
-    linear-gradient(rgba(15,30,61,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15,30,61,0.04) 1px, transparent 1px);
-    background-size: 32px 32px;
+/* Buttons */
+.landing-wrapper .btn-pill {
+    border-radius: 50rem;
+    padding: 0.65rem 1.75rem;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
 }
+.landing-wrapper .btn-pill:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 10px 20px -5px rgba(0,0,0,0.15); 
+}
+.landing-wrapper .btn-orange { 
+    background: #f16819; 
+    color: #fff; 
+    border: none; 
+}
+.landing-wrapper .btn-orange:hover { 
+    background: #e05300; 
+    color: #fff; 
+}
+.landing-wrapper .btn-navy { 
+    background: #0f172a; 
+    color: #fff; 
+}
+.landing-wrapper .btn-navy:hover { 
+    background: #1e293b; 
+    color: #fff; 
+}
+
+/* Badges */
+.landing-wrapper .badge-soft-orange { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.landing-wrapper .badge-soft-primary { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+
+/* Grid patterns */
 .landing-wrapper .grid-pattern-dark {
     background-image:
     linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
     background-size: 36px 36px;
 }
-
-/* Glass & Effects */
-.landing-wrapper .glass {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-}
-.landing-wrapper .glow-blue {
-    box-shadow: 0 0 12px rgba(98,214,255,0.8);
-}
-.landing-wrapper .shadow-soft {
-    box-shadow: 0 8px 32px rgba(15,30,61,0.06);
-}
-.landing-wrapper .shadow-heavy {
-    box-shadow: 0 24px 80px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.2);
+.landing-wrapper .grid-pattern {
+    background-image:
+    linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
 }
 
-/* Base Sections */
-.landing-wrapper .section-padding { padding: 5rem 1rem; }
+/* Sections */
+.landing-wrapper .section-padding { padding: 5rem 1.5rem; }
 @media (min-width: 768px) {
-    .landing-wrapper .section-padding { padding: 7rem 1.5rem; }
+    .landing-wrapper .section-padding { padding: 6.5rem 2rem; }
 }
-
 .landing-wrapper .max-w-1200 { max-width: 1200px; margin: 0 auto; }
-.landing-wrapper .max-w-720 { max-width: 720px; }
+.landing-wrapper .max-w-720 { max-width: 720px; margin: 0 auto; }
 
-/* Reveal Animation */
+/* Card Animations */
 .landing-wrapper .reveal { opacity: 0; transform: translateY(24px); transition: all 0.7s cubic-bezier(.16,1,.3,1); }
 .landing-wrapper .reveal.in-view { opacity: 1; transform: translateY(0); }
 
-/* Buttons */
-.landing-wrapper .btn-pill {
-    border-radius: 50rem;
-    padding: 0.5rem 1.5rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
+.landing-wrapper .feature-card {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
 }
-.landing-wrapper .btn-pill:hover { transform: translateY(-1px); }
-.landing-wrapper .btn-white { background: #fff; color: #0B1733; }
-.landing-wrapper .btn-white:hover { background: rgba(255,255,255,0.9); }
-.landing-wrapper .btn-navy { background: #0F1E3D; color: #fff; }
-.landing-wrapper .btn-navy:hover { background: rgba(15,30,61,0.9); }
-.landing-wrapper .btn-light { background: #F1F5F9; color: #1e293b; border: 1px solid rgba(0,0,0,0.05); }
-.landing-wrapper .btn-light:hover { background: #E8EEF6; }
-
-/* Custom Badge */
-.landing-wrapper .badge-soft-primary { background: #E8F0FF; color: #2A5BDA; border: 1px solid #C7D9FF; }
-.landing-wrapper .badge-soft-danger { background: #FFF0F0; color: #C0392B; border: 1px solid #FFD5D5; }
-.landing-wrapper .badge-glass { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
-
-.landing-wrapper .fs-7 { font-size: 0.85rem; }
-.landing-wrapper .fs-8 { font-size: 0.75rem; }
-.landing-wrapper .fs-9 { font-size: 0.65rem; }
-.landing-wrapper .fw-extrabold { font-weight: 800; }
-.landing-wrapper .fw-black { font-weight: 900; }
-.landing-wrapper .tracking-tight { letter-spacing: -0.03em; }
-.landing-wrapper .tracking-widest { letter-spacing: 0.1em; }
-
-/* Demo UI elements */
-.landing-wrapper .demo-canvas-wrap {
-    transform: rotate(-0.6deg);
-    border-radius: 20px;
-    background: #fff;
-    padding: 10px;
-}
-.landing-wrapper .demo-canvas {
-    border-radius: 14px;
-    overflow: hidden;
-    background: #F6F8FB;
-    border: 1px solid rgba(15,30,61,0.06);
+.landing-wrapper .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+    border-color: #cbd5e1;
 }
 
-/* 덮어쓰기 방지용 */
-body { background-color: #0B1120 !important; }
+/* Pricing Card Special */
+.pricing-card-box {
+    transition: all 0.3s ease;
+    border-radius: 1.5rem;
+    border: 2px solid transparent;
+}
+.pricing-card-box:hover {
+    transform: translateY(-6px);
+}
+.pricing-card-pro {
+    border-color: #f16819 !important;
+    box-shadow: 0 25px 50px -12px rgba(241, 104, 25, 0.15) !important;
+}
 </style>
 
 <div class="landing-wrapper">
+
     <!-- Hero Section -->
-    <section class="position-relative bg-deep-navy text-deep-navy overflow-hidden py-5" style="background-image: url('/assets/images/canvas_demo.png'); background-size: cover; background-position: center;">
-        <div class="position-absolute w-100 h-100 top-0 start-0 bg-deep-navy" style="opacity: 0.85;"></div>
-        <div class="position-absolute w-100 h-100 top-0 start-0 pointer-events-none">
-            <div class="position-absolute start-50 translate-middle-x" style="top:-300px; width: min(1200px, 100vw); height: 800px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(241,104,25,0.35), transparent 60%); filter: blur(20px);"></div>
-            <div class="position-absolute" style="top:120px; right:-100px; width: min(600px, 80vw); height: 600px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(98,214,255,0.18), transparent 60%);"></div>
-            <div class="position-absolute w-100 h-100 grid-pattern-dark opacity-50"></div>
-        </div>
+    <section class="position-relative bg-deep-navy text-light overflow-hidden py-5" style="padding-top: 6rem !important;">
+        <div class="position-absolute w-100 h-100 top-0 start-0 grid-pattern-dark opacity-50"></div>
+        <div class="position-absolute start-50 translate-middle-x" style="top:-250px; width: min(1200px, 100vw); height: 750px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(241,104,25,0.3), transparent 65%); filter: blur(30px);"></div>
+        <div class="position-absolute" style="top:100px; right:-80px; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(99,102,241,0.2), transparent 65%); filter: blur(40px);"></div>
         
         <div class="max-w-1200 section-padding position-relative z-1">
             <div class="row align-items-center gy-5">
                 <div class="col-lg-6">
+                    <div class="d-inline-flex align-items-center gap-2 rounded-pill badge-soft-orange px-3 py-1 fs-7 fw-bold mb-3">
+                        <i class="fa-solid fa-sparkles"></i> 물류 파렛트랙 B2B 자동설계 SaaS
+                    </div>
                     
-                    
-                    <h1 class="mt-4 fw-extrabold tracking-tight text-light" style="font-size: clamp(32px, 5vw, 46px); line-height: 1.1;">
-                        물류 파렛트랙<br>
-                        <span class="text-light">자동설계 및 실시간 견적</span><br>
-                        <span class="text-brand-orange">B2B SaaS</span>
+                    <h1 class="mt-3 fw-bold tracking-tight text-light" style="font-size: clamp(32px, 5vw, 48px); line-height: 1.2;">
+                        복잡한 CAD 없이 <span class="text-brand-orange">5분 완성</span><br>
+                        2D 도면 자동설계 &<br>
+                        실시간 견적서 발행
                     </h1>
                     
-                    <p class="mt-4 fs-6 text-deep-navy-70 lh-lg" style="max-width: 520px;">
-                        1.5~3시간 걸리던 견적을 <span class="text-brand-orange fw-bold">5분 안에</span> CAD 없이 브라우저에서 끝내는 2D Canvas 자동설계. 도면·BOM·PDF 견적서 원클릭 발행.
+                    <p class="mt-4 fs-6 text-light lh-lg" style="max-width: 520px; color: rgba(255, 255, 255, 0.9) !important;">
+                        창고 가로·세로만 입력하면 최적 파렛트랙이 3초 만에 자동 배치됩니다.<br class="d-none d-sm-block">
+                        정밀 자재 BOM 산출부터 로고 탑재 정식 PDF 견적서까지 원클릭으로 완성하세요.
                     </p>
                     
                     <div class="mt-5 d-flex flex-wrap gap-3">
-                        <a href="#pricing" class="btn-pill btn-orange shadow">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                        <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill badge-glass"><span class="d-flex align-items-center justify-content-center btn-orange rounded-circle" style="width:28px;height:28px;"><i class="fa-solid fa-play fs-8 text-light"></i></span> 견적신청데모</a>
+                        <a href="#pricing" class="btn-pill btn-orange shadow-lg fs-6">1개월 무료 체험하기 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill btn-outline-light text-light border-white border-opacity-50 fs-6">
+                            <i class="fa-solid fa-play text-brand-orange"></i> 실시간 2D 데모
+                        </a>
                     </div>
                     
-                    <div class="mt-5 d-flex align-items-center gap-4 fs-8 text-deep-navy-50">
+                    <div class="mt-5 d-flex align-items-center gap-4 fs-8 text-light">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="d-flex" style="margin-left: 10px;">
-                                <div class="rounded-circle border border-dark bg-dark-surface opacity-75" style="width:24px;height:24px; margin-left:-10px;"></div>
-                                <div class="rounded-circle border border-dark bg-dark-surface opacity-50" style="width:24px;height:24px; margin-left:-10px;"></div>
-                                <div class="rounded-circle border border-dark bg-dark-surface opacity-25" style="width:24px;height:24px; margin-left:-10px;"></div>
-                            </div>
-                            <span class="text-deep-navy-70">50+ 공급업체 검증</span>
+                            <i class="fa-solid fa-bolt text-brand-orange"></i>
+                            <span class="text-light">견적 시간 95% 단축</span>
                         </div>
-                        <div style="width:1px; height:12px; background: rgba(255,255,255,0.15);"></div>
+                        <div style="width:1px; height:12px; background: rgba(255,255,255,0.3);"></div>
                         <div class="d-flex align-items-center gap-2">
-                            <i class="fa-solid fa-shield-halved text-brand-orange"></i>
-                            <span class="text-deep-navy-70">오류율 0% 엔진</span>
+                            <i class="fa-solid fa-shield-check text-success"></i>
+                            <span class="text-light">자재 오발주율 0%</span>
+                        </div>
+                        <div style="width:1px; height:12px; background: rgba(255,255,255,0.3);"></div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-credit-card text-info"></i>
+                            <span class="text-light">카드 등록 없이 시작</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="col-lg-6 position-relative">
-                    <div class="demo-canvas-wrap shadow-heavy">
-                        <div class="demo-canvas">
-                            <div class="d-flex align-items-center justify-content-between bg-dark-surface border-bottom px-3 py-2">
+                <div class="col-lg-6">
+                    <div class="position-relative rounded-4 p-2 bg-white bg-opacity-10 border border-white border-opacity-20 shadow-lg">
+                        <div class="rounded-3 bg-white text-dark overflow-hidden shadow-sm">
+                            <div class="d-flex align-items-center justify-content-between bg-light px-3 py-2 border-bottom">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="d-flex gap-1">
-                                        <div class="rounded-circle" style="width:10px;height:10px;background:#FF5F56;"></div>
-                                        <div class="rounded-circle" style="width:10px;height:10px;background:#FFBD2E;"></div>
-                                        <div class="rounded-circle" style="width:10px;height:10px;background:#27C93F;"></div>
-                                    </div>
-                                    <span class="ms-2 fs-8 fw-bold text-deep-navy-70">WAREHOUSE CANVAS • 32.5m x 18.2m</span>
+                                    <div class="rounded-circle bg-danger" style="width:10px;height:10px;"></div>
+                                    <div class="rounded-circle bg-warning" style="width:10px;height:10px;"></div>
+                                    <div class="rounded-circle bg-success" style="width:10px;height:10px;"></div>
+                                    <span class="ms-2 fs-8 fw-bold text-muted">2D CANVAS ENGINE • 30m × 18m</span>
                                 </div>
-                                <div class="d-flex gap-2 fs-9">
-                                    <span class="badge rounded-pill bg-navy fw-normal"><i class="fa-solid fa-microchip"></i> Auto 배치</span>
-                                    <span class="badge rounded-pill bg-brand-orange fw-normal">3.2s 연산</span>
-                                </div>
+                                <span class="badge bg-brand-orange text-white fs-9">연산 속도 2.8s</span>
                             </div>
-                            <div class="position-relative bg-white shadow-sm p-3" style="aspect-ratio: 1.65/1;">
-                                <div class="w-100 h-100 rounded-3 bg-dark-surface border position-relative overflow-hidden grid-pattern">
-                                    <!-- Mockup elements -->
-                                    <div class="position-absolute rounded-1 bg-navy" style="width:16px;height:16px;left:18%;top:18%;"></div>
-                                    <div class="position-absolute rounded-1 bg-navy" style="width:16px;height:16px;left:18%;bottom:18%;"></div>
-                                    <div class="position-absolute rounded-1 bg-navy" style="width:16px;height:16px;right:28%;top:18%;"></div>
-                                    <div class="position-absolute d-flex gap-2" style="bottom:8px; left:50%; transform:translateX(-50%);">
-                                        <div class="rounded-pill" style="width:60px; height:8px; background:rgba(255,189,46,0.8);"></div>
-                                        <div class="rounded-pill" style="width:60px; height:8px; background:rgba(255,189,46,0.8);"></div>
-                                    </div>
-                                    <!-- Mockup Racks -->
-                                    <div class="position-absolute w-100 h-100 p-4">
-                                        <div class="row g-1 h-100">
-                                            <?php for($i=0; $i<18; $i++): ?>
-                                                <?php if($i%3==2): ?>
-                                                    <div class="col-2 d-flex align-items-center"><div class="w-100 border-top border-primary opacity-25" style="border-top-style:dashed!important;"></div></div>
-                                                <?php else: ?>
-                                                    <div class="col-2"><div class="w-100 h-100 rounded-1 border" style="background:#DCE6FF; border-color:rgba(42,91,218,0.2);"></div></div>
-                                                <?php endif; ?>
-                                            <?php endfor; ?>
+                            <div class="p-4 position-relative grid-pattern" style="min-height: 280px; background-color: #f8fafc;">
+                                <!-- Simple Layout Preview -->
+                                <div class="row g-2 h-100">
+                                    <?php for($i=0; $i<12; $i++): ?>
+                                        <div class="col-3">
+                                            <div class="p-2 rounded border text-center" style="background:#e0e7ff; border-color:#c7d2fe !important;">
+                                                <div class="fw-bold text-primary" style="font-size:0.75rem;">랙 열 <?= $i+1 ?></div>
+                                                <div class="text-muted" style="font-size:0.65rem;">3단 적재 (6 PLT)</div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    <?php endfor; ?>
                                 </div>
                                 
-                                <!-- Floating Panels -->
-                                <div class="position-absolute rounded-3 bg-navy text-deep-navy p-2 shadow" style="bottom:20px; left:25px; width: 140px;">
-                                    <div class="fs-9 tracking-widest text-deep-navy-50 fw-bold">BOM AUTO</div>
-                                    <div class="mt-1 fs-8">
-                                        <div class="d-flex justify-content-between"><span class="text-deep-navy-60">주기둥</span><span class="fw-bold">48 EA</span></div>
-                                        <div class="d-flex justify-content-between"><span class="text-deep-navy-60">로드빔</span><span class="fw-bold">96 EA</span></div>
-                                        <div class="d-flex justify-content-between"><span class="text-deep-navy-60">타이빔</span><span class="fw-bold">36 EA</span></div>
-                                        <div class="d-flex justify-content-between"><span class="text-deep-navy-60">앙카</span><span class="fw-bold">192 EA</span></div>
+                                <div class="position-absolute bottom-0 end-0 m-3 p-3 bg-white rounded-3 shadow border" style="max-width: 220px;">
+                                    <div class="d-flex justify-content-between fs-8 mb-1">
+                                        <span class="text-muted">총 주기둥</span>
+                                        <strong class="text-dark">48 EA</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between fs-8 mb-1">
+                                        <span class="text-muted">총 로드빔</span>
+                                        <strong class="text-dark">96 EA</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between fs-8">
+                                        <span class="text-muted">적재 파렛트</span>
+                                        <strong class="text-brand-orange">72 PLT</strong>
                                     </div>
                                 </div>
-                                <div class="position-absolute rounded-pill bg-dark-surface border shadow-sm px-3 py-2 d-flex align-items-center gap-2" style="top:40px; right:15px;">
-                                    <i class="fa-regular fa-file-pdf text-primary-blue"></i>
-                                    <span class="fs-8 fw-bold text-deep-navy">PDF 견적서 • 5분 발행</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Highlights (3 Core Values) -->
+    <section class="section-padding bg-white border-bottom">
+        <div class="max-w-1200">
+            <div class="text-center max-w-720 mb-5">
+                <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-primary px-3 py-1 fs-7 fw-bold mb-2">
+                    <i class="fa-solid fa-cubes"></i> 핵심 기능 요약
+                </div>
+                <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(26px, 4vw, 36px);">
+                    견적 업무의 모든 과정을 하나로 연결합니다
+                </h2>
+                <p class="reveal mt-3 text-muted fs-6">
+                    프로그램 설치 없이 웹 브라우저에서 2D 도면, 자재 수량, 견적서 발송까지 한 번에 처리하세요.
+                </p>
+            </div>
+
+            <div class="row g-4 mt-2">
+                <div class="col-md-4">
+                    <div class="reveal feature-card h-100 rounded-4 p-4 p-lg-5">
+                        <div class="rounded-3 bg-brand-orange bg-opacity-10 text-brand-orange d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
+                            <i class="fa-solid fa-drafting-compass fs-4"></i>
+                        </div>
+                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 웹 인터랙티브 설계</h3>
+                        <p class="text-muted fs-7 mt-3 lh-lg">
+                            창고 치수를 입력하고 마우스 클릭 몇 번으로 최적 랙을 배치합니다. 기둥, 셔터 등 현장 장애물도 자유롭게 등록할 수 있습니다.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="reveal feature-card h-100 rounded-4 p-4 p-lg-5" style="transition-delay: 100ms;">
+                        <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
+                            <i class="fa-solid fa-calculator fs-4"></i>
+                        </div>
+                        <h3 class="fw-bold text-deep-navy fs-5">2. 100% 정밀 자재 BOM 산출</h3>
+                        <p class="text-muted fs-7 mt-3 lh-lg">
+                            주기둥(독립/연결), 로드빔, 타이빔, 앙카볼트 수량이 공학 계산식으로 자동 연산되어 자재 오발주와 누락이 0%로 줄어듭니다.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="reveal feature-card h-100 rounded-4 p-4 p-lg-5" style="transition-delay: 200ms;">
+                        <div class="rounded-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
+                            <i class="fa-solid fa-file-invoice-dollar fs-4"></i>
+                        </div>
+                        <h3 class="fw-bold text-deep-navy fs-5">3. 원클릭 정식 PDF 견적서</h3>
+                        <p class="text-muted fs-7 mt-3 lh-lg">
+                            귀사의 상호와 로고, 직인이 포함된 공식 견적서가 PDF로 즉시 생성됩니다. 고객 링크 공유 및 승인 관리까지 손쉽게 가능합니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Use Us Banner (Direct Link to About Page) -->
+    <section class="py-5 bg-light-gray border-bottom">
+        <div class="max-w-1200 px-3">
+            <div class="reveal rounded-4 p-4 p-md-5 bg-deep-navy text-light d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 shadow-sm position-relative overflow-hidden">
+                <div class="position-absolute end-0 top-0 w-50 h-100 grid-pattern-dark opacity-30 pointer-events-none"></div>
+                <div class="position-relative z-1">
+                    <span class="badge bg-brand-orange text-white mb-2 px-3 py-1 fs-8">도입 효과 심층 분석</span>
+                    <h3 class="fw-bold fs-4 mb-2 text-light">왜 수많은 랙 시공·유통사가 이 솔루션을 선택했을까요?</h3>
+                    <p class="text-light fs-7 mb-0 lh-base" style="color: rgba(255, 255, 255, 0.9) !important;">
+                        기존 AutoCAD 수작업의 치명적 한계(인건비 월 200만원 낭비)와 정량적 ROI(월 193만 원 절감)를 상세 페이지에서 확인하세요.
+                    </p>
+                </div>
+                <div class="position-relative z-1 flex-shrink-0">
+                    <a href="/about" class="btn-pill btn-light text-brand-orange fw-bold px-4 py-3 fs-7 shadow">
+                        서비스 소개 자세히 보기 <i class="fa-solid fa-arrow-right text-brand-orange ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section (Strictly 2 Plans: FREE & PRO) -->
+    <section id="pricing" class="section-padding bg-white border-bottom">
+        <div class="max-w-1200">
+            <div class="text-center max-w-720 mb-5">
+                <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-orange px-3 py-1 fs-7 fw-bold mb-2">
+                    <i class="fa-solid fa-wallet"></i> 투명하고 단순한 요금제
+                </div>
+                <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(28px, 4vw, 38px);">
+                    복잡한 옵션 없이, <span class="text-brand-orange">딱 2가지</span> 플랜
+                </h2>
+                <p class="reveal mt-3 text-muted fs-6">
+                    신용카드 등록 없이 1개월 동안 200건의 견적을 무료로 경험해 보세요.<br>
+                    본격적인 비즈니스 수주를 원하시면 무제한 PRO 플랜을 선택하세요.
+                </p>
+            </div>
+
+            <div class="row g-4 justify-content-center mt-2 align-items-stretch">
+                
+                <!-- Plan 1: FREE -->
+                <div class="col-lg-5 col-md-6">
+                    <div class="reveal pricing-card-box h-100 bg-light p-4 p-xl-5 border d-flex flex-column justify-content-between shadow-sm">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="badge bg-secondary rounded-pill px-3 py-1 fs-8 fw-bold">FREE 플랜</span>
+                                <span class="text-muted fs-8">1달 무료 체험</span>
+                            </div>
+                            <h3 class="fw-bold text-deep-navy fs-3 mb-1">0원</h3>
+                            <p class="text-muted fs-7 mb-4">솔루션 기능 검증 및 소규모 시공업체용</p>
+
+                            <div class="py-3 border-top border-bottom mb-4">
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-success"></i> 총 200건 견적서 발행 제공
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-success"></i> 직원 계정 3명 등록
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-success"></i> 1달(30일) 무료 이용
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-muted fs-7 mb-2">
+                                    <i class="fa-solid fa-check text-muted"></i> 2D Canvas 자동 랙 배치 엔진
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-muted fs-7 mb-2">
+                                    <i class="fa-solid fa-check text-muted"></i> 자재 BOM 실시간 자동 산출
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-muted fs-7">
+                                    <i class="fa-solid fa-check text-muted"></i> 표준 PDF 견적서 즉시 발행
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-outline-dark w-100 justify-content-center fs-7 py-3">
+                                1개월 무료로 시작하기 <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                            <div class="text-center text-muted fs-8 mt-2">신용카드 정보 입력 없음</div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Plan 2: PRO (Featured) -->
+                <div class="col-lg-5 col-md-6">
+                    <div class="reveal pricing-card-box pricing-card-pro h-100 bg-white p-4 p-xl-5 border d-flex flex-column justify-content-between position-relative shadow-lg" style="transition-delay: 100ms;">
+                        <div class="position-absolute top-0 start-50 translate-middle badge bg-brand-orange rounded-pill px-4 py-2 fs-8 fw-bold shadow">
+                            ⭐ 가장 인기 있는 비즈니스 플랜
+                        </div>
+
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-3 mt-2">
+                                <span class="badge bg-brand-orange bg-opacity-10 text-brand-orange rounded-pill px-3 py-1 fs-8 fw-bold">PRO 무제한 플랜</span>
+                                <span class="badge bg-success bg-opacity-10 text-success fs-8">무제한 수주 지원</span>
+                            </div>
+                            <div class="d-flex align-items-baseline gap-2 mb-1">
+                                <h3 class="fw-bold text-deep-navy fs-2 mb-0">₩220,000</h3>
+                                <span class="text-muted fs-7">/ 월 (VAT 별도)</span>
+                            </div>
+                            <p class="text-muted fs-7 mb-4">본격적인 수주 확대 및 견적 자동화를 원하는 전문 기업</p>
+
+                            <div class="py-3 border-top border-bottom mb-4">
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-bold text-brand-orange">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 견적서 발행 무제한 (UNLIMITED)
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-bold">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 직원 등록 무제한 (팀원 전원 계정)
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 업체 맞춤 단가표 & 엑셀 일괄 연동
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 견적 잠금(Lock) 및 승인 관리 시스템
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 귀사 전용 독립 견적 링크 & 홈페이지 임베드
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 fw-semibold">
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 24/7 우선 기술 지원 & 전담 온보딩
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=pro'; ?>" class="btn-pill btn-orange w-100 justify-content-center fs-7 py-3 shadow">
+                                PRO 비즈니스 구독하기 <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                            <div class="text-center text-muted fs-8 mt-2">약정 없이 언제든 변경 및 해지 가능</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Value Comparison Note -->
+            <div class="reveal mt-5 p-4 rounded-4 bg-light text-center max-w-720 mx-auto border">
+                <div class="fs-7 text-deep-navy fw-semibold">
+                    <i class="fa-solid fa-calculator text-brand-orange me-2"></i>
+                    PRO 플랜(월 22만원)은 <span class="text-brand-orange fw-bold">견적 단 1건 작성 인건비</span>보다 저렴합니다.
+                </div>
+                <div class="fs-8 text-muted mt-1">
+                    월 25건 견적 기준 약 193만 원의 순수 인건비 절감 효과를 즉시 경험하세요.
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Problem Section -->
-    <section id="problem" class="bg-black border-top border-white-10">
-        <div class="max-w-1200 section-padding">
-            <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-danger px-3 py-1 fs-8 fw-bold">
-                <i class="fa-solid fa-triangle-exclamation"></i> AS-IS 시장의 치명적 비효율
-            </div>
-            <h2 class="reveal mt-4 fw-extrabold tracking-tight text-light" style="font-size: clamp(24px, 4vw, 36px); line-height: 1.2;">
-                왜 아직도 <span style="color:#C0392B;">AutoCAD</span>로 3시간을 쓰나요?
-            </h2>
-            <p class="reveal mt-3 fs-6 text-deep-navy-60 lh-lg" style="max-width: 640px;">
-                전국 460~1,540건의 월간 견적 기회가 수작업·지연·오발주로 사라집니다. 공급업체는 인건비만 월 200만원 이상을 태우고 있습니다.
-            </p>
-            
-            <div class="row g-4 mt-5">
-                <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 p-1" style="background: linear-gradient(to bottom right, #FFF5F5, #FFE9E9);">
-                        <div class="rounded-4 bg-dark-surface p-4 h-100">
-                            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:40px;height:40px; background:#FFE2E2; color:#C0392B;">
-                                <i class="fa-regular fa-clock fs-5"></i>
-                            </div>
-                            <h3 class="mt-4 fs-5 fw-bold tracking-tight text-light">막대한 견적 공수 & 인건비 낭비</h3>
-                            <p class="mt-2 fs-7 text-deep-navy-60 lh-base">1건당 1~3시간, AutoCAD + BOM 수작업</p>
-                            <div class="mt-3 d-inline-flex rounded-pill bg-navy text-light fs-8 fw-bold px-3 py-1">월 25건 기준 200만원 이상 소모</div>
-                        </div>
-                    </div>
+    <!-- 3-Step Simple Integration -->
+    <section class="section-padding bg-light-gray border-bottom">
+        <div class="max-w-1200">
+            <div class="text-center max-w-720 mb-5">
+                <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-primary px-3 py-1 fs-7 fw-bold mb-2">
+                    <i class="fa-solid fa-link"></i> 초간편 3단계 연동
                 </div>
-                <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 p-1" style="background: linear-gradient(to bottom right, #FFF8F0, #FFEDD5); transition-delay: 100ms;">
-                        <div class="rounded-4 bg-dark-surface p-4 h-100">
-                            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:40px;height:40px; background:#FFE6CC; color:#D35400;">
-                                <i class="fa-solid fa-users-slash fs-5"></i>
-                            </div>
-                            <h3 class="mt-4 fs-5 fw-bold tracking-tight text-light">견적 지연으로 인한 고객 이탈</h3>
-                            <p class="mt-2 fs-7 text-deep-navy-60 lh-base">1~3일 소요, 실시간 응대 불가</p>
-                            <div class="mt-3 d-inline-flex rounded-pill bg-navy text-light fs-8 fw-bold px-3 py-1">수주 전환율 -30% 하락</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 p-1" style="background: linear-gradient(to bottom right, #FFF7E6, #FFEECC); transition-delay: 200ms;">
-                        <div class="rounded-4 bg-dark-surface p-4 h-100">
-                            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:40px;height:40px; background:#FFE9B8; color:#B7791F;">
-                                <i class="fa-solid fa-triangle-exclamation fs-5"></i>
-                            </div>
-                            <h3 class="mt-4 fs-5 fw-bold tracking-tight text-light">오발주 및 자재 누락 손실</h3>
-                            <p class="mt-2 fs-7 text-deep-navy-60 lh-base">오류율 5~10%, 재출장/운임 낭비</p>
-                            <div class="mt-3 d-inline-flex rounded-pill bg-navy text-light fs-8 fw-bold px-3 py-1">연 300~500만원 손실</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Easy Installation Section -->
-    <section class="bg-light-gray border-top border-white-10 py-5">
-        <div class="max-w-1200 section-padding py-5">
-            <div class="reveal text-center max-w-720 mx-auto">
-                <div class="d-inline-flex align-items-center gap-2 rounded-pill bg-navy text-light px-3 py-1 fs-8 fw-bold mb-3">
-                    <i class="fa-solid fa-link"></i> 초간편 연동
-                </div>
-                <h2 class="fw-extrabold tracking-tight text-deep-navy" style="font-size: clamp(24px, 4vw, 36px); line-height: 1.2;">
-                    개발자 없이, <span class="text-brand-orange">간단하게</span><br>우리 회사 홈페이지에 탑재하세요
+                <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(26px, 4vw, 36px);">
+                    개발자 없이, 단 5분 만에 연동 끝
                 </h2>
-                <p class="mt-3 fs-6 text-secondary lh-lg">
-                    복잡한 설치나 코딩이 전혀 필요 없습니다.<br>발급받은 링크를 기존 홈페이지 버튼에 연결하기만 하면 끝납니다.
+                <p class="reveal mt-3 text-muted fs-6">
+                    복잡한 설치 과정 없이 귀사 홈페이지나 블로그에 견적 버튼만 연결하면 끝납니다.
                 </p>
             </div>
-            
-            <div class="row g-4 mt-5 position-relative">
-                <!-- Connecting Line (PC Only) -->
-                <div class="d-none d-lg-block position-absolute top-50 start-50 translate-middle-y z-0" style="width: 70%; height: 2px; border-top: dashed 2px #cbd5e1; left: 15%;"></div>
-                
-                <!-- Step 1 -->
-                <div class="col-lg-4 position-relative z-1">
-                    <div class="reveal h-100 rounded-4 bg-white shadow-sm p-4 p-md-5 text-center border border-white-10">
-                        <div class="rounded-circle bg-navy text-light d-flex align-items-center justify-content-center mx-auto shadow mb-4" style="width:56px;height:56px; font-size: 1.25rem;">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <div class="fs-8 fw-bold tracking-widest text-brand-orange mb-2">STEP 01</div>
-                        <h3 class="fs-5 fw-bold text-deep-navy">도입 신청 및 가입</h3>
-                        <p class="mt-2 fs-7 text-secondary lh-base mb-0">무료 플랜이나 원하는 요금제로 가입을 완료하고 솔루션 환경을 세팅합니다.</p>
-                    </div>
-                </div>
-                
-                <!-- Step 2 -->
-                <div class="col-lg-4 position-relative z-1">
-                    <div class="reveal h-100 rounded-4 bg-white shadow-sm p-4 p-md-5 text-center border border-white-10" style="transition-delay: 100ms;">
-                        <div class="rounded-circle bg-navy text-light d-flex align-items-center justify-content-center mx-auto shadow mb-4" style="width:56px;height:56px; font-size: 1.25rem;">
-                            <i class="fa-solid fa-link"></i>
-                        </div>
-                        <div class="fs-8 fw-bold tracking-widest text-brand-orange mb-2">STEP 02</div>
-                        <h3 class="fs-5 fw-bold text-deep-navy">전용 링크 발급</h3>
-                        <p class="mt-2 fs-7 text-secondary lh-base mb-0">귀사만의 고유한 2D Canvas 접속 링크(URL)가 즉시 발급됩니다.</p>
-                    </div>
-                </div>
-                
-                <!-- Step 3 -->
-                <div class="col-lg-4 position-relative z-1">
-                    <div class="reveal h-100 rounded-4 bg-white shadow-sm p-4 p-md-5 text-center border border-white-10" style="transition-delay: 200ms;">
-                        <div class="rounded-circle bg-brand-orange text-light d-flex align-items-center justify-content-center mx-auto shadow mb-4" style="width:56px;height:56px; font-size: 1.25rem;">
-                            <i class="fa-solid fa-mouse-pointer"></i>
-                        </div>
-                        <div class="fs-8 fw-bold tracking-widest text-brand-orange mb-2">STEP 03</div>
-                        <h3 class="fs-5 fw-bold text-deep-navy">홈페이지 연동</h3>
-                        <p class="mt-2 fs-7 text-secondary lh-base mb-0">운영 중인 홈페이지의 '자동 견적 내기' 버튼에 발급된 링크를 넣으면 끝!</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- Solution Section -->
-    <section id="solution" class="position-relative bg-dark-surface border-top border-white-10 overflow-hidden">
-        <div class="position-absolute w-100 h-100 grid-pattern opacity-30 pointer-events-none"></div>
-        <div class="max-w-1200 section-padding position-relative z-1">
-            <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-primary px-3 py-1 fs-8 fw-bold">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 2D Canvas 자동설계 & 견적 B2B SaaS
-            </div>
-            <h2 class="reveal mt-4 fw-extrabold tracking-tight text-light" style="font-size: clamp(24px, 4vw, 38px); line-height: 1.2; max-width: 720px;">
-                CAD 없이 브라우저에서 끝내는<br>
-                <span class="text-gradient-navy-blue">2D 설계 · 3초 배치 · 원클릭 견적</span>
-            </h2>
-            
-            <div class="row g-4 mt-5">
-                <!-- Feature 1 -->
-                <div class="col-md-7">
-                    <div class="reveal h-100 rounded-4 bg-dark-surface border border-white-10 shadow-soft p-4 p-md-5">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div class="rounded-3 bg-navy d-flex align-items-center justify-content-center shadow" style="width:48px;height:48px; color: #53B5F5;">
-                                <i class="fa-solid fa-table-cells-large fs-5"></i>
-                            </div>
-                            <div class="rounded-pill border border-primary px-3 py-1 fs-9 fw-bold text-primary-blue bg-primary bg-opacity-10 d-flex align-items-center gap-1">
-                                <i class="fa-solid fa-check"></i> 자동화
-                            </div>
-                        </div>
-                        <h3 class="mt-4 fs-4 fw-bold tracking-tight" style="color:#C0392B;">2D Canvas 웹 설계</h3>
-                        <p class="mt-2 fs-6 text-deep-navy-60 lh-base">가로x세로 치수 입력, 기둥/셔터/장애물 드래그로 즉시 레이아웃. CAD 불필요.</p>
-                        <div class="mt-4 d-flex flex-wrap gap-2">
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">실시간 치수 스냅</span>
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">장애물 충돌 자동 감지</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Feature 2 -->
-                <div class="col-md-5">
-                    <div class="reveal h-100 rounded-4 bg-dark-surface border border-white-10 shadow-soft p-4 p-md-5" style="transition-delay: 100ms;">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div class="rounded-3 bg-navy d-flex align-items-center justify-content-center shadow" style="width:48px;height:48px; color: #53B5F5;">
-                                <i class="fa-solid fa-bolt fs-5"></i>
-                            </div>
-                            <div class="rounded-pill border border-primary px-3 py-1 fs-9 fw-bold text-primary-blue bg-primary bg-opacity-10 d-flex align-items-center gap-1">
-                                <i class="fa-solid fa-check"></i> 자동화
-                            </div>
-                        </div>
-                        <h3 class="mt-4 fs-4 fw-bold tracking-tight" style="color:#C0392B;">자동 랙 배치 연산</h3>
-                        <p class="mt-2 fs-6 text-deep-navy-60 lh-base">파렛트 규격 1100/1200, 단수, 통로 3초 연산.</p>
-                        <div class="mt-4 d-flex flex-wrap gap-2">
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">통로 3,000mm 확보</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="col-md-5">
-                    <div class="reveal h-100 rounded-4 bg-dark-surface border border-white-10 shadow-soft p-4 p-md-5">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div class="rounded-3 bg-navy d-flex align-items-center justify-content-center shadow" style="width:48px;height:48px; color: #53B5F5;">
-                                <i class="fa-solid fa-calculator fs-5"></i>
-                            </div>
-                        </div>
-                        <h3 class="mt-4 fs-4 fw-bold tracking-tight" style="color:#C0392B;">정밀 BOM 자동 산출</h3>
-                        <p class="mt-2 fs-6 text-deep-navy-60 lh-base">주기둥/로드빔 등 100% 자동 산출. 오발주 0%.</p>
-                        <div class="mt-4 d-flex flex-wrap gap-2">
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">규격별 단가 DB 연동</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 4 -->
-                <div class="col-md-7">
-                    <div class="reveal h-100 rounded-4 bg-dark-surface border border-white-10 shadow-soft p-4 p-md-5" style="transition-delay: 100ms;">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div class="rounded-3 bg-navy d-flex align-items-center justify-content-center shadow" style="width:48px;height:48px; color: #53B5F5;">
-                                <i class="fa-regular fa-file-pdf fs-5"></i>
-                            </div>
-                        </div>
-                        <h3 class="mt-4 fs-4 fw-bold tracking-tight" style="color:#C0392B;">원클릭 PDF 견적서</h3>
-                        <p class="mt-2 fs-6 text-deep-navy-60 lh-base">로고가 삽입된 정식 견적서를 5분 내 발행하여 고객사로 바로 발송.</p>
-                        <div class="mt-4 d-flex flex-wrap gap-2">
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">브랜드 커스텀 템플릿</span>
-                            <span class="badge rounded-pill bg-white shadow-sm text-deep-navy-70 border fw-medium px-3 py-2 text-dark">도면 + BOM + 금액 통합</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ROI Section -->
-    <section id="roi" class="bg-white border-top border-white-10">
-        <div class="max-w-1200 section-padding">
-            <div class="reveal d-flex align-items-center gap-3">
-                <div class="rounded-3 bg-navy text-deep-navy d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                    <i class="fa-solid fa-arrow-trend-up"></i>
-                </div>
-                <div>
-                    <div class="fs-8 fw-bold tracking-widest text-primary-blue">ROI ANALYSIS</div>
-                    <h2 class="fs-3 fw-extrabold tracking-tight">도입 시 원가 절감 효과 (공급업체 ROI)</h2>
-                </div>
-            </div>
-            
-            <div class="reveal mt-5 rounded-4 border border-white-10 overflow-hidden shadow">
-                <div class="table-responsive">
-                    <table class="table table-borderless mb-0 align-middle">
-                        <thead class="bg-navy text-deep-navy fs-8 tracking-wide">
-                            <tr>
-                                <th class="py-3 px-4 fw-semibold w-25">항목</th>
-                                <th class="py-3 px-4 fw-semibold text-dark">AS-IS</th>
-                                <th class="py-3 px-4 fw-semibold">TO-BE</th>
-                                <th class="py-3 px-4 fw-semibold text-brand-orange d-none d-md-table-cell">효과</th>
-                            </tr>
-                        </thead>
-                        <tbody class="fs-6">
-                            <tr class="border-bottom border-white-10 bg-light-gray">
-                                <td class="py-4 px-4 fw-semibold"><i class="fa-regular fa-clock text-primary-blue me-2"></i> 건당 견적 소요시간</td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-danger px-3 py-2">1.5~3시간</span></td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-primary px-3 py-2">5분 이내</span></td>
-                                <td class="py-4 px-4 d-none d-md-table-cell fw-bold text-deep-navy">95% 단축 <div class="fs-8 text-secondary fw-normal">생산성 20배</div></td>
-                            </tr>
-                            <tr class="border-bottom border-white-10 bg-white shadow-sm">
-                                <td class="py-4 px-4 fw-semibold"><i class="fa-solid fa-wallet text-primary-blue me-2"></i> 월간 인건비 (25건)</td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-danger px-3 py-2">200만원</span></td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-primary px-3 py-2">6.5만원</span></td>
-                                <td class="py-4 px-4 d-none d-md-table-cell fw-bold text-deep-navy">193.5만원 절감 <div class="fs-8 text-secondary fw-normal">연 2,322만원</div></td>
-                            </tr>
-                            <tr class="border-bottom border-white-10 bg-light-gray">
-                                <td class="py-4 px-4 fw-semibold"><i class="fa-solid fa-chart-column text-primary-blue me-2"></i> 월 구독료 대비 순수익</td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-danger px-3 py-2">비용 지속</span></td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-primary px-3 py-2">29만원</span></td>
-                                <td class="py-4 px-4 d-none d-md-table-cell fw-bold text-deep-navy">ROI 560% <div class="fs-8 text-secondary fw-normal">+164.5만원 순이익</div></td>
-                            </tr>
-                            <tr class="border-bottom border-white-10 bg-white shadow-sm">
-                                <td class="py-4 px-4 fw-semibold"><i class="fa-solid fa-bolt text-primary-blue me-2"></i> 견적 응대 리드타임</td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-danger px-3 py-2">1~3일</span></td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-primary px-3 py-2">10분 내 발송</span></td>
-                                <td class="py-4 px-4 d-none d-md-table-cell fw-bold text-deep-navy">수주 전환율 <div class="fs-8 text-secondary fw-normal">15~30% 개선</div></td>
-                            </tr>
-                            <tr class="bg-light-gray">
-                                <td class="py-4 px-4 fw-semibold"><i class="fa-solid fa-shield-halved text-primary-blue me-2"></i> 설계/BOM 오류율</td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-danger px-3 py-2">5~10%</span></td>
-                                <td class="py-4 px-4"><span class="badge rounded-pill badge-soft-primary px-3 py-2">0%</span></td>
-                                <td class="py-4 px-4 d-none d-md-table-cell fw-bold text-deep-navy">손실 방지 <div class="fs-8 text-secondary fw-normal">300~500만원</div></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="reveal mt-3 d-flex flex-wrap gap-2 align-items-center fs-8">
-                <span class="badge rounded-pill bg-navy text-light px-3 py-2 fw-normal"><i class="fa-solid fa-wand-magic-sparkles text-brand-orange me-1"></i> 월 25건 기준, 구독료 29만원 대비 순수익 +164.5만원</span>
-                <span class="text-dark ms-2">* 인건비 산정: 건당 2.5시간 × 시급 3만원 초과 인력 가정 / 오류 손실: 재출장·운임·자재 폐기 포함</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- TAM/SAM/SOM Section -->
-    <section class="position-relative bg-navy text-deep-navy overflow-hidden border-top border-white-10">
-        <div class="position-absolute w-100 h-100 pointer-events-none">
-            <div class="position-absolute start-50 translate-middle-x" style="top:-160px; width: 900px; height: 600px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(42,91,218,0.35), transparent 60%);"></div>
-            <div class="position-absolute w-100 h-100 grid-pattern-dark opacity-50"></div>
-        </div>
-        
-        <div class="max-w-1200 section-padding position-relative z-1">
-            <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill border border-white-15 bg-light-gray bg-opacity-10 px-3 py-1 fs-8 fw-bold">
-                <i class="fa-solid fa-database"></i> TAM / SAM / SOM
-            </div>
-            
-            <div class="row g-4 mt-5">
+            <div class="row g-4 mt-2">
                 <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 bg-light-gray bg-opacity-10 p-4 glass">
-                        <div class="rounded-3 bg-gradient-primary d-flex align-items-center justify-content-center shadow mb-3" style="width:40px;height:40px;">
-                            <i class="fa-solid fa-box text-deep-navy"></i>
+                    <div class="reveal bg-white rounded-4 p-4 p-lg-5 text-center border h-100">
+                        <div class="rounded-circle bg-deep-navy text-white d-flex align-items-center justify-content-center mx-auto mb-4 shadow" style="width: 56px; height: 56px; font-size: 1.25rem;">
+                            1
                         </div>
-                        <div class="fs-8 tracking-widest text-deep-navy-50 fw-bold">국내 랙 시장</div>
-                        <div class="mt-1 fw-extrabold tracking-tight text-deep-navy" style="font-size: 36px; line-height:1;">1,386억</div>
-                        <div class="mt-2 fs-7 text-secondary lh-base">1.98억 달러 중 50% • 연 6~8% 성장</div>
-                        <div class="mt-4 rounded-pill bg-dark overflow-hidden" style="height:2px;">
-                            <div class="h-100 bg-gradient-primary" style="width:72%;"></div>
-                        </div>
+                        <h4 class="fw-bold text-deep-navy fs-5">무료 가입</h4>
+                        <p class="text-muted fs-7 mt-2 lh-lg mb-0">
+                            이메일과 상호명 입력으로 1분 만에 가입 완료.
+                        </p>
                     </div>
                 </div>
+
                 <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 bg-light-gray bg-opacity-10 p-4 glass" style="transition-delay: 100ms;">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center shadow mb-3" style="width:40px;height:40px; background: linear-gradient(to right, #62D6FF, #A5B4FC);">
-                            <i class="fa-regular fa-building text-deep-navy"></i>
+                    <div class="reveal bg-white rounded-4 p-4 p-lg-5 text-center border h-100" style="transition-delay: 100ms;">
+                        <div class="rounded-circle bg-brand-orange text-white d-flex align-items-center justify-content-center mx-auto mb-4 shadow" style="width: 56px; height: 56px; font-size: 1.25rem;">
+                            2
                         </div>
-                        <div class="fs-8 tracking-widest text-deep-navy-50 fw-bold">전국 등록 창고</div>
-                        <div class="mt-1 fw-extrabold tracking-tight text-deep-navy" style="font-size: 36px; line-height:1;">5,156개</div>
-                        <div class="mt-2 fs-7 text-secondary lh-base">경기/경남/인천/부산 64.4% 집중</div>
-                        <div class="mt-4 rounded-pill bg-dark overflow-hidden" style="height:2px;">
-                            <div class="h-100" style="width:72%; background: linear-gradient(to right, #62D6FF, #A5B4FC);"></div>
-                        </div>
+                        <h4 class="fw-bold text-deep-navy fs-5">전용 링크 발급</h4>
+                        <p class="text-muted fs-7 mt-2 lh-lg mb-0">
+                            귀사 로고와 단가표가 적용된 고유 2D 캔버스 링크 자동 발급.
+                        </p>
                     </div>
                 </div>
+
                 <div class="col-md-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 bg-light-gray bg-opacity-10 p-4 glass" style="transition-delay: 200ms;">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center shadow mb-3" style="width:40px;height:40px; background: linear-gradient(to right, #A5B4FC, #2A5BDA);">
-                            <i class="fa-solid fa-chart-column text-deep-navy"></i>
+                    <div class="reveal bg-white rounded-4 p-4 p-lg-5 text-center border h-100" style="transition-delay: 200ms;">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4 shadow" style="width: 56px; height: 56px; font-size: 1.25rem;">
+                            3
                         </div>
-                        <div class="fs-8 tracking-widest text-deep-navy-50 fw-bold">월간 견적 기회</div>
-                        <div class="mt-1 fw-extrabold tracking-tight text-deep-navy" style="font-size: 36px; line-height:1;">~900건</div>
-                        <div class="mt-2 fs-7 text-secondary lh-base">460~1,540건 추산 • 전환 시 MRR 핵심</div>
-                        <div class="mt-4 rounded-pill bg-dark overflow-hidden" style="height:2px;">
-                            <div class="h-100" style="width:72%; background: linear-gradient(to right, #A5B4FC, #2A5BDA);"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="reveal mt-5 row g-4">
-                <div class="col-md-7">
-                    <div class="rounded-4 bg-light-gray text-deep-navy p-4 d-flex align-items-center justify-content-between h-100">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-3 bg-navy text-deep-navy d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                            </div>
-                            <div>
-                                <div class="fs-6 fw-bold">전국 물류 거점 64.4%가 4개 권역 집중</div>
-                                <div class="fs-8 text-secondary">경기·경남·인천·부산 타겟 영업 시 효율 극대화</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-5">
-                    <div class="rounded-4 border border-white-15 bg-light-gray bg-opacity-10 p-4 d-flex align-items-center gap-3 h-100">
-                        <div class="rounded-3 bg-light-gray text-deep-navy d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                            <i class="fa-solid fa-arrow-trend-up"></i>
-                        </div>
-                        <div class="fs-7 lh-base">
-                            <div class="fw-semibold text-deep-navy">SOM: 월 900건 중 5% 전환 시 MRR 2,200만원</div>
-                            <div class="fs-8 text-secondary">STARTER 29만원 × 45사 기준 초기 가설</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="bg-light-gray border-top border-white-10">
-        <div class="max-w-1200 section-padding">
-            <div class="reveal text-center max-w-720 mx-auto">
-                <div class="d-inline-flex align-items-center gap-2 rounded-pill bg-navy text-light px-3 py-1 fs-8 fw-bold">
-                    <i class="fa-solid fa-wallet"></i> REVENUE MODEL & PRICING
-                </div>
-                <h2 class="mt-4 fw-extrabold tracking-tight" style="font-size: clamp(28px, 4vw, 36px); line-height: 1.2; color: #C0392B;">
-                    견적 1건의 인건비보다 저렴한<br>월 구독으로 시작하세요
-                </h2>
-                <p class="mt-3 fs-6 text-secondary lh-lg">
-                    FREE부터 PRO까지, 현장 검증된 기능만 담았습니다.<br>10건 무료 체험 • 카드 등록 불필요
-                </p>
-            </div>
-            
-            <div class="row g-4 mt-5 align-items-stretch">
-                <!-- FREE -->
-                <div class="col-lg-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 bg-white p-4 p-md-5 d-flex flex-column">
-                        <div class="fs-8 fw-bold tracking-widest text-deep-navy">FREE</div>
-                        <div class="mt-3 d-flex align-items-baseline gap-1">
-                            <span class="fs-2 fw-extrabold tracking-tight text-deep-navy">무료</span>
-                        </div>
-                        <div class="mt-2 fs-7 text-secondary lh-base">솔루션 체험용</div>
-                        <div class="mt-4 mb-4 flex-grow-1">
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 모든 기능 100% 동일 제공</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 월 10건 견적 발행</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 1명</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 이메일 지원</div>
-                        </div>
-                        <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-light w-100 justify-content-center fs-7">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                    </div>
-                </div>
-                
-                <!-- STARTER -->
-                <div class="col-lg-4">
-                    <div class="reveal h-100 rounded-4 border p-1 bg-gradient-popular shadow-heavy position-relative" style="transition-delay: 100ms;">
-                        <div class="position-absolute start-50 translate-middle-x rounded-pill bg-brand-orange text-light px-3 py-1 fs-9 fw-bold shadow" style="top:-12px; z-index:2; width: 140px; text-align: center;">
-                            <i class="fa-solid fa-star"></i> MOST POPULAR
-                        </div>
-                        <div class="h-100 rounded-4 bg-white p-4 p-md-5 d-flex flex-column position-relative z-1">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="fs-8 fw-bold tracking-widest text-deep-navy">STARTER</div>
-                                <span class="badge rounded-pill badge-soft-primary fs-9">⭐ 추천</span>
-                            </div>
-                            <div class="mt-3 d-flex align-items-baseline gap-1">
-                                <span class="fs-2 fw-extrabold tracking-tight text-deep-navy">월 29만원</span>
-                                <span class="fs-8 text-deep-navy-50">/ VAT 별도</span>
-                            </div>
-                            <div class="mt-2 fs-7 text-secondary lh-base">소규모 업체용</div>
-                            <div class="mt-4 mb-4 flex-grow-1">
-                                <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 모든 기능 100% 동일 제공</div>
-                                <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 월 30건 견적 발행</div>
-                                <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 무제한</div>
-                                <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 우선 지원 & 온보딩</div>
-                            </div>
-                            <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=starter'; ?>" class="btn-pill w-100 justify-content-center fs-7 shadow border-0" style="background: linear-gradient(to right, #2A5BDA, #62D6FF); color: #fff;">STARTER 선택 <i class="fa-solid fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PRO -->
-                <div class="col-lg-4">
-                    <div class="reveal h-100 rounded-4 border border-white-10 bg-white p-4 p-md-5 d-flex flex-column" style="transition-delay: 200ms;">
-                        <div class="fs-8 fw-bold tracking-widest text-deep-navy">PRO</div>
-                        <div class="mt-3 d-flex align-items-baseline gap-1">
-                            <span class="fs-2 fw-extrabold tracking-tight text-deep-navy">월 49만원</span>
-                            <span class="fs-8 text-deep-navy-50">/ VAT 별도</span>
-                        </div>
-                        <div class="mt-2 fs-7 text-secondary lh-base">일반 업체용</div>
-                        <div class="mt-4 mb-4 flex-grow-1">
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 모든 기능 100% 동일 제공</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 견적 발행 무제한</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 직원 등록 무제한</div>
-                            <div class="d-flex align-items-center gap-2 fs-7 mb-2 fw-medium text-deep-navy"><div class="rounded-circle bg-white shadow-sm text-primary-blue d-flex align-items-center justify-content-center" style="width:20px;height:20px;"><i class="fa-solid fa-check fs-9"></i></div> 24/7 전담 지원</div>
-                        </div>
-                        <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=pro'; ?>" class="btn-pill btn-light w-100 justify-content-center fs-7">PRO 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="reveal mt-5 rounded-4 bg-navy text-deep-navy px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div class="fs-7 d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center" style="width:24px;height:24px;">
-                        <i class="fa-solid fa-calculator fs-9"></i>
-                    </div>
-                    <span class="text-deep-navy-80">STARTER 29만원은 <span class="text-warning fw-bold">견적 1건 인건비</span>보다 저렴합니다. 월 25건 기준 순이익 +164.5만원.</span>
-                </div>
-                <a href="#roi" class="btn-pill btn-white fs-9 px-3 py-2">ROI 계산기 다시보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Growth & Roadmap -->
-    <section class="position-relative border-top border-white-10" style="background: url('/assets/images/graph_back.jpg') no-repeat center center fixed; background-size: cover;">
-        <div class="position-absolute w-100 h-100 top-0 start-0 bg-white" style="opacity: 0.5;"></div>
-        <div class="max-w-1200 section-padding position-relative z-1">
-            <div class="row g-5">
-                <div class="col-lg-8 mx-auto">
-                    <div class="reveal rounded shadow p-4">
-                        <div class="d-inline-flex align-items-center gap-2 rounded-pill bg-white shadow-sm border border-white-10 px-3 py-1 fs-8 fw-bold">
-                            <i class="fa-solid fa-chart-line"></i> GROWTH MODEL
-                        </div>
-                        <h3 class="mt-4 fs-3 fw-extrabold tracking-tight text-deep-navy">20사에서 200사까지, MRR 1.38억 스케일</h3>
-                        <p class="mt-2 fs-7 text-secondary lh-lg">검증된 DB 영업 → PoC → SaaS 상용화 → 중개 플랫폼 확장</p>
-                        
-                        <div class="mt-5 rounded-4 border border-white-10 overflow-hidden">
-                            <div class="table-responsive">
-                                <table class="table table-borderless mb-0">
-                                    <thead class="bg-white shadow-sm text-secondary fs-8">
-                                        <tr>
-                                            <th class="px-4 py-3 fw-semibold">구분</th>
-                                            <th class="px-3 py-3 fw-semibold">고객사</th>
-                                            <th class="px-3 py-3 fw-semibold">MRR</th>
-                                            <th class="px-4 py-3 fw-semibold">ARR</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="fs-7">
-                                        <tr class="border-top border-white-10">
-                                            <td class="px-4 py-3 fw-semibold text-deep-navy">Year 0</td>
-                                            <td class="px-3 py-3 text-deep-navy">20사</td>
-                                            <td class="px-3 py-3 fw-bold text-deep-navy">780만</td>
-                                            <td class="px-4 py-3 d-flex align-items-center gap-2">
-                                                <span class="fw-bold text-deep-navy">0.94억</span>
-                                                <div class="d-none d-md-block flex-grow-1 rounded-pill bg-white shadow-sm overflow-hidden" style="height:6px;">
-                                                    <div class="h-100 bg-brand-orange" style="width:18%;"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr class="border-top border-white-10">
-                                            <td class="px-4 py-3 fw-semibold text-deep-navy">Year 1</td>
-                                            <td class="px-3 py-3 text-deep-navy">50사</td>
-                                            <td class="px-3 py-3 fw-bold text-deep-navy">2,450만</td>
-                                            <td class="px-4 py-3 d-flex align-items-center gap-2">
-                                                <span class="fw-bold text-deep-navy">2.94억</span>
-                                                <div class="d-none d-md-block flex-grow-1 rounded-pill bg-white shadow-sm overflow-hidden" style="height:6px;">
-                                                    <div class="h-100 bg-brand-orange" style="width:35%;"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr class="border-top border-white-10">
-                                            <td class="px-4 py-3 fw-semibold text-deep-navy">Year 2</td>
-                                            <td class="px-3 py-3 text-deep-navy">100사</td>
-                                            <td class="px-3 py-3 fw-bold text-deep-navy">5,900만</td>
-                                            <td class="px-4 py-3 d-flex align-items-center gap-2">
-                                                <span class="fw-bold text-deep-navy">7.08억</span>
-                                                <div class="d-none d-md-block flex-grow-1 rounded-pill bg-white shadow-sm overflow-hidden" style="height:6px;">
-                                                    <div class="h-100 bg-brand-orange" style="width:62%;"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr class="border-top border-white-10 bg-navy text-deep-navy">
-                                            <td class="px-4 py-3 fw-semibold">Year 3</td>
-                                            <td class="px-3 py-3">200사</td>
-                                            <td class="px-3 py-3 fw-bold">1.38억</td>
-                                            <td class="px-4 py-3 d-flex align-items-center gap-2">
-                                                <span class="fw-bold">16.56억</span>
-                                                <div class="d-none d-md-block flex-grow-1 rounded-pill bg-white bg-opacity-25 overflow-hidden" style="height:6px;">
-                                                    <div class="h-100 bg-white shadow-sm-blue" style="width:100%;"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="mt-3 fs-9 text-dark">* PRO 49만원 기준 보수적 산정, 상향 확장 시 ARR 20억+ 가능</div>
+                        <h4 class="fw-bold text-deep-navy fs-5">홈페이지 버튼 연결</h4>
+                        <p class="text-muted fs-7 mt-2 lh-lg mb-0">
+                            기존 홈페이지의 [견적 내기] 버튼에 링크를 걸면 24시간 자동 견적 작동!
+                        </p>
                     </div>
                 </div>
             </div>
@@ -787,27 +490,49 @@ body { background-color: #0B1120 !important; }
     </section>
 
     <!-- Final CTA -->
-    <section class="position-relative bg-dark-blue text-deep-navy overflow-hidden text-center border-top border-white-10">
-        <div class="position-absolute w-100 h-100 grid-pattern-dark opacity-40 pointer-events-none"></div>
-        <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 900px; height: 500px; background: radial-gradient(ellipse at center, rgba(42,91,218,0.35), transparent 60%);"></div>
-        
-        <div class="max-w-1200 section-padding position-relative z-1 py-5">
-            <div class="reveal d-inline-flex rounded-pill badge-glass px-3 py-1 fs-8 fw-bold tracking-widest text-light mt-4">
-                READY TO SHIP • 2026
-            </div>
-            <h2 class="reveal mt-4 fw-extrabold tracking-tight" style="font-size: clamp(28px, 5vw, 42px); line-height: 1.1; color:orange;">
-                지금, 견적 공수 95%를<br>줄이세요.
+    <section class="section-padding bg-deep-navy text-light text-center position-relative overflow-hidden">
+        <div class="position-absolute w-100 h-100 top-0 start-0 grid-pattern-dark opacity-40"></div>
+        <div class="max-w-720 position-relative z-1 py-4">
+            <h2 class="reveal fw-bold tracking-tight text-light" style="font-size: clamp(28px, 4.5vw, 42px);">
+                오늘부터 견적 공수 95%를<br>
+                <span class="text-brand-orange">즉시 줄여보세요</span>
             </h2>
-            <p class="reveal mt-3 fs-6 text-secondary lh-lg max-w-720 mx-auto">
-                AutoCAD 없이 5분 안에 끝내는 2D Canvas 자동설계.<br>14일 무료 체험으로 오늘 바로 검증하세요.
+            <p class="reveal mt-3 fs-6 text-light lh-lg" style="color: rgba(255, 255, 255, 0.9) !important;">
+                AutoCAD 없이 브라우저에서 끝내는 2D Canvas 자동설계.<br>
+                1개월 무료 체험으로 200건의 실전 견적을 직접 검증하세요.
             </p>
-            
-            <div class="reveal mt-5 d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3 pb-4">
-                <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-white shadow-heavy" style="height: 52px; font-size: 16px; padding: 0 2rem;">무료로 시작하기 <i class="fa-solid fa-arrow-right"></i></a>
-                <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill badge-glass text-light" style="height: 52px; font-size: 16px; padding: 0 2rem;"><i class="fa-solid fa-play"></i> 견적신청데모</a>
+            <div class="reveal mt-5 d-flex flex-wrap justify-content-center gap-3">
+                <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-orange shadow-lg fs-6 py-3 px-4">
+                    1개월 무료 체험 시작하기 <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill btn-outline-light text-light border-white border-opacity-50 fs-6 py-3 px-4">
+                    <i class="fa-solid fa-play text-brand-orange"></i> 실시간 데모 보기
+                </a>
             </div>
-            <div class="reveal mt-4 fs-8 text-deep-navy-45 pb-5">
-                평균 온보딩 12분 • PoC 3~5곳 진행 중
+        </div>
+    </section>
+
+    <!-- Custom Website Development Banner (Above Footer) -->
+    <section class="py-5 bg-white border-top border-bottom">
+        <div class="max-w-1200 px-3">
+            <div class="reveal rounded-4 p-4 p-lg-5 bg-light-gray border d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 shadow-sm position-relative overflow-hidden" style="border-color: #cbd5e1 !important;">
+                <div class="position-relative z-1" style="max-width: 760px;">
+                    <div class="d-inline-flex align-items-center gap-2 rounded-pill mb-3 px-3 py-1 fs-8 fw-bold" style="background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;">
+                        <i class="fa-solid fa-code"></i> 기업 맞춤형 웹 & ERP 시스템 개발
+                    </div>
+                    <h3 class="fw-bold text-deep-navy mb-2" style="font-size: clamp(22px, 3.5vw, 30px); line-height: 1.3;">
+                        회사 홈페이지부터 쇼핑몰, 사내 ERP까지<br class="d-none d-sm-block">
+                        <span class="text-brand-orange">원하시는 모든 웹 시스템을 맞춤 제작</span>해 드립니다
+                    </h3>
+                    <p class="text-muted fs-6 mb-0 lh-base mt-2">
+                        파렛트랙 2D 자동견적 연동은 물론, 기업 홍보용 웹사이트, 온라인 쇼핑몰, 재고/정산/주문 관리 사내 ERP 시스템까지 비즈니스 목적에 맞춰 완벽하게 개발해 드립니다.
+                    </p>
+                </div>
+                <div class="position-relative z-1 flex-shrink-0">
+                    <a href="/website" class="btn-pill btn-orange text-white fw-bold px-4 py-3 fs-6 shadow-sm">
+                        홈페이지 & 시스템 제작 문의 <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </section>
@@ -816,7 +541,6 @@ body { background-color: #0B1120 !important; }
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Reveal Animation Setup
     const revealElements = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -830,4 +554,4 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<?php include_footer($siteConfig); ?>
+<?php include_footer($siteConfig ?? []); ?>

@@ -124,6 +124,62 @@ let isMovingRack = false;
 let rackDragOffsetX = 0;
 let rackDragOffsetY = 0;
 
+// 🌟 캔버스 스마트 플로팅 토스트 경고창 및 랙 연장 차단 상태
+let lastExtendWarningTime = 0;
+window.isExtendBlockedByObstacle = false;
+
+function showCanvasAlert(msg, type = 'warning', duration = 3200) {
+    const now = Date.now();
+    if (now - lastExtendWarningTime < 2500) {
+        return; // 마우스 드래그 중 과도한 중복 호출 방지 (2.5초 쿨다운 쓰로틀링)
+    }
+    lastExtendWarningTime = now;
+
+    let toast = document.getElementById('canvas-floating-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'canvas-floating-toast';
+        toast.style.position = 'fixed';
+        toast.style.top = '75px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%) translateY(-20px)';
+        toast.style.zIndex = '999999';
+        toast.style.padding = '12px 26px';
+        toast.style.borderRadius = '30px';
+        toast.style.background = 'rgba(15, 23, 42, 0.94)';
+        toast.style.backdropFilter = 'blur(10px)';
+        toast.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 158, 11, 0.35)';
+        toast.style.color = '#ffffff';
+        toast.style.fontSize = '0.92rem';
+        toast.style.fontWeight = '600';
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'center';
+        toast.style.gap = '10px';
+        toast.style.opacity = '0';
+        toast.style.pointerEvents = 'none';
+        toast.style.transition = 'opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        document.body.appendChild(toast);
+    }
+
+    const icon = type === 'warning' ? '⚠️' : (type === 'danger' ? '🚫' : 'ℹ️');
+    const borderColor = type === 'warning' ? '#f59e0b' : (type === 'danger' ? '#ef4444' : '#38bdf8');
+    toast.style.border = `1.5px solid ${borderColor}`;
+    toast.innerHTML = `<span style="font-size: 1.2rem;">${icon}</span> <span>${msg}</span>`;
+
+    // 부드러운 표시
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+
+    if (window._canvasToastTimeout) {
+        clearTimeout(window._canvasToastTimeout);
+    }
+    window._canvasToastTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    }, duration);
+}
+window.showCanvasAlert = showCanvasAlert;
+
 
 
 let baseWidth = 0;
@@ -929,6 +985,7 @@ canvas.addEventListener('mousemove', (e) => {
 
         if (snapMergeTarget) {
             window.activeMergePreview = { sourceIndex: extendingRackIndex, targetIndex: snapMergeTarget.index };
+            window.isExtendBlockedByObstacle = false;
         } else {
             window.activeMergePreview = null;
 
@@ -965,6 +1022,17 @@ canvas.addEventListener('mousemove', (e) => {
                     r.smallBeamLength = 0;
                     r.totalLengthPx = (85 + (foundSafeBays * r.beamLength)) * currentScale;
                 }
+
+                // 🌟 사용자가 당긴 목표 베이 수보다 장애물로 인해 실제 배치된 베이 수가 적을 때 경고 안내
+                const actualBays = (r.independent || 1) + (r.connected || 0) + (r.smallConnected ? 1 : 0);
+                if (newTotalBays > actualBays) {
+                    window.isExtendBlockedByObstacle = true;
+                    showCanvasAlert('장애물(기둥/벽면) 또는 지게차 회전 통로(2,800mm) 간섭으로 인해 더 이상 랙을 늘릴 수 없습니다.', 'warning', 3200);
+                } else {
+                    window.isExtendBlockedByObstacle = false;
+                }
+            } else {
+                window.isExtendBlockedByObstacle = false;
             }
         }
 
@@ -1099,6 +1167,7 @@ canvas.addEventListener('mouseup', (e) => {
             }
             window.activeMergePreview = null;
         }
+        window.isExtendBlockedByObstacle = false;
         isExtendingRack = false;
         extendingRackIndex = -1;
         updateRackFormCounts();
@@ -1859,46 +1928,85 @@ function isPointInPolygon(point, vs) {
 function checkRackValidPlacement(newRack, ignoreRack = null) {
     let boxes = getRackBoxes(newRack);
 
-    // 조건 A: 겹침 및 코너 여유공간 (Dead Space), 그리고 통로(Aisle) 간격 검사
+    // 🌟 조건 0: 가로/세로 랙 공존 시 코너 데드존(Dead Zone) 침범 검사
+    if (typeof getCornerDeadZones === 'function') {
+        const deadZones = getCornerDeadZones();
+        for (let dz of deadZones) {
+            const b1 = boxes.physical;
+            const b2 = dz.bounds;
+            const overlapX = Math.min(b1.maxX, b2.maxX) - Math.max(b1.minX, b2.minX);
+            const overlapY = Math.min(b1.maxY, b2.maxY) - Math.max(b1.minY, b2.minY);
+            if (overlapX > 3 && overlapY > 3) {
+                return false;
+            }
+        }
+    }
+
+    // 조건 A: 겹침 및 지게차 통로(Aisle, 최소 2,800mm) 간격 검사
     const AISLE_DIST_PX = 2800 * currentScale;
 
     for (let r of racks) {
         if (r === newRack || r === ignoreRack) continue; // 자기 자신과의 비교 제외
 
         let existBoxes = getRackBoxes(r);
-        // 새로운 랙의 물리적 박스가 기존 랙의 물리적 박스를 침범하면 불합격
-        if (checkBoxesOverlap(boxes.physical, existBoxes.physical)) {
+        const b1 = boxes.physical;
+        const b2 = existBoxes.physical;
+
+        // 1. 물리적 박스 겹침 충돌 검사
+        const overlapX = Math.min(b1.maxX, b2.maxX) - Math.max(b1.minX, b2.minX);
+        const overlapY = Math.min(b1.maxY, b2.maxY) - Math.max(b1.minY, b2.minY);
+        if (overlapX > 0 && overlapY > 0) {
             return false;
         }
 
-        // 통로 간격 검사 (2800mm 룰)
-        if (newRack.isHoriz === r.isHoriz) {
-            let placedDepthPx = getRackTotalDepthPx(r);
-            let newDepthPx = getRackTotalDepthPx(newRack);
+        // 2. 랙 방향 판별 (회전각 기반)
+        const angle1 = (typeof getRackAngle === 'function') ? getRackAngle(newRack) : (newRack.angle || 0);
+        const angle2 = (typeof getRackAngle === 'function') ? getRackAngle(r) : (r.angle || 0);
+        const isHoriz1 = Math.abs(Math.sin(angle1)) < 0.5;
+        const isHoriz2 = Math.abs(Math.sin(angle2)) < 0.5;
 
-            if (newRack.isHoriz) {
-                let myMinX = newRack.dir > 0 ? newRack.x : newRack.x - newRack.totalLengthPx;
-                let myMaxX = newRack.dir > 0 ? newRack.x + newRack.totalLengthPx : newRack.x;
-                let pMinX = r.dir > 0 ? r.x : r.x - r.totalLengthPx;
-                let pMaxX = r.dir > 0 ? r.x + r.totalLengthPx : r.x;
-
-                if (!(myMaxX < pMinX || myMinX > pMaxX)) {
-                    let dist = Math.abs(newRack.y - r.y) - (newDepthPx / 2 + placedDepthPx / 2);
-                    if (dist > -5 && dist < AISLE_DIST_PX - 5) {
+        if (isHoriz1 === isHoriz2) {
+            // [Case A] 평행한 랙 사이의 지게차 통로(Aisle) 간격 검사
+            if (isHoriz1) {
+                // 둘 다 가로 랙: X축(길이) 구간이 마주보고 겹칠 때 Y축 통로 거리 검사
+                if (overlapX > 10) {
+                    const distY = Math.max(b1.minY - b2.maxY, b2.minY - b1.maxY);
+                    if (distY >= 0 && distY < AISLE_DIST_PX - 5) {
                         return false;
                     }
                 }
             } else {
-                let myMinY = newRack.dir > 0 ? newRack.y : newRack.y - newRack.totalLengthPx;
-                let myMaxY = newRack.dir > 0 ? newRack.y + newRack.totalLengthPx : newRack.y;
-                let pMinY = r.dir > 0 ? r.y : r.y - r.totalLengthPx;
-                let pMaxY = r.dir > 0 ? r.y + r.totalLengthPx : r.y;
-
-                if (!(myMaxY < pMinY || myMinY > pMaxY)) {
-                    let dist = Math.abs(newRack.x - r.x) - (newDepthPx / 2 + placedDepthPx / 2);
-                    if (dist > -5 && dist < AISLE_DIST_PX - 5) {
+                // 둘 다 세로 랙: Y축(길이) 구간이 마주보고 겹칠 때 X축 통로 거리 검사
+                if (overlapY > 10) {
+                    const distX = Math.max(b1.minX - b2.maxX, b2.minX - b1.maxX);
+                    if (distX >= 0 && distX < AISLE_DIST_PX - 5) {
                         return false;
                     }
+                }
+            }
+        } else {
+            // [Case B] 🌟 단수-복수(가로-세로) 랙이 만나는 T자 직교 지점 지게차 통로 검사
+            // 가로 랙(hBox)과 세로 랙(vBox) 식별
+            const hBox = isHoriz1 ? b1 : b2;
+            const vBox = isHoriz1 ? b2 : b1;
+
+            // 세로 랙의 X 범위가 가로 랙의 X 범위(작업면/통로) 쪽으로 마주볼 때
+            const hOverlap = Math.min(hBox.maxX, vBox.maxX) - Math.max(hBox.minX, vBox.minX);
+            if (hOverlap > 10) {
+                // 세로 랙 끝단과 가로 랙 몸통 사이의 Y축 거리 (지게차가 다닐 통로 공간)
+                const distY = Math.max(vBox.minY - hBox.maxY, hBox.minY - vBox.maxY);
+                if (distY >= 0 && distY < AISLE_DIST_PX - 5) {
+                    return false; // 지게차 통로(2,800mm) 미확보 시 설치 불가(빨간색 오류)!
+                }
+            }
+
+            // 반대로 가로 랙의 Y 범위가 세로 랙의 Y 범위(작업면/통로) 쪽으로 마주볼 때
+            const vOverlap = Math.min(hBox.maxY, vBox.maxY) - Math.max(hBox.minY, vBox.minY);
+            if (vOverlap > 10) {
+                // 가로 랙 끝단과 세로 랙 몸통 사이의 X축 거리
+                const distX = Math.max(hBox.minX - vBox.maxX, vBox.minX - hBox.maxX);
+                if (distX >= 0 && distX < AISLE_DIST_PX - 5) {
+                    return false; // 지게차 통로(2,800mm) 미확보 시 설치 불가(빨간색 오류)!
                 }
             }
         }
@@ -2079,20 +2187,23 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     }
 
     const isLight = isCanvasLightMode();
+    const isRackInvalid = (r.isValid === false);
 
     // 1. 배경 채우기
     if (isPreview) {
         ctx.fillStyle = isLight
-            ? (r.isValid ? 'rgba(2, 132, 199, 0.15)' : 'rgba(239, 68, 68, 0.15)')
-            : (r.isValid ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.25)');
+            ? (r.isValid ? 'rgba(2, 132, 199, 0.15)' : 'rgba(239, 68, 68, 0.25)')
+            : (r.isValid ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.35)');
     } else {
-        ctx.fillStyle = isLight ? 'rgba(241, 245, 249, 0.85)' : 'rgba(15, 23, 42, 0.6)'; // 반투명 배경
+        ctx.fillStyle = isRackInvalid
+            ? (isLight ? 'rgba(239, 68, 68, 0.28)' : 'rgba(239, 68, 68, 0.35)')
+            : (isLight ? 'rgba(241, 245, 249, 0.85)' : 'rgba(15, 23, 42, 0.6)'); // 반투명 배경
     }
     ctx.fillRect(0, -depthPx / 2, r.totalLengthPx, depthPx);
 
     // 2. 가로 로드빔 평행선 그리기 (이중 선)
-    ctx.strokeStyle = isPreview && !r.isValid ? 'rgba(239, 68, 68, 0.8)' : (isLight ? '#0284c7' : '#0ea5e9');
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isRackInvalid ? '#ef4444' : (isPreview ? (isLight ? '#0284c7' : '#38bdf8') : (isLight ? '#0284c7' : '#0ea5e9'));
+    ctx.lineWidth = isRackInvalid ? 2.5 : 2;
 
     if (isDouble) {
         // 상부 랙 & 하부 랙 각각 독립된 1000mm 깊이로 렌더링, 가운데 holderPx 간격 확보
@@ -2105,8 +2216,10 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     }
 
     // 3. 기둥 및 고정 홀더 렌더링
-    ctx.fillStyle = isPreview ? (isLight ? 'rgba(2, 132, 199, 0.6)' : 'rgba(56, 189, 248, 0.7)') : (isLight ? '#0284c7' : '#0ea5e9');
-    ctx.strokeStyle = isLight ? '#0f172a' : '#fff';
+    const defaultPostFill = isLight ? '#0284c7' : '#0ea5e9';
+    const previewPostFill = isLight ? 'rgba(2, 132, 199, 0.6)' : 'rgba(56, 189, 248, 0.7)';
+    ctx.fillStyle = isRackInvalid ? '#ef4444' : (isPreview ? previewPostFill : defaultPostFill);
+    ctx.strokeStyle = isRackInvalid ? '#b91c1c' : (isLight ? '#0f172a' : '#fff');
     ctx.lineWidth = 1;
 
     const regularSpans = (r.independent || 0) + (r.connected || 0);
@@ -2137,8 +2250,8 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
             ctx.lineWidth = 1;
             ctx.fillRect(colX + 1, -holderPx / 2, colSizePx - 2, holderPx);
             ctx.strokeRect(colX + 1, -holderPx / 2, colSizePx - 2, holderPx);
-            ctx.fillStyle = isPreview ? 'rgba(56, 189, 248, 0.7)' : '#0ea5e9';
-            ctx.strokeStyle = '#fff';
+            ctx.fillStyle = isRackInvalid ? '#ef4444' : (isPreview ? 'rgba(56, 189, 248, 0.7)' : '#0ea5e9');
+            ctx.strokeStyle = isRackInvalid ? '#b91c1c' : '#fff';
         } else {
             ctx.fillRect(colX, -depthPx / 2, colSizePx, colSizePx);
             ctx.strokeRect(colX, -depthPx / 2, colSizePx, colSizePx);
@@ -2153,7 +2266,7 @@ function drawRackGroup(r, isPreview = false, rackIdx = -1) {
     }
 
     // 4. CAD 치수선(Dimension Lines) 렌더링
-    if (!isPreview) {
+    if (!isPreview || isMovingRack) {
         // 회전된 랙의 치수 텍스트 가독성 보정
         const currentAngle = typeof getRackAngle === 'function' ? getRackAngle(r) : (r.angle || 0);
         const normAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -2397,75 +2510,201 @@ function draw() {
         ctx.fillText(i + 1, midX, midY);
     }
 
-    // 3.5. 코너 Dead Zone 표시 (랙이 배치된 경우에만 표시)
-    if (isPolygonClosed() && racks.length > 0 && currentScale > 0) {
-        const rackDepthMm = getRackDepth ? getRackDepth() : 1000;
-        const cornerMm = rackDepthMm + 100; // 코너 Dead Zone = 랙깊이 + 100mm
-        const cornerPx = cornerMm * currentScale;
+// 🌟 코너 설치불가 데드존(Dead Zone) 계산 유틸 함수
+// 가로 랙과 세로 랙이 실제로 만나는 코너 지점에만 rackDepth × rackDepth 크기의 데드존 생성
+function getCornerDeadZones() {
+    if (!isPolygonClosed() || points.length < 4) return [];
+    
+    // 검사 대상 랙 목록 (배치된 랙 + 드래그 중인 미리보기 랙)
+    let checkRacks = (typeof racks !== 'undefined' && Array.isArray(racks)) ? [...racks] : [];
+    if (typeof currentRackPreview !== 'undefined' && currentRackPreview) {
+        checkRacks.push(currentRackPreview);
+    }
+    if (checkRacks.length === 0 || currentScale <= 0) return [];
 
-        ctx.save();
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';   // 연한 황금색 배경
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 1;
+    const rackDepthMm = (checkRacks.length > 0 && checkRacks[0].rackDepth) 
+        ? checkRacks[0].rackDepth 
+        : (typeof getRackDepth === 'function' ? getRackDepth() : 1000);
+    const depthPx = rackDepthMm * currentScale;
 
-        for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            const wallLenPx = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            if (wallLenPx < cornerPx * 2) continue; // 벽이 너무 짧으면 스킵
+    const numCorners = points.length - 1;
+    let deadZones = [];
 
-            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-            const isHoriz = Math.abs(Math.cos(angle)) > 0.5;
-            const dir = isHoriz ? (p2.x > p1.x ? 1 : -1) : (p2.y > p1.y ? 1 : -1);
+    // 각 랙의 바운딩 박스 및 각도/방향(가로/세로) 정보 사전 계산
+    const rackInfoList = checkRacks.map(r => {
+        let b = null;
+        if (typeof getRackBoxes === 'function') {
+            const boxes = getRackBoxes(r);
+            if (boxes && boxes.physical) b = boxes.physical;
+        }
+        if (!b) {
+            const rLen = r.totalLengthPx || (1000 * currentScale);
+            b = { minX: r.x - 20, maxX: r.x + rLen + 20, minY: r.y - depthPx, maxY: r.y + depthPx };
+        }
+        const angle = (typeof getRackAngle === 'function') ? getRackAngle(r) : (r.angle || 0);
+        // 회전각 기반 가로/세로 판별: 0도 또는 180도(수평) vs 90도 또는 270도(수직)
+        const isHoriz = Math.abs(Math.sin(angle)) < 0.5;
+        const isVert = Math.abs(Math.cos(angle)) < 0.5;
+        return { r, b, isHoriz, isVert };
+    });
 
-            // 안쪽 방향 판별
-            const midX = (p1.x + p2.x) / 2;
-            const midY = (p1.y + p2.y) / 2;
-            const rackHalfPx = (rackDepthMm / 2) * currentScale;
-            const pillarClear = 100 * currentScale;
-            let insetDir = 0;
-            if (isHoriz) {
-                insetDir = isPointInPolygon([midX, midY + rackHalfPx + pillarClear], points) ? 1 : -1;
-            } else {
-                insetDir = isPointInPolygon([midX + rackHalfPx + pillarClear, midY], points) ? 1 : -1;
+    for (let i = 0; i < numCorners; i++) {
+        const P = points[i];
+        const P_prev = points[(i - 1 + numCorners) % numCorners];
+        const P_next = points[(i + 1) % numCorners];
+
+        const v1 = { x: P_prev.x - P.x, y: P_prev.y - P.y };
+        const v2 = { x: P_next.x - P.x, y: P_next.y - P.y };
+        const len1 = Math.hypot(v1.x, v1.y);
+        const len2 = Math.hypot(v2.x, v2.y);
+        if (len1 < 1e-3 || len2 < 1e-3) continue;
+
+        const u1 = { x: v1.x / len1, y: v1.y / len1 };
+        const u2 = { x: v2.x / len2, y: v2.y / len2 };
+
+        // 4개 꼭짓점 (창고 내부 방향으로 형성되는 직사각형/평행사변형)
+        const c0 = { x: P.x, y: P.y };
+        const c1 = { x: P.x + u1.x * depthPx, y: P.y + u1.y * depthPx };
+        const c2 = { x: P.x + (u1.x + u2.x) * depthPx, y: P.y + (u1.y + u2.y) * depthPx };
+        const c3 = { x: P.x + u2.x * depthPx, y: P.y + u2.y * depthPx };
+
+        const center = {
+            x: (c0.x + c1.x + c2.x + c3.x) / 4,
+            y: (c0.y + c1.y + c2.y + c3.y) / 4
+        };
+
+        // 창고 내부 검사
+        if (!isPointInPolygon([center.x, center.y], points)) continue;
+
+        const minX = Math.min(c0.x, c1.x, c2.x, c3.x);
+        const maxX = Math.max(c0.x, c1.x, c2.x, c3.x);
+        const minY = Math.min(c0.y, c1.y, c2.y, c3.y);
+        const maxY = Math.max(c0.y, c1.y, c2.y, c3.y);
+
+        // 🌟 두목님 핵심 원칙: "가로 세로 랙이 만나는 지점(해당 코너 부근)에만 데드존이 되어야 해"
+        // 코너 P 부근(지게차 통로폭 AST 이내)에 가로 랙과 세로 랙이 동시에 존재하는지 검사
+        const forkliftAisleMm = (function() {
+            let el = document.getElementById('chat-forklift-ast') || document.getElementById('forklift-ast');
+            if (el && el.value) {
+                let v = parseInt(el.value, 10);
+                if (!isNaN(v) && v > 0) return v;
             }
+            return 2800; // 기본 지게차 통로폭 2,800mm
+        })();
+        const searchDistPx = forkliftAisleMm * currentScale;
+        let hasNearHoriz = false;
+        let hasNearVert = false;
 
-            // 코너 Dead Zone 박스 2개 (시작점 쪽 + 끝점 쪽)
-            const depthPx = (rackDepthMm) * currentScale; // Dead Zone 깊이 = 랙 깊이
+        for (let info of rackInfoList) {
+            const b = info.b;
+            const dx = Math.max(0, b.minX - P.x, P.x - b.maxX);
+            const dy = Math.max(0, b.minY - P.y, P.y - b.maxY);
+            const dist = Math.hypot(dx, dy);
 
-            [-1, 1].forEach(side => {
-                // side=-1: p1 코너, side=1: p2 코너
-                const cornerX = side === -1 ? p1.x : p2.x;
-                const cornerY = side === -1 ? p1.y : p2.y;
+            if (dist <= searchDistPx) {
+                if (info.isHoriz) hasNearHoriz = true;
+                if (info.isVert) hasNearVert = true;
+            }
+        }
 
-                let zx, zy, zw, zh;
-                if (isHoriz) {
-                    const dx = side === -1 ? dir : -dir;
-                    zx = cornerX;
-                    zy = cornerY - (insetDir > 0 ? depthPx : 0) - (insetDir > 0 ? 0 : -depthPx);
-                    // 간략화: 코너에서 cornerPx 만큼 가로, depthPx 만큼 세로
-                    if (dx * dir > 0) {
-                        // 벽 방향으로 cornerPx 만큼
-                        if (insetDir > 0) {
-                            ctx.fillRect(cornerX, cornerY, dir * cornerPx, insetDir * depthPx);
-                            ctx.strokeRect(cornerX, cornerY, dir * cornerPx, insetDir * depthPx);
-                        }
-                    }
-                } else {
-                    if (insetDir !== 0) {
-                        ctx.fillRect(cornerX - (insetDir > 0 ? depthPx : 0), cornerY, insetDir * depthPx, dir * cornerPx * side);
-                        ctx.strokeRect(cornerX - (insetDir > 0 ? depthPx : 0), cornerY, insetDir * depthPx, dir * cornerPx * side);
-                    }
-                }
+        // 가로 랙과 세로 랙이 "동시에" 이 코너에 모였을 때만 데드존 활성화!
+        if (hasNearHoriz && hasNearVert) {
+            deadZones.push({
+                cornerIndex: i,
+                point: P,
+                depthMm: rackDepthMm,
+                depthPx: depthPx,
+                poly: [c0, c1, c2, c3],
+                center: center,
+                bounds: { minX, maxX, minY, maxY }
             });
         }
-        ctx.setLineDash([]);
+    }
+    return deadZones;
+}
+window.getCornerDeadZones = getCornerDeadZones;
+
+    // 3.5. 코너 Dead Zone 표시 (가로/세로 랙이 만나는 지점에만 표시)
+    const deadZones = getCornerDeadZones();
+    if (deadZones.length > 0) {
+        ctx.save();
+        deadZones.forEach(dz => {
+            const poly = dz.poly;
+            ctx.beginPath();
+            ctx.moveTo(poly[0].x, poly[0].y);
+            ctx.lineTo(poly[1].x, poly[1].y);
+            ctx.lineTo(poly[2].x, poly[2].y);
+            ctx.lineTo(poly[3].x, poly[3].y);
+            ctx.closePath();
+
+            // 창고 내부 연한 앰버/황금색 배경
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+            ctx.fill();
+
+            // 점선 테두리
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+
+            // 코너 대각선 엑스(X) 표시
+            ctx.beginPath();
+            ctx.moveTo(poly[0].x, poly[0].y);
+            ctx.lineTo(poly[2].x, poly[2].y);
+            ctx.moveTo(poly[1].x, poly[1].y);
+            ctx.lineTo(poly[3].x, poly[3].y);
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // 🌟 데드존 텍스트는 완전히 제거됨
+        });
         ctx.restore();
     }
 
-    // 4. 파렛트랙 그룹들 그리기
-    racks.forEach((r, idx) => drawRackGroup(r, false, idx));
+    // 4. 파렛트랙 유효성 실시간 재평가 및 그룹 그리기
+    racks.forEach((r, idx) => {
+        if (typeof checkRackValidPlacement === 'function') {
+            r.isValid = checkRackValidPlacement(r, r);
+        }
+        drawRackGroup(r, false, idx);
+    });
+
+    // 4.5. 랙 연장 중 장애물/지게차통로 간섭으로 확장 차단 시 시각적 경고 뱃지 렌더링
+    if (isExtendingRack && window.isExtendBlockedByObstacle && extendingRackIndex >= 0 && extendingRackIndex < racks.length) {
+        const blkRack = racks[extendingRackIndex];
+        const tail = (typeof getRackTailPos === 'function') ? getRackTailPos(blkRack) : null;
+        if (tail) {
+            ctx.save();
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const badgeText = '⛔ 확장 한계 (장애물/지게차 통로 간섭)';
+            const textW = ctx.measureText(badgeText).width + 18;
+            const badgeY = tail.y - 26;
+            
+            // 붉은색 글래스모피즘 뱃지 배경
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(tail.x - textW / 2, badgeY - 13, textW, 26, 6);
+            } else {
+                ctx.rect(tail.x - textW / 2, badgeY - 13, textW, 26);
+            }
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(badgeText, tail.x, badgeY);
+            ctx.restore();
+        }
+    }
 
     // 5. 드래그 중인 파렛트랙 미리보기 그리기
     if ((isDrawingRack || isMovingRack) && currentRackPreview) {
@@ -2627,7 +2866,10 @@ function drawDimensions() {
             let closestRack = null;
             let minDist = Infinity;
 
-            racks.forEach(r => {
+            const activeDoorRacks = [...racks];
+            if ((isDrawingRack || isMovingRack) && currentRackPreview) activeDoorRacks.push(currentRackPreview);
+
+            activeDoorRacks.forEach(r => {
                 let rOuterDepth = r.rackDepth || 1100;
                 let rDepthPx = rOuterDepth * (r.isDouble ? 2 : 1) * currentScale;
 
@@ -2824,13 +3066,15 @@ function drawWallToRackDimensions() {
     }
 
     let racksToCheck = [...racks];
-    if (window.isDrawingRack && currentRackPreview) racksToCheck.push(currentRackPreview);
+    if ((window.isDrawingRack || isMovingRack) && currentRackPreview) {
+        racksToCheck.push(currentRackPreview);
+    }
 
     // ── 1단계: 세그먼트 수집 (회전 각도 지원) ──
     let dimSegments = [];
 
     racksToCheck.forEach(r => {
-        let isFocused = (r === window.selectedRack || r === window.hoveredRack || r === currentRackPreview);
+        let isFocused = (r === window.selectedRack || r === window.hoveredRack || r === currentRackPreview || (isMovingRack && r === currentRackPreview));
         
         let singleDepth = r.rackDepth || 1000;
         let holderSize = r.holderSize || 200;
@@ -2859,6 +3103,14 @@ function drawWallToRackDimensions() {
             // 4. 꼬리쪽 면 (길이 + 방향)
             { px: r.x + lx * len, py: r.y + ly * len, dx: lx, dy: ly, dir: 'L2' }
         ];
+
+        // 🌟 이동/선택 중인 랙은 양 끝단(머리/꼬리)에서도 법선 레이 발사하여 장애물/벽면과의 정렬 치수선 다중 표시
+        if (isFocused && len > 50) {
+            rays.push({ px: r.x - nx * (dep / 2), py: r.y - ny * (dep / 2), dx: -nx, dy: -ny, dir: 'N1_head' });
+            rays.push({ px: r.x + lx * len - nx * (dep / 2), py: r.y + ly * len - nx * (dep / 2), dx: -nx, dy: -ny, dir: 'N1_tail' });
+            rays.push({ px: r.x + nx * (dep / 2), py: r.y + ny * (dep / 2), dx: nx, dy: ny, dir: 'N2_head' });
+            rays.push({ px: r.x + lx * len + nx * (dep / 2), py: r.y + ly * len + nx * (dep / 2), dx: nx, dy: ny, dir: 'N2_tail' });
+        }
 
         rays.forEach(ray => {
             let hit = rayIntersectAll(ray.px, ray.py, ray.dx, ray.dy, r);
@@ -3005,15 +3257,15 @@ function drawWallToRackDimensions() {
         ctx.moveTo(seg.x1, seg.y1);
         ctx.lineTo(seg.x2, seg.y2);
         ctx.strokeStyle = seg.isFocused
-            ? 'rgba(56, 189, 248, 0.75)'
+            ? 'rgba(251, 146, 60, 0.95)'
             : seg.isObstacleHit
-                ? 'rgba(251, 191, 36, 0.6)'
+                ? 'rgba(251, 191, 36, 0.7)'
                 : 'rgba(156, 163, 175, 0.5)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = seg.isFocused ? 1.5 : 1;
         ctx.stroke();
 
         // 텍스트 그리기 (각도에 맞춰 회전)
-        let textColor = seg.isFocused ? (isCanvasLightMode() ? '#0284c7' : '#38bdf8')
+        let textColor = seg.isFocused ? (isCanvasLightMode() ? '#ea580c' : '#fb923c')
             : seg.isObstacleHit ? '#d97706'
                 : (isCanvasLightMode() ? '#1e293b' : '#e5e7eb');
 
@@ -3340,19 +3592,19 @@ window.renderObstacleInputs = function () {
                 <div class="d-flex gap-1 mt-1">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light text-dark fw-bold" style="font-size:0.7rem; padding: 2px 4px;">길이</span>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${obs.length || ''}" placeholder="크기(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem; min-width:0;" value="${obs.length || ''}" placeholder="크기(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstacleData(${index}, 'length', this.value)">
                     </div>
                     <div class="input-group input-group-sm" title="좌측 또는 상단 기준 띄움 거리(mm)">
                         <span class="input-group-text bg-light text-dark fw-bold" style="font-size:0.7rem; padding: 2px 4px;">위치</span>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem;" value="${distVal}" placeholder="여백(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstaclePosition(${index}, this.value)">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control bg-white text-dark small px-1" style="font-size:0.75rem; min-width:0;" value="${distVal}" placeholder="여백(mm)" onclick="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateObstaclePosition(${index}, this.value)">
                     </div>
                 </div>
             `;
         } else {
             itemDiv.innerHTML = headerHtml + `
                 <div class="d-flex gap-2">
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.width || ''}" placeholder="가로(mm)" onclick="this.select()" oninput="updateObstacleData(${index}, 'width', this.value)">
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${obs.height || ''}" placeholder="세로(mm)" onclick="this.select()" oninput="updateObstacleData(${index}, 'height', this.value)">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" style="min-width:0;" value="${obs.width || ''}" placeholder="가로(mm)" onclick="this.select()" oninput="updateObstacleData(${index}, 'width', this.value)">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm bg-white text-dark border-secondary small" style="min-width:0;" value="${obs.height || ''}" placeholder="세로(mm)" onclick="this.select()" oninput="updateObstacleData(${index}, 'height', this.value)">
                 </div>
             `;
         }
@@ -4243,15 +4495,30 @@ window.autoAlignRacks = function () {
         if (p.y > pMaxY) pMaxY = p.y;
     });
 
+    // 🌟 장애물(출입문, 셔터, 기둥, 사용불가구역 등) 분류
+    const allObs = (typeof obstacles !== 'undefined' && Array.isArray(obstacles)) ? obstacles : [];
+    const doors = allObs.filter(o => o.type === 'door' || o.type === 'shutter');
+    const pillars = allObs.filter(o => o.type !== 'door' && o.type !== 'shutter');
+
+    const DOOR_CLEARANCE_MM = 3000; // 출입문 앞 확보할 지게차/통행 안전통로 (3.0m)
+    const DOOR_SIDE_MARGIN_MM = 300; // 출입문 양옆 안전 마진 (300mm)
+    const WALL_MARGIN_MM = 200; // 벽면 최소 이격 여백 (200mm)
+
     let horizCount = 0;
     racks.forEach(r => { if (r.isHoriz) horizCount++; });
     const alignHoriz = horizCount >= racks.length / 2;
 
+    // 🌟 가로/세로 랙 공존 시 코너 데드존(모서리 깊이×깊이 설치불가) 오프셋
+    const hasHorizRack = racks.some(r => r.isHoriz);
+    const hasVertRack = racks.some(r => !r.isHoriz);
+    const baseDepthMm = (racks.length > 0 && racks[0].rackDepth) ? racks[0].rackDepth : 1000;
+    const cornerDeadOffsetPx = (hasHorizRack && hasVertRack) ? (baseDepthMm * currentScale) : 0;
+
     let singleRacks = racks.filter(r => !r.isDouble && r.isHoriz === alignHoriz);
-    let topY = pMinY;
-    let bottomY = pMaxY;
-    let leftX = pMinX;
-    let rightX = pMaxX;
+    let topY = pMinY + (alignHoriz && hasVertRack ? cornerDeadOffsetPx : 0);
+    let bottomY = pMaxY - (alignHoriz && hasVertRack ? cornerDeadOffsetPx : 0);
+    let leftX = pMinX + (!alignHoriz && hasHorizRack ? cornerDeadOffsetPx : 0);
+    let rightX = pMaxX - (!alignHoriz && hasHorizRack ? cornerDeadOffsetPx : 0);
 
     if (alignHoriz) {
         singleRacks.forEach(r => {
@@ -4276,6 +4543,9 @@ window.autoAlignRacks = function () {
     let doubleRacks = racks.filter(r => r.isDouble && r.isHoriz === alignHoriz);
     if (doubleRacks.length > 0) {
         if (alignHoriz) {
+            // ─────────────────────────────────────────────
+            // 1. 가로 배치 랙 (Horizontal Racks)
+            // ─────────────────────────────────────────────
             doubleRacks.sort((a, b) => a.y - b.y);
             let rows = [];
             let currentRow = [doubleRacks[0]];
@@ -4306,13 +4576,95 @@ window.autoAlignRacks = function () {
                     rowTop += rowDepths[i];
                 }
                 const targetY = rowTop + rowDepths[idx] / 2;
+                const rowMinY = targetY - rowDepths[idx] / 2;
+                const rowMaxY = targetY + rowDepths[idx] / 2;
+
+                // 좌측/우측 벽면 출입문 충돌 검사
+                let leftDoorBlock = null;
+                let rightDoorBlock = null;
+                doors.forEach(d => {
+                    const dLenPx = (d.length || 3500) * currentScale;
+                    const dMinY = d.y - dLenPx / 2 - DOOR_SIDE_MARGIN_MM * currentScale;
+                    const dMaxY = d.y + dLenPx / 2 + DOOR_SIDE_MARGIN_MM * currentScale;
+                    if (rowMaxY > dMinY && rowMinY < dMaxY) {
+                        if (Math.abs(d.x - pMinX) < 1500 * currentScale) leftDoorBlock = d;
+                        if (Math.abs(d.x - pMaxX) < 1500 * currentScale) rightDoorBlock = d;
+                    }
+                });
+
                 row.forEach(r => {
                     r.y = targetY;
                     const isFlipped = Math.cos(getRackAngle(r)) < -0.1;
-                    r.x = isFlipped ? wCenter + r.totalLengthPx / 2 : wCenter - r.totalLengthPx / 2;
+                    let defaultX = isFlipped ? wCenter + r.totalLengthPx / 2 : wCenter - r.totalLengthPx / 2;
+                    r.x = defaultX;
+
+                    // 좌측 출입문 회피
+                    if (leftDoorBlock) {
+                        const minLeftX = pMinX + DOOR_CLEARANCE_MM * currentScale;
+                        const curLeftX = isFlipped ? (r.x - r.totalLengthPx) : r.x;
+                        if (curLeftX < minLeftX) {
+                            const maxRightX = pMaxX - WALL_MARGIN_MM * currentScale;
+                            const curRightX = isFlipped ? r.x : (r.x + r.totalLengthPx);
+                            const roomRight = maxRightX - curRightX;
+                            const neededShift = minLeftX - curLeftX;
+                            if (roomRight >= neededShift) {
+                                r.x += neededShift;
+                            } else {
+                                const availWidthPx = maxRightX - minLeftX;
+                                const availWidthMm = availWidthPx / currentScale;
+                                const beam = r.beamLength || 2585;
+                                let maxBays = Math.floor((availWidthMm - 85) / beam);
+                                if (maxBays >= 1) {
+                                    r.independent = 1;
+                                    r.connected = Math.max(0, maxBays - 1);
+                                    r.smallConnected = 0;
+                                    const newLenMm = (r.independent + r.connected) * beam + 85;
+                                    r.totalLengthPx = newLenMm * currentScale;
+                                    if (r.bypassBays && Array.isArray(r.bypassBays)) {
+                                        r.bypassBays = r.bypassBays.map(sub => (sub || []).slice(0, (r.independent + r.connected)));
+                                    }
+                                }
+                                r.x = isFlipped ? (minLeftX + r.totalLengthPx) : minLeftX;
+                            }
+                        }
+                    }
+
+                    // 우측 출입문 회피
+                    if (rightDoorBlock) {
+                        const maxRightX = pMaxX - DOOR_CLEARANCE_MM * currentScale;
+                        const curRightX = isFlipped ? r.x : (r.x + r.totalLengthPx);
+                        if (curRightX > maxRightX) {
+                            const minLeftX = pMinX + WALL_MARGIN_MM * currentScale;
+                            const curLeftX = isFlipped ? (r.x - r.totalLengthPx) : r.x;
+                            const roomLeft = curLeftX - minLeftX;
+                            const neededShift = curRightX - maxRightX;
+                            if (roomLeft >= neededShift) {
+                                r.x -= neededShift;
+                            } else {
+                                const availWidthPx = maxRightX - minLeftX;
+                                const availWidthMm = availWidthPx / currentScale;
+                                const beam = r.beamLength || 2585;
+                                let maxBays = Math.floor((availWidthMm - 85) / beam);
+                                if (maxBays >= 1) {
+                                    r.independent = 1;
+                                    r.connected = Math.max(0, maxBays - 1);
+                                    r.smallConnected = 0;
+                                    const newLenMm = (r.independent + r.connected) * beam + 85;
+                                    r.totalLengthPx = newLenMm * currentScale;
+                                    if (r.bypassBays && Array.isArray(r.bypassBays)) {
+                                        r.bypassBays = r.bypassBays.map(sub => (sub || []).slice(0, (r.independent + r.connected)));
+                                    }
+                                }
+                                r.x = isFlipped ? maxRightX : (maxRightX - r.totalLengthPx);
+                            }
+                        }
+                    }
                 });
             });
         } else {
+            // ─────────────────────────────────────────────
+            // 2. 세로 배치 랙 (Vertical Racks)
+            // ─────────────────────────────────────────────
             doubleRacks.sort((a, b) => a.x - b.x);
             let cols = [];
             let currentCol = [doubleRacks[0]];
@@ -4343,15 +4695,159 @@ window.autoAlignRacks = function () {
                     colLeft += colDepths[i];
                 }
                 const targetX = colLeft + colDepths[idx] / 2;
+                const colMinX = targetX - colDepths[idx] / 2;
+                const colMaxX = targetX + colDepths[idx] / 2;
+
+                // 상단/하단 벽면 출입문 충돌 검사
+                let topDoorBlock = null;
+                let bottomDoorBlock = null;
+                doors.forEach(d => {
+                    const dLenPx = (d.length || 3500) * currentScale;
+                    const dMinX = d.x - dLenPx / 2 - DOOR_SIDE_MARGIN_MM * currentScale;
+                    const dMaxX = d.x + dLenPx / 2 + DOOR_SIDE_MARGIN_MM * currentScale;
+                    if (colMaxX > dMinX && colMinX < dMaxX) {
+                        if (Math.abs(d.y - pMinY) < 1500 * currentScale) topDoorBlock = d;
+                        if (Math.abs(d.y - pMaxY) < 1500 * currentScale) bottomDoorBlock = d;
+                    }
+                });
+
                 col.forEach(r => {
                     r.x = targetX;
                     const isFlippedVert = Math.sin(getRackAngle(r)) < -0.1;
-                    r.y = isFlippedVert ? wCenterY + r.totalLengthPx / 2 : wCenterY - r.totalLengthPx / 2;
+                    let defaultY = isFlippedVert ? wCenterY + r.totalLengthPx / 2 : wCenterY - r.totalLengthPx / 2;
+                    r.y = defaultY;
+
+                    // 상단 출입문 회피 (상단 통로 3.0m 확보)
+                    if (topDoorBlock) {
+                        const minTopY = pMinY + DOOR_CLEARANCE_MM * currentScale;
+                        const curTopY = isFlippedVert ? (r.y - r.totalLengthPx) : r.y;
+                        if (curTopY < minTopY) {
+                            const maxBottomY = pMaxY - WALL_MARGIN_MM * currentScale;
+                            const curBottomY = isFlippedVert ? r.y : (r.y + r.totalLengthPx);
+                            const roomBelow = maxBottomY - curBottomY;
+                            const neededShift = minTopY - curTopY;
+                            if (roomBelow >= neededShift) {
+                                r.y += neededShift;
+                            } else {
+                                const availHeightPx = maxBottomY - minTopY;
+                                const availHeightMm = availHeightPx / currentScale;
+                                const beam = r.beamLength || 2585;
+                                let maxBays = Math.floor((availHeightMm - 85) / beam);
+                                if (maxBays >= 1) {
+                                    r.independent = 1;
+                                    r.connected = Math.max(0, maxBays - 1);
+                                    r.smallConnected = 0;
+                                    const newLenMm = (r.independent + r.connected) * beam + 85;
+                                    r.totalLengthPx = newLenMm * currentScale;
+                                    if (r.bypassBays && Array.isArray(r.bypassBays)) {
+                                        r.bypassBays = r.bypassBays.map(sub => (sub || []).slice(0, (r.independent + r.connected)));
+                                    }
+                                }
+                                r.y = isFlippedVert ? (minTopY + r.totalLengthPx) : minTopY;
+                            }
+                        }
+                    }
+
+                    // 하단 출입문 회피 (하단 통로 3.0m 확보)
+                    if (bottomDoorBlock) {
+                        const maxBottomY = pMaxY - DOOR_CLEARANCE_MM * currentScale;
+                        const curBottomY = isFlippedVert ? r.y : (r.y + r.totalLengthPx);
+                        if (curBottomY > maxBottomY) {
+                            const minTopY = pMinY + WALL_MARGIN_MM * currentScale;
+                            const curTopY = isFlippedVert ? (r.y - r.totalLengthPx) : r.y;
+                            const roomAbove = curTopY - minTopY;
+                            const neededShift = curBottomY - maxBottomY;
+                            if (roomAbove >= neededShift) {
+                                r.y -= neededShift;
+                            } else {
+                                const availHeightPx = maxBottomY - minTopY;
+                                const availHeightMm = availHeightPx / currentScale;
+                                const beam = r.beamLength || 2585;
+                                let maxBays = Math.floor((availHeightMm - 85) / beam);
+                                if (maxBays >= 1) {
+                                    r.independent = 1;
+                                    r.connected = Math.max(0, maxBays - 1);
+                                    r.smallConnected = 0;
+                                    const newLenMm = (r.independent + r.connected) * beam + 85;
+                                    r.totalLengthPx = newLenMm * currentScale;
+                                    if (r.bypassBays && Array.isArray(r.bypassBays)) {
+                                        r.bypassBays = r.bypassBays.map(sub => (sub || []).slice(0, (r.independent + r.connected)));
+                                    }
+                                }
+                                r.y = isFlippedVert ? maxBottomY : (maxBottomY - r.totalLengthPx);
+                            }
+                        }
+                    }
                 });
             });
         }
     }
 
+    // ─────────────────────────────────────────────
+    // 3. 내부 기둥 및 장애물(Pillar / Forbidden Area) 간섭 자동 바이패스(Bypass) 감지
+    // ─────────────────────────────────────────────
+    if (pillars.length > 0) {
+        racks.forEach(r => {
+            const beam = r.beamLength || 2585;
+            const indep = r.independent || 1;
+            const conn = r.connected || 0;
+            const totalBays = indep + conn;
+            if (!r.bypassBays || !Array.isArray(r.bypassBays) || r.bypassBays.length < 2) {
+                r.bypassBays = [
+                    new Array(totalBays).fill(false),
+                    new Array(totalBays).fill(false)
+                ];
+            }
+
+            const isHoriz = r.isHoriz;
+            const angle = getRackAngle(r);
+            const isFlipped = isHoriz ? (Math.cos(angle) < -0.1) : (Math.sin(angle) < -0.1);
+            const depthPx = ((r.rackDepth || 1000) * (r.isDouble ? 2 : 1) + (r.isDouble ? (r.holderSize || 200) : 0)) * currentScale;
+
+            pillars.forEach(pil => {
+                const pWPx = (pil.width || 500) * currentScale;
+                const pHPx = (pil.height || 500) * currentScale;
+                const pilMinX = pil.x - pWPx / 2;
+                const pilMaxX = pil.x + pWPx / 2;
+                const pilMinY = pil.y - pHPx / 2;
+                const pilMaxY = pil.y + pHPx / 2;
+
+                for (let b = 0; b < totalBays; b++) {
+                    const bayOffsetMm = b * beam;
+                    const bayStartPx = bayOffsetMm * currentScale;
+                    const bayEndPx = (bayOffsetMm + beam) * currentScale;
+
+                    let bMinX, bMaxX, bMinY, bMaxY;
+                    if (isHoriz) {
+                        const startX = isFlipped ? (r.x - bayEndPx) : (r.x + bayStartPx);
+                        const endX = isFlipped ? (r.x - bayStartPx) : (r.x + bayEndPx);
+                        bMinX = Math.min(startX, endX);
+                        bMaxX = Math.max(startX, endX);
+                        bMinY = r.y - depthPx / 2;
+                        bMaxY = r.y + depthPx / 2;
+                    } else {
+                        const startY = isFlipped ? (r.y - bayEndPx) : (r.y + bayStartPx);
+                        const endY = isFlipped ? (r.y - bayStartPx) : (r.y + bayEndPx);
+                        bMinX = r.x - depthPx / 2;
+                        bMaxX = r.x + depthPx / 2;
+                        bMinY = Math.min(startY, endY);
+                        bMaxY = Math.max(startY, endY);
+                    }
+
+                    // 겹침 판정
+                    if (!(bMaxX < pilMinX || bMinX > pilMaxX || bMaxY < pilMinY || bMinY > pilMaxY)) {
+                        // 기둥과 겹치는 베이에 자동으로 바이패스(터널 통로) 활성화!
+                        if (r.bypassBays[0]) r.bypassBays[0][b] = true;
+                        if (r.bypassBays[1]) r.bypassBays[1][b] = true;
+                    }
+                }
+            });
+        });
+    }
+
+    // 변경된 랙 정보 렌더링 및 동기화
+    if (typeof window.renderFloorTabs === 'function') window.renderFloorTabs();
+    if (typeof renderObstacleInputs === 'function') renderObstacleInputs();
     draw();
 };
 

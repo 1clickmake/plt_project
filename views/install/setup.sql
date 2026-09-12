@@ -322,6 +322,8 @@ DROP TABLE IF EXISTS `quote_requests`;
 CREATE TABLE `quote_requests` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `vendor_user_id` int(11) NOT NULL COMMENT '공급사 회원 고유 ID',
+  `source_mode` varchar(50) DEFAULT 'expert' COMMENT '요청 경로 (expert, easy, board)',
+  `title` varchar(255) DEFAULT NULL COMMENT '게시판 문의 제목',
   `pricing_rule_id` int(11) DEFAULT NULL,
   `company` varchar(255) NOT NULL COMMENT '요청 회사명',
   `name` varchar(255) NOT NULL COMMENT '담당자 이름',
@@ -512,5 +514,27 @@ CREATE TABLE `vendor_inquiries` (
   KEY `idx_vendor_user_id` (`vendor_user_id`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='공급사 전용 게시판 문의 테이블';
+
+DROP TABLE IF EXISTS `service_reviews`;
+CREATE TABLE `service_reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `company` varchar(255) DEFAULT NULL COMMENT '회사명',
+  `name` varchar(255) NOT NULL COMMENT '담당자명',
+  `rating` int(1) NOT NULL DEFAULT 5 COMMENT '별점(1~5)',
+  `comment` text DEFAULT NULL COMMENT '후기 내용',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '작성 일시',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 서비스 리뷰 테이블';
+
+DROP TABLE IF EXISTS `website_portfolios`;
+CREATE TABLE `website_portfolios` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL COMMENT '프로젝트/사이트명',
+  `url` varchar(500) NOT NULL COMMENT '사이트 URL',
+  `category` varchar(50) DEFAULT '회사홈페이지' COMMENT '카테고리',
+  `description` text DEFAULT NULL COMMENT '설명',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '등록일시',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='제작 웹사이트 포트폴리오 테이블';
 
 SET FOREIGN_KEY_CHECKS = 1;

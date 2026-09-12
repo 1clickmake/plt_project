@@ -162,9 +162,9 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             ?>
             <?php if (!$btnIsPro): ?>
             <div>
-                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-2" style="border-radius: 10px;">
+                <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-2" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a>
+                </a> -->
             </div>
             <?php endif; ?>
         </div>

@@ -68,7 +68,8 @@
 .chat-msg {
     display: flex;
     gap: 12px;
-    max-width: 95%;
+    max-width: 100%;
+    scroll-margin-top: 20px;
     animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 .chat-msg.bot {
@@ -350,15 +351,21 @@ const ChatWizard = {
         if (typeof draw === 'function') draw();
     },
 
-    appendBotMsg(html) {
+    appendBotMsg(html, fullWidth = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'chat-msg bot';
+        if (fullWidth) msgDiv.style.width = '100%';
+        const bubbleStyle = fullWidth ? 'flex: 1; width: 100%;' : '';
         msgDiv.innerHTML = `
             <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
-            <div class="chat-bubble">${html}</div>
+            <div class="chat-bubble" style="${bubbleStyle}">${html}</div>
         `;
         this.body.appendChild(msgDiv);
-        this.scrollToBottom();
+        setTimeout(() => {
+            if (msgDiv) {
+                msgDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 150);
     },
 
     appendUserMsg(text) {
@@ -382,11 +389,14 @@ const ChatWizard = {
         this.appendBotMsg(`
             <span class="step-indicator">Step 1/7</span><br>
             <span class="small">안녕하세요? 💕<br>
-            스마트 창고 배치를 도와드리는 AI<br><b>아사미야</b> 입니다.<br>
-            천천히 따라오시면 멋진 도면을<br>만드실 수 있어요.💕<br><br>
+            스마트 창고 배치를 도와드리는 AI <b>아사미야</b> 입니다.<br>
+            천천히 따라오시면 멋진 도면을 만드실 수 있어요.💕<br><br>
             먼저 바탕화면의 넓은 도화지(캔버스)에<br>마우스로 점을 찍어<br><b>창고 외곽선(모양)</b>을 직접 그려주세요!<br>
             </span>
-            <br><div style="text-align:center;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); margin-top:5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 도면 선이 조금 삐뚤어져도 걱정하지 마세요!<br>대략적인 형태만 그려주시면 다음 단계에서 <b>자동으로 반듯하게 정렬</b>됩니다. 편하게 그려주세요!
+            </div>
+            <div style="text-align:center; margin-top:10px;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
         `);
     },
 
@@ -401,7 +411,10 @@ const ChatWizard = {
                 <span class="small">
                 바탕화면의 넓은 도화지(캔버스)에<br>마우스로 점을 찍어<br><b>[${floorName}] 외곽선(모양)</b>을 직접 그려주세요!<br>
                 </span>
-                <br><div style="text-align:center;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); margin-top:5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
+                <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                    💡 <b>Tip:</b> 도면 선이 조금 삐뚤어져도 걱정하지 마세요!<br>대략적인 형태만 그려주시면 다음 단계에서 <b>자동으로 반듯하게 정렬</b>됩니다. 편하게 그려주세요!
+                </div>
+                <div style="text-align:center; margin-top:10px;"><img src="/assets/images/storage.gif" style="width:100%; border-radius:8px; border:1px solid rgba(56,189,248,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.5);"></div>
             `);
         }
     },
@@ -421,8 +434,10 @@ const ChatWizard = {
             <span class="small">
                 와! 도면을 잘 그려주셨네요. 👏<br>
                 이제 각 벽면의 <b>실제 길이(mm)</b>를<br>아래 폼에 입력해주세요.<br>
-                <span class="text-secondary">(숫자만 입력후, 탭(Tab)키를 누르면<br>편하게 다음칸으로 이동할수 있어요!)</span>
             </span>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 숫자만 입력 후 <b>탭(Tab)키</b>를 누르면<br>편하게 다음 칸으로 이동할 수 있어요!
+            </div>
             
             <div class="form-card" id="chat-inputs-container">
                 ${inputsHtml}
@@ -454,9 +469,11 @@ const ChatWizard = {
             <span class="small">
                 완벽해요! 💕<br>
                 이번엔 <b>출입문이나 기둥 같은 장애물</b>을<br>도면 위로 끌어다 놓아주세요.<br>
-                그리고 각 장애물의 사이즈(mm)를<br>입력하세요!<br>
-                <span class="text-secondary">(장애물을 끌어다 놓은후,<br>아이콘위에 마우스를 올려놓고<br>드래그하면 이동할수 있어요!)</span>
+                그리고 각 장애물의 사이즈(mm)를 입력하세요!<br>
             </span>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 장애물을 끌어다 놓은 후,<br>아이콘 위에 마우스를 올려놓고 <b>드래그하면<br>이동</b>할 수 있어요!
+            </div>
             <div class="form-card p-2">
                 <div class="d-flex flex-wrap gap-1 justify-content-center">
                     <div class="drag-item bg-white border rounded shadow-sm" id="drag-door" draggable="true" ondragstart="handleDragStart(event, 'door')" style="cursor: grab; font-size: 0.78rem; padding: 4px 8px; margin: 2px;">🚪 출입문</div>
@@ -482,7 +499,10 @@ const ChatWizard = {
     startStep4() {
         this.appendBotMsg(`
             <span class="step-indicator">Step 4/7</span><br>
-            <span class="small">이제 보관하실 <b>파렛트의 사이즈</b>를<br>알려주세요.</span>
+            <span class="small">이제 보관하실 <b>파렛트의 사이즈</b>를 알려주세요.</span>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 파렛트 사이즈를 정확히 알려주시면<br>아사미야가 <b>랙 규격을 자동으로 추천</b>해 드립니다!
+            </div>
             <div class="form-card">
                 <div class="mb-3">
                     <label class="small text-secondary mb-1 fw-bold">가로(W) / 세로(D) mm</label>
@@ -721,6 +741,9 @@ const ChatWizard = {
         this.appendBotMsg(`
             <span class="step-indicator">Step 5/7</span><br>
             <span class="small">다음은 창고에서 사용하실 <b>지게차 정보</b>를<br>선택해주세요! 🚜</span>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 정확한 인상높이나 통로 폭을 모르셔도 <b>지게차 종류(입승식/좌승식 등)만 선택</b>하시면 아사미야가 평균적인 값을 알아서 입력해 드려요!
+            </div>
             <div class="form-card">
                 <div class="mb-3">
                     <label class="small text-secondary mb-1 fw-bold">지게차 종류</label>
@@ -772,7 +795,10 @@ const ChatWizard = {
     startStep6() {
         this.appendBotMsg(`
             <span class="step-indicator">Step 6/7</span><br>
-            <span class="small">거의 다 왔어요!<br>랙을 <b>몇 단으로 설치</b>하실지<br>알려주세요.</span>
+            <span class="small">거의 다 왔어요!<br>랙을 <b>몇 단으로 설치</b>하실지 알려주세요.</span>
+            <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.85rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                💡 <b>Tip:</b> 설치 높이를 비워두시면, <b>파렛트 제원과 단수에 맞춰 아사미야가 자동으로 계산</b>해 드려요!
+            </div>
             <div class="form-card">
                 <div class="mb-3">
                     <label class="small text-secondary mb-1 fw-bold">설치 단수 (필수)</label>
@@ -801,7 +827,7 @@ const ChatWizard = {
             <span class="step-indicator">Step 7/7</span><br>
             <span class="small">
                 수고하셨습니다! 💕<br>
-                참고할 <b>도면이나 현장 사진</b>이 있다면<br>첨부해주시고, <b>[자동 배치 시작하기]</b>를 <br>눌러주세요!
+                참고할 <b>도면이나 현장 사진</b>이 있다면 첨부해주시고,<br><b>[자동 배치 시작하기]</b>를  눌러주세요!
             </span>
             <div class="form-card text-center py-3 mt-3 mb-2" style="cursor: pointer; border: 2px dashed #0ea5e9; border-radius: 12px; background: rgba(14, 165, 233, 0.05);" onclick="document.getElementById('file-input').click()">
                 <div style="font-size:2rem; margin-bottom: 3px;">📁</div>
@@ -810,7 +836,7 @@ const ChatWizard = {
             </div>
             <div id="file-preview-area" class="d-flex flex-wrap gap-2 mt-2"></div>
             <button id="final-submit-btn" class="chat-btn mt-3" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 1rem; padding: 12px; border-radius: 25px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);" onclick="ChatWizard.submitFinal()">🚀 자동 배치 시작하기</button>
-        `);
+        `, true);
     },
 
     submitFinal() {
@@ -832,8 +858,11 @@ const ChatWizard = {
                 this.appendBotMsg(`
                     🎉 <b>파렛트랙 배치가 성공적으로<br>실행되었습니다!</b><br><br>
                     <span class="small">
+                    • <b>마우스 휠</b>을 굴리면 <b>확대/축소</b>가 가능해요.<br>
                     • 랙을 드래그해서 원하는 위치로<br>자유롭게 이동시킬 수 있어요.<br>
+                    &nbsp;&nbsp;<span class="text-primary">(💡 <b>Shift 키</b>를 누른 채로 드래그하면<br>&nbsp;&nbsp;더욱 부드럽고 미세하게 이동해요!)</span><br>
                     • 리모컨을 사용해서 연장이나 회전,<br>삭제 등을 할 수 있어요! 🚀<br>
+                    &nbsp;&nbsp;<span class="text-primary">(💡 리모컨 <b>상단(CANVAS)을 드래그</b>하면<br>&nbsp;&nbsp;작업하기 편한 위치로 옮길 수 있어요!)</span><br>
                     <span class="text-danger fw-bold">※ 주의:</span> 랙을 드래그해서 이동할 때에는<br>리모컨의 모든 버튼이 꺼져 있는지 꼭 확인하세요!
                     </span>
                     <div class="mt-3">

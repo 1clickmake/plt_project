@@ -1,6 +1,16 @@
 <?php
-require_once CM_PATH . '/config/config.php';
-include_header('요금제 및 구독 결제');
+if (empty($siteConfig)) {
+    try {
+        $db = \App\Core\Database::getInstance();
+        if ($db) {
+            $siteConfig = $db->query("SELECT * FROM config WHERE id = 1")->fetch() ?: [];
+        }
+    } catch (\Exception $e) {
+        $siteConfig = [];
+    }
+}
+$title = '요금제 및 구독 결제';
+include_header($title, $siteConfig ?? []);
 ?>
 <style>
 .pricing-card {
@@ -44,7 +54,7 @@ include_header('요금제 및 구독 결제');
 
     <div class="row g-4 justify-content-center">
         <!-- FREE -->
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-5 col-md-6">
             <div class="card pricing-card h-100 rounded-4 p-4 text-center">
                 <h4 class="fw-bold">FREE</h4>
                 <p class="text-muted small">솔루션 체험용</p>
@@ -54,48 +64,29 @@ include_header('요금제 및 구독 결제');
                 <button class="btn btn-light rounded-pill fw-bold w-100 mb-4" disabled>현재 이용중</button>
                 <ul class="list-unstyled text-start small mb-0">
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>모든 기능 100% 동일 제공</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>총 10건 견적 발행 (리셋 없음)</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>직원 등록 1명</li>
-                    <li><i class="bi bi-check-circle-fill text-success me-2"></i>이메일 지원</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- STARTER -->
-        <div class="col-lg-4 col-md-6">
-            <div class="card pricing-card popular h-100 rounded-4 p-4 text-center position-relative">
-                <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger px-3 py-2">가장 인기</span>
-                <h4 class="fw-bold" style="color:#667eea;">STARTER</h4>
-                <p class="text-muted small">소규모 업체용</p>
-                <div class="price-display d-flex flex-column justify-content-center my-4">
-                    <div id="price_starter" class="fw-bold fs-2">₩290,000</div>
-                    <div id="vat_starter" class="vat-text">+ VAT ₩29,000</div>
-                </div>
-                <button class="btn btn-primary rounded-pill fw-bold w-100 mb-4 btn-checkout" data-plan="starter" data-base-price="290000" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">STARTER 구독하기</button>
-                <ul class="list-unstyled text-start small mb-0">
-                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>모든 기능 100% 동일 제공</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>월 30건 견적 발행 (30일 리셋)</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>직원 등록 무제한</li>
-                    <li><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>우선 지원 & 온보딩</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>총 200건 견적 발행</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>직원 등록 3명</li>
+                    <li><i class="bi bi-check-circle-fill text-success me-2"></i>1달(30일)만 이용 가능</li>
                 </ul>
             </div>
         </div>
 
         <!-- PRO -->
-        <div class="col-lg-4 col-md-6">
-            <div class="card pricing-card h-100 rounded-4 p-4 text-center">
-                <h4 class="fw-bold text-dark">PRO</h4>
-                <p class="text-muted small">일반 업체용</p>
+        <div class="col-lg-5 col-md-6">
+            <div class="card pricing-card popular h-100 rounded-4 p-4 text-center position-relative">
+                <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger px-3 py-2">가장 인기</span>
+                <h4 class="fw-bold" style="color:#667eea;">PRO</h4>
+                <p class="text-muted small">전문 업체용</p>
                 <div class="price-display d-flex flex-column justify-content-center my-4">
-                    <div id="price_pro" class="fw-bold fs-2">₩490,000</div>
-                    <div id="vat_pro" class="vat-text">+ VAT ₩49,000</div>
+                    <div id="price_pro" class="fw-bold fs-2">₩220,000</div>
+                    <div id="vat_pro" class="vat-text">+ VAT ₩22,000</div>
                 </div>
-                <button class="btn btn-dark rounded-pill fw-bold w-100 mb-4 btn-checkout" data-plan="pro" data-base-price="490000">PRO 구독하기</button>
+                <button class="btn btn-primary rounded-pill fw-bold w-100 mb-4 btn-checkout" data-plan="pro" data-base-price="220000" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">PRO 구독하기</button>
                 <ul class="list-unstyled text-start small mb-0">
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-dark me-2"></i>모든 기능 100% 동일 제공</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-dark me-2"></i><strong>견적 발행 무제한</strong></li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-dark me-2"></i>직원 등록 무제한</li>
-                    <li><i class="bi bi-check-circle-fill text-dark me-2"></i>24/7 전담 지원</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>모든 기능 100% 동일 제공</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i><strong>견적 발행 무제한</strong></li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>직원 등록 무제한</li>
+                    <li><i class="bi bi-check-circle-fill" style="color:#667eea; margin-right:8px;"></i>24/7 전담 지원</li>
                 </ul>
             </div>
         </div>
@@ -118,47 +109,66 @@ const discounts = {
 let currentDuration = 1;
 
 function updatePrices() {
-    currentDuration = parseInt(document.querySelector('input[name="duration"]:checked').value);
-    const discountRate = discounts[currentDuration];
+    const checkedRadio = document.querySelector('input[name="duration"]:checked');
+    currentDuration = checkedRadio ? parseInt(checkedRadio.value) : 1;
+    const discountRate = discounts[currentDuration] || 0;
 
-    // STARTER
-    const baseStarter = 290000;
-    const finalStarter = baseStarter * currentDuration * (1 - discountRate);
-    const vatStarter = finalStarter * 0.1;
-    document.getElementById('price_starter').innerText = formatPrice(finalStarter);
-    document.getElementById('vat_starter').innerText = '+ VAT ' + formatPrice(vatStarter);
+    // PRO 플랜 (기본 월 220,000원)
+    const basePro = 220000;
+    const originalPro = basePro * currentDuration;
+    const finalPro = Math.round(originalPro * (1 - discountRate));
+    const vatPro = Math.round(finalPro * 0.1);
+    const totalPro = finalPro + vatPro;
 
-    // PRO
-    const basePro = 490000;
-    const finalPro = basePro * currentDuration * (1 - discountRate);
-    const vatPro = finalPro * 0.1;
-    document.getElementById('price_pro').innerText = formatPrice(finalPro);
-    document.getElementById('vat_pro').innerText = '+ VAT ' + formatPrice(vatPro);
+    const priceEl = document.getElementById('price_pro');
+    const vatEl = document.getElementById('vat_pro');
+
+    if (priceEl) {
+        priceEl.innerText = formatPrice(finalPro);
+    }
+    if (vatEl) {
+        let vatHtml = `+ VAT ${formatPrice(vatPro)} <span class="fw-bold text-dark">(총 ${formatPrice(totalPro)})</span>`;
+        if (currentDuration > 1) {
+            const monthlyPrice = Math.round(finalPro / currentDuration);
+            const savedAmount = originalPro - finalPro;
+            vatHtml += `<div class="mt-1 text-primary fw-bold" style="font-size: 0.85rem;">
+                <i class="bi bi-tag-fill me-1"></i>월 ${formatPrice(monthlyPrice)} (${Math.round(discountRate * 100)}% 할인 / ${formatPrice(savedAmount)} 절약)
+            </div>`;
+        }
+        vatEl.innerHTML = vatHtml;
+    }
 }
 
 document.querySelectorAll('input[name="duration"]').forEach(radio => {
     radio.addEventListener('change', updatePrices);
 });
 
+// 페이지 로드 시 즉시 1회 계산 실행
+document.addEventListener('DOMContentLoaded', updatePrices);
+updatePrices();
+
 // 결제 버튼 이벤트
 document.querySelectorAll('.btn-checkout').forEach(btn => {
     btn.addEventListener('click', async function() {
-        const plan = this.dataset.plan; // 'starter' or 'pro'
-        const basePrice = parseInt(this.dataset.basePrice);
+        const plan = this.dataset.plan || 'pro';
+        const basePrice = parseInt(this.dataset.basePrice) || 220000;
         
-        const discountRate = discounts[currentDuration];
-        const finalPrice = basePrice * currentDuration * (1 - discountRate);
-        const vat = finalPrice * 0.1;
-        let totalPrice = finalPrice + vat;
+        const discountRate = discounts[currentDuration] || 0;
+        const finalPrice = Math.round(basePrice * currentDuration * (1 - discountRate));
+        const vat = Math.round(finalPrice * 0.1);
+        const totalPrice = finalPrice + vat;
         
-        // [테스트용 임시 코드] 두목님의 요청으로 무조건 1004원 결제되게 세팅! (테스트 끝나면 지울게요!)
-        totalPrice = 1004;
-        
-        let planName = plan === 'starter' ? 'STARTER' : 'PRO';
+        let planName = 'PRO';
         let orderName = `${planName} 플랜 (${currentDuration}개월)`;
 
-        // 유저 확인용 메시지 (부가세 포함)
-        if (!confirm(`${orderName}\n결제 금액: ${formatPrice(finalPrice)} + VAT ${formatPrice(vat)} = 총 ${formatPrice(totalPrice)}\n결제를 진행하시겠습니까?`)) {
+        // 유저 확인용 메시지 (부가세 포함 실제 결제 금액)
+        const confirmMsg = `${orderName}\n` +
+            `공급가액: ${formatPrice(finalPrice)}\n` +
+            `부가세(VAT): ${formatPrice(vat)}\n` +
+            `최종 결제 금액: ${formatPrice(totalPrice)}\n\n` +
+            `결제를 진행하시겠습니까?`;
+
+        if (!confirm(confirmMsg)) {
             return;
         }
 
@@ -217,4 +227,4 @@ document.querySelectorAll('.btn-checkout').forEach(btn => {
     });
 });
 </script>
-<?php include_footer(); ?>
+<?php include_footer($siteConfig ?? []); ?>

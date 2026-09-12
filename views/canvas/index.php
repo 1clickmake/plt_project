@@ -719,6 +719,7 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="/assets/js/canvas2d.js?v=<?= time() ?>"></script>
 <script src="/assets/js/canvas-interactions.js?v=<?= time() ?>"></script>
 <script src="/assets/js/tutorial.js?v=<?= time() ?>"></script>
@@ -1443,7 +1444,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <!-- 🎮 TV 리모컨 컨트롤 패널 (position:fixed - 항상 우측 상단 고정) -->
-<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; bottom:30px; right:100px; z-index:9998; user-select:none;">
+<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; bottom:210px; right:100px; z-index:9998; user-select:none;">
     <div style="
         background: linear-gradient(160deg, rgba(10,15,28,0.98) 0%, rgba(22,33,52,0.98) 100%);
         border: 1px solid rgba(56,189,248,0.4);
@@ -1897,10 +1898,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 function submitReview() {
+    const ratingVal = parseInt(document.getElementById('review-rating').value) || 5;
     const payload = {
         company: document.getElementById('review-company').value,
         name: document.getElementById('review-name').value,
-        rating: document.getElementById('review-rating').value,
+        rating: ratingVal,
         comment: document.getElementById('review-comment').value
     };
     fetch('/review/submit', {
@@ -1909,12 +1911,50 @@ function submitReview() {
         body: JSON.stringify(payload)
     }).then(res => res.json()).then(res => {
         bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
-        alert('💕 피드백을 보내주셔서 정말 감사합니다! 더 발전하는 아사미야가 될게요!');
+        
+        if (ratingVal >= 3) {
+            // 별점 3점 이상일 경우 특별 리워드 모달 팝업
+            const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+            exportModal.show();
+        } else {
+            alert('💕 피드백을 남겨주셔서 정말 감사합니다! 더 노력하는 아사미야가 될게요!');
+        }
     }).catch(err => {
         bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
     });
 }
 </script>
+
+<!-- 도면 다운로드 리워드 모달 -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-light" style="border: 1px solid rgba(56,189,248,0.4); border-radius: 1rem; box-shadow: 0 0 30px rgba(56,189,248,0.15);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title fw-bold" id="exportModalLabel" style="color: #38bdf8;">🎁 특별한 선물 도착!</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <p class="mb-4 text-light" style="font-size: 0.95rem;">
+          좋은 평가를 남겨주셔서 진심으로 감사드립니다! 💕<br>
+          감사의 의미로 방금 그리신 <strong>도면 원본 파일</strong>을<br>무료로 다운로드할 수 있도록 준비했어요.
+        </p>
+        
+        <div class="d-grid gap-3 px-3">
+          <button class="btn btn-outline-info py-3 fw-bold" onclick="exportCanvas('dxf'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();" style="border-width: 2px; background: rgba(56,189,248,0.1);">
+            <span style="font-size:1.8rem; display:block; margin-bottom:5px;">📐</span> 
+            DXF 캐드 원본 파일 다운로드
+          </button>
+          <button class="btn btn-outline-light py-2" onclick="exportCanvas('pdf'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();">
+            📄 PDF 문서로 다운로드
+          </button>
+          <button class="btn btn-outline-secondary py-2" onclick="exportCanvas('jpg'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();">
+            🖼️ JPG 이미지로 저장
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 플로팅 챗봇 마법사 -->
 <?php include 'chat.php'; ?>

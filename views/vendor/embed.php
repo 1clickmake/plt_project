@@ -122,9 +122,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a>
+                </a> --> -->
                 <?php endif; ?>
                 <i class="fa-solid fa-circle-user text-info fs-5"></i>
                 <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>

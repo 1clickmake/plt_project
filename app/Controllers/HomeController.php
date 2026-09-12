@@ -27,6 +27,97 @@ class HomeController extends BaseController {
         $this->view($templatePath, ['groups' => $groups, 'config' => $config]);
     }
 
+    public function about() {
+        $db = Database::getInstance();
+        $config = $db->query("SELECT * FROM config WHERE id = 1")->fetch();
+        $template = $config['template'] ?? 'basic';
+        
+        $templatePath = "templates/{$template}/about";
+        $this->view($templatePath, ['config' => $config]);
+    }
+
+    public function website() {
+        $db = Database::getInstance();
+        $config = $db->query("SELECT * FROM config WHERE id = 1")->fetch();
+        $template = $config['template'] ?? 'basic';
+        
+        // Ensure website_portfolios table exists
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS `website_portfolios` (
+                `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+                `title` varchar(255) NOT NULL COMMENT '프로젝트/사이트명',
+                `url` varchar(500) NOT NULL COMMENT '사이트 URL',
+                `category` varchar(50) DEFAULT '회사홈페이지' COMMENT '카테고리',
+                `description` text DEFAULT NULL COMMENT '설명',
+                `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '등록일시',
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='제작 웹사이트 포트폴리오 테이블'");
+            
+            $portfolios = $db->query("SELECT * FROM website_portfolios ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $portfolios = [];
+        }
+
+        $templatePath = "templates/{$template}/website";
+        if (!file_exists(CM_VIEWS_PATH . '/' . $templatePath . '.php')) {
+            $templatePath = "website";
+        }
+        $this->view($templatePath, [
+            'config' => $config,
+            'portfolios' => $portfolios
+        ]);
+    }
+
+    public function addPortfolio() {
+        $this->checkAdmin();
+
+        $title       = trim($_POST['title'] ?? '');
+        $url         = trim($_POST['url'] ?? '');
+        $category    = trim($_POST['category'] ?? '회사홈페이지');
+        $description = trim($_POST['description'] ?? '');
+
+        if (!$url) {
+            $this->redirect('/website');
+            return;
+        }
+
+        if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
+            $url = "http://" . $url;
+        }
+
+        if (!$title) {
+            $parsed = parse_url($url, PHP_URL_HOST);
+            $title = $parsed ?: $url;
+        }
+
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->prepare("INSERT INTO website_portfolios (title, url, category, description) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$title, $url, $category, $description]);
+        } catch (\Exception $e) {
+            // Log or ignore
+        }
+
+        $this->redirect('/website#portfolio');
+    }
+
+    public function deletePortfolio() {
+        $this->checkAdmin();
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            try {
+                $db = Database::getInstance();
+                $stmt = $db->prepare("DELETE FROM website_portfolios WHERE id = ?");
+                $stmt->execute([$id]);
+            } catch (\Exception $e) {
+                // Log or ignore
+            }
+        }
+
+        $this->redirect('/website#portfolio');
+    }
+
     public function page($vars) {
         $db = Database::getInstance();
         $slug = $vars['slug'];

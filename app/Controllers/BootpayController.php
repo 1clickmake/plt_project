@@ -5,7 +5,7 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Services\BootpayService;
 
-class BootpayController
+class BootpayController extends BaseController
 {
     private $db;
     private $bootpayService;
@@ -163,7 +163,7 @@ class BootpayController
      */
     public function subscribeForm()
     {
-        include CM_VIEWS_PATH . '/shop/subscribe.php';
+        $this->view('shop/subscribe');
     }
 
     /**
@@ -171,7 +171,7 @@ class BootpayController
      */
     public function mypagePayments()
     {
-        include CM_VIEWS_PATH . '/vendor/payments.php';
+        $this->view('vendor/payments');
     }
 
     /**

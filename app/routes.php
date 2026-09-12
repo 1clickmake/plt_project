@@ -87,6 +87,10 @@ return function(FastRoute\RouteCollector $r) {
 
     // Frontend Routes
     $r->addRoute('GET', '/', ['App\Controllers\HomeController', 'index']);
+    $r->addRoute('GET', '/about', ['App\Controllers\HomeController', 'about']);
+    $r->addRoute('GET', '/website', ['App\Controllers\HomeController', 'website']);
+    $r->addRoute('POST', '/website/portfolio/add', ['App\Controllers\HomeController', 'addPortfolio']);
+    $r->addRoute('POST', '/website/portfolio/delete', ['App\Controllers\HomeController', 'deletePortfolio']);
     $r->addRoute('POST', '/contact/send', ['App\Controllers\HomeController', 'sendContact']);
 
     // Payment Routes (Paddle)
@@ -157,4 +161,5 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
     $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);
+    $r->addRoute('POST', '/review/submit',        ['App\Controllers\CanvasController', 'submitReview']);
 };

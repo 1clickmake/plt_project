@@ -44,9 +44,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a>
+                </a> --> -->
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
@@ -405,7 +405,9 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center">130×100mm 1.2t</td>
       <td class="center fw-bold text-secondary" id="linerQtyText"><?= number_format($linerQty) ?></td>
       <td class="center">개</td>
-      <td class="right fw-bold" id="linerUnitText"><?= number_format($linerUnitPrice) ?></td>
+      <td class="right fw-bold">
+          <input type="number" step="any" class="form-control form-control-sm text-end bom-input liner-unit-price" id="linerUnitInput" value="<?= is_numeric($linerUnitPrice) ? floor((float)$linerUnitPrice) : $linerUnitPrice ?>" style="width: 80px; margin: 0 0 0 auto;">
+      </td>
       <td class="right fw-bold text-secondary" id="linerTotalText"><?= number_format($linerTotal) ?></td>
       <td class="center text-muted" style="font-size: 0.85rem;">기둥 수량과 동일</td>
     </tr>
@@ -594,7 +596,8 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             const isBoardMode = <?= json_encode(($quote['source_mode'] ?? '') === 'board') ?>;
             const linerRow = document.getElementById('linerRow');
             const linerQty = isBoardMode ? 0 : (totalFrames * 2);
-            const linerUnitPrice = <?= empty($quote['pricing_rule_id']) ? 0 : 500 ?>;
+            const linerUnitInput = document.getElementById('linerUnitInput');
+            const linerUnitPrice = linerUnitInput ? (parseFloat(linerUnitInput.value) || 0) : <?= empty($quote['pricing_rule_id']) ? 0 : 500 ?>;
             const linerTotal = linerQty * linerUnitPrice;
 
             if (linerQty > 0) {
@@ -642,7 +645,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
         // 🌟 실시간 이벤트 리스너 등록 (BOM 수량/단가/품명/규격 입력 시 자동 재계산 및 리스트 동기화)
         document.addEventListener('input', function(e) {
-            if (e.target.matches('.bom-part-qty, .bom-part-unit, .bom-part-name, .bom-part-spec, .custom-item-qty, .custom-item-price, .mod-remark, .mod-unit-text')) {
+            if (e.target.matches('.bom-part-qty, .bom-part-unit, .bom-part-name, .bom-part-spec, .custom-item-qty, .custom-item-price, .mod-remark, .mod-unit-text, .mod-qty-input, .liner-unit-price')) {
                 recalculateAll();
             }
         });

@@ -37,9 +37,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a>
+                </a> --> -->
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
@@ -82,8 +82,8 @@ document.querySelector('.btn-checkout').addEventListener('click', async function
     const vat = 15000;
     let totalPrice = finalPrice + vat;
     
-    // 테스트 결제 금액
-    totalPrice = 1004;
+    // 테스트 결제 시 필요한 경우 아래 주석 해제 (실결제는 165,000원)
+    // totalPrice = 1004;
 
     const orderName = "견적 발송 10건 추가 충전";
 
