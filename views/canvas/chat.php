@@ -296,27 +296,36 @@ body.theme-light .step-indicator {
 .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 </style>
 
-<!-- 신규 진입 모달 - 딱 2개만 -->
-<div id="first-entry-modal" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:40px; border-radius:16px; box-shadow:0 15px 50px rgba(0,0,0,0.3); z-index:9999; text-align:center; min-width: 380px;">
+<!-- 신규 진입 모달 - 가로/세로 직사각형 기본 + 비정형 직접 그리기 옵션 -->
+<div id="first-entry-modal" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:35px 35px 25px 35px; border-radius:16px; box-shadow:0 15px 50px rgba(0,0,0,0.3); z-index:9999; text-align:center; min-width: 380px; max-width: 440px;">
     <h3 style="margin-bottom:10px; color:#0f172a; font-weight:800; letter-spacing:-1px;">창고 크기만 알려주세요</h3>
     <p style="color:#64748b; font-size:0.9rem; margin-bottom:25px;">복잡한 설정은 저희가 알아서 최적화해 드립니다.</p>
     
-    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:25px;">
-        <div>
+    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+        <div style="position:relative;">
             <label style="display:block; text-align:left; font-size:0.8rem; font-weight:bold; color:#475569; margin-bottom:5px;">가로 길이</label>
             <input type="number" id="quick-w" placeholder="예: 30" style="width:140px; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1.1rem; text-align:center; outline:none;" onfocus="this.style.borderColor='#f16819'" onblur="this.style.borderColor='#cbd5e1'">
-            <span style="position:absolute; margin-left:-30px; margin-top:14px; color:#94a3b8; font-weight:bold;">m</span>
+            <span style="position:absolute; right:12px; top:36px; color:#94a3b8; font-weight:bold;">m</span>
         </div>
-        <div>
+        <div style="position:relative;">
             <label style="display:block; text-align:left; font-size:0.8rem; font-weight:bold; color:#475569; margin-bottom:5px;">세로 길이</label>
             <input type="number" id="quick-h" placeholder="예: 18" style="width:140px; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1.1rem; text-align:center; outline:none;" onfocus="this.style.borderColor='#f16819'" onblur="this.style.borderColor='#cbd5e1'">
-            <span style="position:absolute; margin-left:-30px; margin-top:14px; color:#94a3b8; font-weight:bold;">m</span>
+            <span style="position:absolute; right:12px; top:36px; color:#94a3b8; font-weight:bold;">m</span>
         </div>
     </div>
     
-    <button onclick="autoRender()" style="background:#f16819; color:white; padding:15px; font-size:1.1rem; font-weight:bold; border:none; border-radius:8px; cursor:pointer; width:100%; box-shadow: 0 4px 15px rgba(241, 104, 25, 0.3); transition: all 0.2s;">
+    <button type="button" onclick="autoRender()" style="background:#f16819; color:white; padding:14px; font-size:1.1rem; font-weight:bold; border:none; border-radius:8px; cursor:pointer; width:100%; box-shadow: 0 4px 15px rgba(241, 104, 25, 0.3); transition: all 0.2s;">
         랙 깔아보기 <i class="fa-solid fa-arrow-right ms-1"></i>
     </button>
+
+    <!-- 두목님 & 하이디 5% 비정형(오각형/마름모/L자) 사장님을 위한 2-Track 옵션 -->
+    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 22px 0 16px 0;">
+    <div style="font-size: 0.88rem; color: #64748b; line-height: 1.5;">
+        <span style="color: #475569; font-weight: 500;">창고가 5각형, 마름모, L자형인가요?</span><br>
+        <button type="button" onclick="openIrregularWizard()" style="background: none; border: none; color: #0284c7; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 6px 4px; margin-top: 4px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-draw-polygon" style="color: #f16819;"></i> 비정형 창고 직접 그리기 →
+        </button>
+    </div>
 </div>
 
 <script>
@@ -340,7 +349,24 @@ function autoRender() {
         window.autoGenerateWarehouse(W, H, config);
     } else {
         // Fallback: Mock render completion to show the summary immediately
-        alert(`[ 렌더링 완료 (미리보기) ]\n\n가로: ${W}m / 세로: ${H}m\n\n- 적재: 3단 (6 PLT) 기본\n- 랙 타입: 단면/양면 자동\n- 통로(AST): 3500mm 고정\n- 기둥 간격: 2800mm 고정\n\n✔️ 결과: 총 기둥 48EA, 빔 96EA, 파렛트 72PLT`);
+        alert(`[ 렌더링 완료 (미리보기) ]\n\n가로: ${W}m / 세로: ${H}m\n\n- 적재: 3단 (6 PLT) 기본\n- 랙 타입: 단면/양면 자동\n- 통로(AST): 3500mm 고정\n- 기둥 간격: 2800mm 고정\n\n✔️ 결과: 총 기둥 48EA, 빔 96EA, 파렛트 72PLT\n\n💡 팁: 창고가 직사각형이 아니신가요? 캔버스 모서리를 드래그해서 모양을 자유롭게 변경해보세요!`);
+    }
+}
+
+// 5% 비정형(오각형, 마름모, L자형) 창고 직접 그리기 모드 전환
+function openIrregularWizard() {
+    const entryModal = document.getElementById('first-entry-modal');
+    const oldGuide = document.getElementById('old-chat-guide');
+    if (entryModal) entryModal.style.display = 'none';
+    if (oldGuide) oldGuide.style.display = 'block';
+    
+    if (typeof ChatWizard !== 'undefined') {
+        if (typeof ChatWizard.restore === 'function') {
+            ChatWizard.restore();
+        }
+        if (typeof ChatWizard.init === 'function') {
+            ChatWizard.init();
+        }
     }
 }
 </script>
