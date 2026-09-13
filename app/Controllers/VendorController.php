@@ -237,6 +237,12 @@ class VendorController extends BaseController {
         $db = Database::getInstance();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $supplierId = intval($_POST['supplier_id'] ?? 0);
+            if ($supplierId <= 0) {
+                echo "<script>alert('공급사를 선택해 주세요.'); window.history.back();</script>";
+                return;
+            }
+
             if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
                 $uploadDirExcel = __DIR__ . '/../../storage/excel/';
                 if (!file_exists($uploadDirExcel)) {
@@ -271,15 +277,20 @@ class VendorController extends BaseController {
                         $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
 
                         // Save to vendor_pricing_rules
-                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, source_file, pricing_data) VALUES (:vid, :am, :sf, :pd)");
+                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, supplier_id, applied_month, source_file, pricing_data) VALUES (:vid, :sid, :am, :sf, :pd)");
                         $insertRuleStmt->execute([
                             'vid' => $userId,
+                            'sid' => $supplierId,
                             'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
                             'sf' => $_FILES['price_excel']['name'],
                             'pd' => $pricesData
                         ]);
                         
-                        // Update vendor_settings
+                        // Update suppliers table status to excel
+                        $updSup = $db->prepare("UPDATE suppliers SET status = 'excel', excel_file = :ef WHERE id = :sid AND vendor_user_id = :vuid");
+                        $updSup->execute(['ef' => $_FILES['price_excel']['name'], 'sid' => $supplierId, 'vuid' => $userId]);
+
+                        echo "<script>alert('단가표가 성공적으로 분석 및 적용되었습니다.'); window.location.href='/vendor/pricing';</script>";
                         $stmtCheck = $db->prepare("SELECT id FROM vendor_settings WHERE user_id = :uid");
                         $stmtCheck->execute(['uid' => $userId]);
                         if ($stmtCheck->fetchColumn()) {
@@ -313,24 +324,116 @@ class VendorController extends BaseController {
         $totalCount = $stmtTotal->fetchColumn();
         $totalPages = ceil($totalCount / $limit);
 
-        $stmt = $db->prepare("SELECT * FROM vendor_pricing_rules WHERE vendor_id = :vuid ORDER BY id DESC LIMIT :limit OFFSET :offset");
+        $stmt = $db->prepare("SELECT r.*, s.name as supplier_name FROM vendor_pricing_rules r LEFT JOIN suppliers s ON r.supplier_id = s.id WHERE r.vendor_id = :vuid ORDER BY r.id DESC LIMIT :limit OFFSET :offset");
         $stmt->bindValue(':vuid', $userId, \PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
         $rules = $stmt->fetchAll();
 
-        // Also fetch current settings for displaying latest uploaded file
-        $stmtSettings = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :uid");
-        $stmtSettings->execute(['uid' => $userId]);
-        $settings = $stmtSettings->fetch();
+        // Fetch suppliers for the vendor
+        $stmtSuppliers = $db->prepare("SELECT * FROM suppliers WHERE vendor_user_id = :vuid ORDER BY id ASC");
+        $stmtSuppliers->execute(['vuid' => $userId]);
+        $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Fetch manual pricing for each supplier
+        $manualPrices = [];
+        if ($suppliers) {
+            $sIds = array_column($suppliers, 'id');
+            $placeholders = str_repeat('?,', count($sIds) - 1) . '?';
+            $stmtManual = $db->prepare("SELECT supplier_id, item_code, unit_price FROM vendor_prices_manual WHERE supplier_id IN ($placeholders)");
+            $stmtManual->execute($sIds);
+            $manualData = $stmtManual->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($manualData as $md) {
+                $manualPrices[$md['supplier_id']][$md['item_code']] = $md['unit_price'];
+            }
+        }
 
         $this->view('vendor/pricing', [
+            'suppliers' => $suppliers,
+            'manualPrices' => $manualPrices,
             'rules' => $rules,
             'page' => $page,
-            'totalPages' => $totalPages,
-            'settings' => $settings
+            'totalPages' => $totalPages
         ]);
+    }
+
+    public function addSupplier() {
+        $this->requireVendorEmployees();
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $db = Database::getInstance();
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $name = trim($input['name'] ?? '');
+        if (empty($name)) {
+            echo json_encode(['success' => false, 'message' => '공급사 이름을 입력해주세요.']);
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare("INSERT INTO suppliers (vendor_user_id, name, factory_name, status, color) VALUES (?, ?, ?, 'none', '#94a3b8')");
+            $stmt->execute([$userId, $name, $name . ' 공장']);
+            $newId = $db->lastInsertId();
+            echo json_encode(['success' => true, 'id' => $newId]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => '저장 중 오류가 발생했습니다.']);
+        }
+    }
+
+    public function saveManualPricing() {
+        $this->requireVendorEmployees();
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            echo json_encode(['success' => false, 'message' => '로그인이 필요합니다.']);
+            return;
+        }
+
+        $userId = $_SESSION['user']['user_id'];
+        $db = Database::getInstance();
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $supplierId = intval($input['supplier_id'] ?? 0);
+        $prices = $input['prices'] ?? [];
+        
+        if ($supplierId <= 0 || empty($prices)) {
+            echo json_encode(['success' => false, 'message' => '유효하지 않은 요청입니다.']);
+            return;
+        }
+
+        try {
+            // Verify supplier ownership
+            $stmt = $db->prepare("SELECT id FROM suppliers WHERE id = ? AND vendor_user_id = ?");
+            $stmt->execute([$supplierId, $userId]);
+            if (!$stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => '권한이 없습니다.']);
+                return;
+            }
+
+            $db->beginTransaction();
+            $ins = $db->prepare("INSERT INTO vendor_prices_manual (supplier_id, item_code, unit_price) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price)");
+            foreach ($prices as $code => $price) {
+                // remove commas and convert to float/int
+                $val = floatval(str_replace(',', '', $price));
+                $ins->execute([$supplierId, $code, $val]);
+            }
+            
+            $upd = $db->prepare("UPDATE suppliers SET status = 'manual' WHERE id = ? AND status = 'none'");
+            $upd->execute([$supplierId]);
+            
+            $db->commit();
+            echo json_encode(['success' => true, 'message' => '수동 단가가 저장되었습니다.']);
+        } catch (\Exception $e) {
+            $db->rollBack();
+            echo json_encode(['success' => false, 'message' => '저장 중 오류가 발생했습니다.']);
+        }
     }
 
     public function downloadPricingExcel() {
@@ -791,24 +894,78 @@ class VendorController extends BaseController {
 
         // 모듈별 단위 BOM 계산 클로저
         if (empty($ruleId)) {
-            // 엑셀 단가표가 없는 소형 업체를 위한 심플 세트 단위 BOM
-            $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) {
-                $typeName = '파렛트랙';
-                $spec = "{$beamL} × {$depth} × {$rackH}";
-                $bom = [
-                    [
-                        'name' => $typeName,
-                        'spec' => $spec,
-                        'qty' => 1,
-                        'unit_amount' => 0,
-                        'total' => 0
-                    ]
-                ];
+            // 엑셀 단가표가 없는 경우: 수동 완제품 단가(Fallback) 사용 (영업소/대리점 B2B용)
+            $db = \App\Core\Database::getInstance();
+            $stmt = $db->prepare("
+                SELECT v.item_code, v.unit_price 
+                FROM vendor_prices_manual v
+                JOIN suppliers s ON v.supplier_id = s.id
+                WHERE s.vendor_user_id = ? AND s.status = 'manual'
+                ORDER BY s.id ASC LIMIT 100
+            ");
+            $stmt->execute([$vendorId]);
+            $manualPrices = [];
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $manualPrices[$row['item_code']] = floatval($row['unit_price']);
+            }
+
+            $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) use ($manualPrices) {
+                $bom = [];
+                $totalPrice = 0;
+                
+                // 1. 기둥 단가 (높이에 가장 가까운 단가 매핑)
+                $colPrice = 0;
+                if ($rackH <= 2250) $colPrice = $manualPrices['column2000'] ?? 0;
+                else if ($rackH <= 2750) $colPrice = $manualPrices['column2500'] ?? 0;
+                else $colPrice = $manualPrices['column3000'] ?? 0;
+                
+                if ($frames > 0) {
+                    $bom[] = [
+                        'name' => '기둥 (프레임)',
+                        'spec' => "H-{$rackH}",
+                        'qty' => $frames,
+                        'unit_amount' => $colPrice,
+                        'total' => $colPrice * $frames
+                    ];
+                    $totalPrice += $colPrice * $frames;
+                }
+
+                // 2. 빔 단가 (두께에 따라 매핑)
+                $beamPrice = 0;
+                if ($beamThick <= 1.2) $beamPrice = $manualPrices['beam1t'] ?? 0;
+                else if ($beamThick <= 1.7) $beamPrice = $manualPrices['beam1_5t'] ?? 0;
+                else $beamPrice = $manualPrices['beam2t'] ?? 0;
+                
+                if ($beamLevels > 0) {
+                    $bom[] = [
+                        'name' => '로드빔 (단당)',
+                        'spec' => "{$beamThick}T",
+                        'qty' => $beamLevels,
+                        'unit_amount' => $beamPrice,
+                        'total' => $beamPrice * $beamLevels
+                    ];
+                    $totalPrice += $beamPrice * $beamLevels;
+                }
+
+                // 3. 부자재
+                $tieCount = $beamLevels * $tiePerLevel;
+                $tiePrice = $manualPrices['tiebar'] ?? 0;
+                if ($tieCount > 0 && $tiePrice > 0) {
+                    $bom[] = ['name' => '타이바', 'spec' => '-', 'qty' => $tieCount, 'unit_amount' => $tiePrice, 'total' => $tiePrice * $tieCount];
+                    $totalPrice += $tiePrice * $tieCount;
+                }
+
+                $miscPrice = ($manualPrices['boltSet'] ?? 0) + ($manualPrices['liner'] ?? 0);
+                if ($miscPrice > 0) {
+                    $bom[] = ['name' => '부자재 세트 (볼트/라이너 등)', 'spec' => '-', 'qty' => 1, 'unit_amount' => $miscPrice, 'total' => $miscPrice];
+                    $totalPrice += $miscPrice;
+                }
+
                 return [
                     'bom' => $bom,
                     'weight' => 0,
-                    'raw_price' => 0,
-                    'final_price' => 0
+                    'raw_price' => $totalPrice,
+                    'final_price' => $totalPrice // 마진 포함 완제품 단가이므로 raw_price = final_price
                 ];
             };
         } else {
