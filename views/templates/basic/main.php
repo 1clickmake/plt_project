@@ -501,7 +501,8 @@ include_header($title, $siteConfig ?? []);
         </div>
     </section>
 
-    <!-- Custom Website Development Banner (Above Footer) -->
+    <!-- Custom Website Development Banner (Above Footer) - Temporarily disabled for better B2B focus -->
+    <!--
     <section class="py-5 bg-white border-top border-bottom">
         <div class="max-w-1200 px-3">
             <div class="reveal rounded-4 p-4 p-lg-5 bg-light-gray border d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 shadow-sm position-relative overflow-hidden" style="border-color: #cbd5e1 !important;">
@@ -525,6 +526,7 @@ include_header($title, $siteConfig ?? []);
             </div>
         </div>
     </section>
+    -->
 
 </div>
 
