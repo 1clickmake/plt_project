@@ -233,7 +233,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id']; // 정수 PK (users.id)
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $db = Database::getInstance();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -287,8 +288,8 @@ class VendorController extends BaseController {
                         ]);
                         
                         // Update suppliers table status to excel
-                        $updSup = $db->prepare("UPDATE suppliers SET status = 'excel', excel_file = :ef WHERE id = :sid AND vendor_user_id = :vuid");
-                        $updSup->execute(['ef' => $_FILES['price_excel']['name'], 'sid' => $supplierId, 'vuid' => $userId]);
+                        $updSup = $db->prepare("UPDATE suppliers SET status = 'excel', excel_file = :ef WHERE id = :sid AND (vendor_user_id = :vuid OR vendor_user_id = :vuid_str)");
+                        $updSup->execute(['ef' => $_FILES['price_excel']['name'], 'sid' => $supplierId, 'vuid' => $userId, 'vuid_str' => $userStrId]);
 
                         echo "<script>alert('단가표가 성공적으로 분석 및 적용되었습니다.'); window.location.href='/vendor/pricing';</script>";
                         $stmtCheck = $db->prepare("SELECT id FROM vendor_settings WHERE user_id = :uid");
@@ -319,28 +320,29 @@ class VendorController extends BaseController {
         $limit = 20;
         $offset = ($page - 1) * $limit;
 
-        $stmtTotal = $db->prepare("SELECT COUNT(*) FROM vendor_pricing_rules WHERE vendor_id = :vuid");
-        $stmtTotal->execute(['vuid' => $userId]);
+        $stmtTotal = $db->prepare("SELECT COUNT(*) FROM vendor_pricing_rules WHERE vendor_id = :vuid OR vendor_id = :vuid_str");
+        $stmtTotal->execute(['vuid' => $userId, 'vuid_str' => $userStrId]);
         $totalCount = $stmtTotal->fetchColumn();
         $totalPages = ceil($totalCount / $limit);
 
-        $stmt = $db->prepare("SELECT r.*, s.name as supplier_name FROM vendor_pricing_rules r LEFT JOIN suppliers s ON r.supplier_id = s.id WHERE r.vendor_id = :vuid ORDER BY r.id DESC LIMIT :limit OFFSET :offset");
+        $stmt = $db->prepare("SELECT r.*, s.name as supplier_name FROM vendor_pricing_rules r LEFT JOIN suppliers s ON r.supplier_id = s.id WHERE r.vendor_id = :vuid OR r.vendor_id = :vuid_str ORDER BY r.id DESC LIMIT :limit OFFSET :offset");
         $stmt->bindValue(':vuid', $userId, \PDO::PARAM_INT);
+        $stmt->bindValue(':vuid_str', $userStrId, \PDO::PARAM_STR);
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
         $rules = $stmt->fetchAll();
 
         // Fetch suppliers for the vendor
-        $stmtSuppliers = $db->prepare("SELECT * FROM suppliers WHERE vendor_user_id = :vuid ORDER BY id ASC");
-        $stmtSuppliers->execute(['vuid' => $userId]);
+        $stmtSuppliers = $db->prepare("SELECT * FROM suppliers WHERE vendor_user_id = :vuid OR vendor_user_id = :vuid_str ORDER BY id ASC");
+        $stmtSuppliers->execute(['vuid' => $userId, 'vuid_str' => $userStrId]);
         $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
 
         // If no suppliers exist, auto-create default '세화 (기본)'
         if (empty($suppliers)) {
             // Check if user already has an existing pricing excel in vendor_settings
-            $stmtSet = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :vuid");
-            $stmtSet->execute(['vuid' => $userId]);
+            $stmtSet = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :vuid OR user_id = :vuid_str");
+            $stmtSet->execute(['vuid' => $userId, 'vuid_str' => $userStrId]);
             $existExcel = $stmtSet->fetchColumn();
 
             $initStatus = !empty($existExcel) ? 'excel' : 'none';
@@ -353,7 +355,7 @@ class VendorController extends BaseController {
                 'ef' => $initExcelName
             ]);
             
-            $stmtSuppliers->execute(['vuid' => $userId]);
+            $stmtSuppliers->execute(['vuid' => $userId, 'vuid_str' => $userStrId]);
             $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
         }
 
@@ -388,7 +390,7 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id']; // 정수 PK
         $db = Database::getInstance();
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -404,7 +406,7 @@ class VendorController extends BaseController {
             $newId = $db->lastInsertId();
             echo json_encode(['success' => true, 'id' => $newId]);
         } catch (\Exception $e) {
-            echo json_encode(['success' => false, 'message' => '저장 중 오류가 발생했습니다.']);
+            echo json_encode(['success' => false, 'message' => '저장 중 오류가 발생했습니다: ' . $e->getMessage()]);
         }
     }
 
@@ -417,7 +419,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['user_id'];
+        $userId = $_SESSION['user']['id']; // 정수 PK
+        $userStrId = $_SESSION['user']['user_id'] ?? '';
         $db = Database::getInstance();
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -431,8 +434,8 @@ class VendorController extends BaseController {
 
         try {
             // Verify supplier ownership
-            $stmt = $db->prepare("SELECT id FROM suppliers WHERE id = ? AND vendor_user_id = ?");
-            $stmt->execute([$supplierId, $userId]);
+            $stmt = $db->prepare("SELECT id FROM suppliers WHERE id = ? AND (vendor_user_id = ? OR vendor_user_id = ?)");
+            $stmt->execute([$supplierId, $userId, $userStrId]);
             if (!$stmt->fetch()) {
                 echo json_encode(['success' => false, 'message' => '권한이 없습니다.']);
                 return;
