@@ -231,7 +231,7 @@ include_header($title, $siteConfig ?? []);
         </div>
     </section>
 
-    <!-- Key Highlights (3 Core Values) -->
+    <!-- Key Highlights (3 Core Values - Security Focused) -->
     <section class="section-padding bg-white border-bottom">
         <div class="max-w-1200">
             <div class="text-center max-w-720 mb-5">
@@ -239,10 +239,10 @@ include_header($title, $siteConfig ?? []);
                     <i class="fa-solid fa-cubes"></i> 핵심 기능 요약
                 </div>
                 <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(26px, 4vw, 36px);">
-                    견적 업무의 모든 과정을 하나로 연결합니다
+                    도면은 자동으로, 보안은 철저하게 통제합니다
                 </h2>
                 <p class="reveal mt-3 text-muted fs-6">
-                    프로그램 설치 없이 웹 브라우저에서 2D 도면, 자재 수량, 견적서 발송까지 한 번에 처리하세요.
+                    대표님의 승인과 통제 없이 단 1%의 마진도 밖으로 나갈 수 없습니다.
                 </p>
             </div>
 
@@ -252,9 +252,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-brand-orange bg-opacity-10 text-brand-orange d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-drafting-compass fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 웹 인터랙티브 설계</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 도면은 5초 만에, 단가는 5분 승인 후에만</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            창고 치수를 입력하고 마우스 클릭 몇 번으로 최적 랙을 배치합니다. 기둥, 셔터 등 현장 장애물도 자유롭게 등록할 수 있습니다.
+                            창고 치수만 입력하면 캐드 도면은 5초 만에 뚝딱 완성됩니다. 하지만 최종 견적 단가는 오직 대표님의 5분 검토와 승인이 있어야만 외부로 나갈 수 있습니다.
                         </p>
                     </div>
                 </div>
@@ -264,9 +264,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-calculator fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">2. 100% 정밀 자재 BOM 산출</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">2. 자재 수량은 자동, 마진율은 대표님만</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            주기둥(독립/연결), 로드빔, 타이빔, 앙카볼트 수량이 공학 계산식으로 자동 연산되어 자재 오발주와 누락이 0%로 줄어듭니다.
+                            주기둥, 로드빔, 타이빔 수량은 AI가 100% 정확하게 산출합니다. 하지만 회사의 영업 비밀인 '항목별 마진율'은 오직 대표님 계정으로만 통제하고 잠글 수 있습니다.
                         </p>
                     </div>
                 </div>
@@ -276,9 +276,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-file-invoice-dollar fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">3. 원클릭 정식 PDF 견적서</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">3. 0.1초 만에 추적하는 지문 견적서</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            귀사의 상호와 로고, 직인이 포함된 공식 견적서가 PDF로 즉시 생성됩니다. 고객 링크 공유 및 승인 관리까지 손쉽게 가능합니다.
+                            발행된 모든 PDF 견적서에는 보이지 않는 추적 지문이 심어집니다. 카톡이나 캡처본이 유출되더라도, 어느 직원이 언제 유출했는지 즉시 색출합니다.
                         </p>
                     </div>
                 </div>
