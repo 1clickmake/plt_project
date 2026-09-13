@@ -4,14 +4,13 @@ namespace App\Services;
 use App\Core\Database;
 
 class AuditService {
-    const SECRET_SALT = 'ASAMIYA_FORENSIC_SALT_2026';
-
     /**
      * 디지털 감사 검증 토큰 생성 (HMAC-SHA256)
      * 위변조 방지 및 1:1 대조용 지문
      */
     public static function generateToken($quoteId, $userId) {
-        $raw = hash_hmac('sha256', "{$quoteId}|{$userId}|" . date('Y-m-d'), self::SECRET_SALT);
+        $salt = $_ENV['AUDIT_SALT'] ?? 'fallback_salt_asamiya';
+        $raw = hash_hmac('sha256', "{$quoteId}|{$userId}", $salt);
         return strtoupper(substr($raw, 0, 4) . '-' . substr($raw, 4, 4) . '-' . substr($raw, 8, 4));
     }
 
