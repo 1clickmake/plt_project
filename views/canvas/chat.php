@@ -391,28 +391,44 @@ const ChatWizard = {
         if (fullWidth) msgDiv.style.width = '100%';
         const bubbleStyle = fullWidth ? 'flex: 1; width: 100%;' : '';
         
-        // 초기에는 타이핑 효과 점 3개만 표시 (생각하는 느낌)
-        msgDiv.innerHTML = `
-            <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
-            <div class="chat-bubble" style="${bubbleStyle} padding: 8px 12px;">
-                <div class="typing-indicator">
-                    <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
-                </div>
-            </div>
-        `;
-        this.body.appendChild(msgDiv);
-        this.scrollToBottom();
+        // Step 1/7 (첫 시작)일 때만 채팅(타이핑) 느낌을 주고, 나머지는 즉시 로드하여 눈 피로 방지
+        const isStep1 = html.includes('Step 1/7');
 
-        // 600ms 후에 실제 텍스트를 한 글자씩 타자치는 효과 시작
-        setTimeout(() => {
-            if (msgDiv) {
-                const bubble = msgDiv.querySelector('.chat-bubble');
-                if (bubble) {
-                    bubble.style.padding = ''; // 원래 패딩 복구
-                    this.typeWriterHTML(html, bubble, 25, onComplete); // 25ms 간격으로 타이핑
+        if (isStep1) {
+            // 초기에는 타이핑 효과 점 3개만 표시 (생각하는 느낌)
+            msgDiv.innerHTML = `
+                <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
+                <div class="chat-bubble" style="${bubbleStyle} padding: 8px 12px;">
+                    <div class="typing-indicator">
+                        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                    </div>
+                </div>
+            `;
+            this.body.appendChild(msgDiv);
+            this.scrollToBottom();
+
+            // 600ms 후에 실제 텍스트를 한 글자씩 타자치는 효과 시작
+            setTimeout(() => {
+                if (msgDiv) {
+                    const bubble = msgDiv.querySelector('.chat-bubble');
+                    if (bubble) {
+                        bubble.style.padding = ''; // 원래 패딩 복구
+                        this.typeWriterHTML(html, bubble, 25, onComplete); // 25ms 간격으로 타이핑
+                    }
                 }
-            }
-        }, 600);
+            }, 600);
+        } else {
+            // 타이핑 효과 없이 즉시 표시
+            msgDiv.innerHTML = `
+                <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
+                <div class="chat-bubble" style="${bubbleStyle}">
+                    ${html}
+                </div>
+            `;
+            this.body.appendChild(msgDiv);
+            this.scrollToBottom();
+            if (onComplete) onComplete();
+        }
     },
 
     typeWriterHTML(html, targetElement, speed, onComplete) {
