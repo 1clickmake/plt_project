@@ -169,7 +169,7 @@ $isLightTheme = in_array($theme, ['light', 'white']);
                         <i class="fa-solid fa-boxes-stacked text-warning"></i> 견적 희망 옵션
                     </h6>
                     <div class="row g-3 mb-4 p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label text-muted small mb-2 d-block">자재 상태 선택</label>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="board_condition" id="b_cond_new" value="new" checked>
@@ -184,7 +184,7 @@ $isLightTheme = in_array($theme, ['light', 'white']);
                                 <label class="form-check-label text-light small" for="b_cond_both">모두(비교 견적)</label>
                             </div>
                         </div>
-                        <div class="col-md-6 d-flex align-items-center">
+                        <div class="col-12 mt-2">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="board-self-install" value="1">
                                 <label class="form-check-label text-light small" for="board-self-install">
@@ -239,22 +239,61 @@ $isLightTheme = in_array($theme, ['light', 'white']);
 
         <!-- 우측: AI CAD 배너 (col-lg-4) -->
         <div class="col-lg-4 mb-4">
-            <div class="glass-panel p-4 p-md-5 d-flex flex-column h-100 justify-content-center align-items-center text-center" style="background: rgba(14, 165, 233, 0.03); border-color: rgba(56, 189, 248, 0.2);">
-                <div class="mb-4">
-                    <span style="font-size: 4rem; filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.4));">🤖</span>
-                </div>
-                <h4 class="fw-bold text-white mb-3">AI 도면 직접 그리기</h4>
-                <p class="text-muted small mb-5" style="line-height: 1.6;">
-                    5각형, 기둥 등 특수한 형태의 창고인가요?<br><br>
-                    직접 도면을 그려주시면<br>더욱 정확하고 빠른 자동 견적이 가능합니다.
-                </p>
-                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="btn btn-outline-info rounded-pill px-4 py-3 fw-bold w-100" style="transition: all 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
-                    📐 AI 스마트 도면 체험하기 <i class="fa-solid fa-arrow-right ms-2"></i>
+            <div class="glass-panel d-flex flex-column h-100 justify-content-between text-center overflow-hidden" style="background: rgba(14, 165, 233, 0.03); border-color: rgba(56, 189, 248, 0.2);">
+                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="d-block position-relative" style="transition: transform 0.3s; overflow: hidden;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <img src="/assets/images/banner_ai_cad.webp" alt="AI 스마트 랙킹 시스템" class="img-fluid w-100 border-bottom border-info border-opacity-25" style="object-fit: cover;">
                 </a>
+                
+                <div class="p-4 d-flex flex-column align-items-center flex-grow-1 justify-content-center">
+                    <div class="mb-3">
+                        <span style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));">🤖</span>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="line-height: 1.4; font-size: 1.1rem;">"알아서 그려준다는데,<br>굳이 내가 왜 그려야 할까?"</h5>
+                    <p class="text-info small mb-4 text-decoration-underline" data-bs-toggle="modal" data-bs-target="#benefitsModal" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#7dd3fc'" onmouseout="this.style.color='#0dcaf0'">
+                        🎁 직접 그리면 얻게 되는 3가지 혜택 보기
+                    </p>
+                    <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="btn btn-outline-info rounded-pill px-4 py-3 fw-bold w-100" style="transition: all 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+                        📐 AI 스마트 설계 시작하기 <i class="fa-solid fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
+</div> <!-- .container-xl -->
+
+<!-- 3가지 혜택 모달 -->
+<div class="modal fade" id="benefitsModal" tabindex="-1" aria-labelledby="benefitsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content glass-panel" style="background: rgba(15, 23, 42, 0.95);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold text-white" id="benefitsModalLabel">왜 직접 그려보는 것이 유리할까요?</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-light p-4 p-md-5" style="font-size: 0.95rem; line-height: 1.6;">
+          <h6 class="text-info fw-bold mb-2">🕒 1. 귀찮은 연락 NO! 5분 만에 끝나는 즉각적인 물량 확인</h6>
+          <p class="text-muted mb-4">기존에는 업체에 견적을 문의하고 도면이 나오기까지 하염없이 기다려야 했습니다. 바쁜 업무 중에 걸려 오는 확인 전화는 덤이죠. 이제 마우스로 가볍게 창고 형태만 그리고 <strong>'AI 자동 배치'</strong> 버튼을 누르세요. 귀찮은 소통 없이 단 5분 만에 내 창고의 최적 랙 수량과 도면을 즉시 확인할 수 있습니다.</p>
+
+          <h6 class="text-info fw-bold mb-2">🛡️ 2. 확실하다! (내 비즈니스에 딱 맞는 공간 효율 검증)</h6>
+          <p class="text-muted mb-4">내 창고의 실제 업무 동선과 적재 품목의 특성은 내가 가장 잘 압니다. 직접 그려보며 우리 회사에 가장 최적화된 배치를 눈으로 확인하세요. 확보한 도면 데이터를 바탕으로 시공 업체와 상담하면, 불필요한 오해나 커뮤니케이션 미스 없이 가장 빠르고 완벽한 맞춤형 창고를 완성할 수 있습니다.</p>
+
+          <h6 class="text-info fw-bold mb-2">🎮 3. 눈치 볼 필요 없는 무한 시뮬레이션</h6>
+          <p class="text-muted mb-4">“통로를 3m로 넓히면 수량이 얼마나 줄까?”, “가로 배열과 세로 배열 중 어느 쪽이 좋을까?” 궁금증이 생길 때마다 도면 수정을 요청하기는 부담스럽습니다. 이제 클릭 몇 번으로 실시간 배치를 변경하고 수량을 업데이트하세요. 내 창고에 딱 맞는 최적의 세팅을 직접 설계하고 비교해 볼 수 있습니다.</p>
+          
+          <hr class="border-secondary my-4">
+          <div class="text-center">
+              <span style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">✨</span>
+              <h6 class="text-white fw-bold mt-2">어렵지 않냐고요? AI 설계 비서가 함께합니다!</h6>
+              <p class="text-muted small mb-0">마치 게임을 하듯 쉽고 직관적입니다.<br>지금 바로 내 비즈니스 공간의 진짜 가치를 스마트하게 확인해 보세요!</p>
+          </div>
+      </div>
+      <div class="modal-footer border-secondary justify-content-center pb-4">
+        <button type="button" class="btn btn-primary-gradient px-5 py-2 rounded-pill" data-bs-dismiss="modal" onclick="document.querySelector('.btn-outline-info').click();">
+            👉 지금 바로 스마트 설계 시작하기
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

@@ -28,7 +28,7 @@ files_to_upload = [
     'public/assets/js/canvas-interactions-easy.js',
     'public/assets/js/tutorial.js',
     'views/canvas/index.php',
-    'views/canvas/board.php',
+    'views/canvas/cad.php',
     'views/canvas/easy.php',
     'views/canvas/chat.php',
     'views/install/setup.sql',
