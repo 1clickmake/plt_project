@@ -374,7 +374,7 @@ const ChatWizard = {
         if (fullWidth) msgDiv.style.width = '100%';
         const bubbleStyle = fullWidth ? 'flex: 1; width: 100%;' : '';
         
-        // 초기에는 타이핑 효과 점 3개만 표시
+        // 초기에는 타이핑 효과 점 3개만 표시 (생각하는 느낌)
         msgDiv.innerHTML = `
             <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
             <div class="chat-bubble" style="${bubbleStyle} padding: 8px 12px;">
@@ -386,17 +386,82 @@ const ChatWizard = {
         this.body.appendChild(msgDiv);
         this.scrollToBottom();
 
-        // 800ms 후에 실제 메시지로 교체
+        // 600ms 후에 실제 텍스트를 한 글자씩 타자치는 효과 시작
         setTimeout(() => {
             if (msgDiv) {
                 const bubble = msgDiv.querySelector('.chat-bubble');
                 if (bubble) {
                     bubble.style.padding = ''; // 원래 패딩 복구
-                    bubble.innerHTML = html;
+                    this.typeWriterHTML(html, bubble, 25); // 25ms 간격으로 타이핑
                 }
-                this.scrollToBottom();
             }
-        }, 800);
+        }, 600);
+    },
+
+    typeWriterHTML(html, targetElement, speed, onComplete) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        targetElement.innerHTML = '';
+        
+        const typeNode = (node, parentTarget, callback) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent;
+                let i = 0;
+                
+                // 공백/줄바꿈만 있는 텍스트 노드는 타이핑 딜레이 없이 즉시 출력
+                if (text.trim() === '') {
+                    parentTarget.appendChild(document.createTextNode(text));
+                    callback();
+                    return;
+                }
+
+                const typeChar = () => {
+                    if (i < text.length) {
+                        parentTarget.appendChild(document.createTextNode(text.charAt(i)));
+                        i++;
+                        if (i % 4 === 0) ChatWizard.scrollToBottom(); // 부하 방지를 위해 4글자마다 스크롤
+                        setTimeout(typeChar, speed);
+                    } else {
+                        callback();
+                    }
+                };
+                typeChar();
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const clone = node.cloneNode(false);
+                parentTarget.appendChild(clone);
+                
+                const children = Array.from(node.childNodes);
+                let childIdx = 0;
+                const processNextChild = () => {
+                    if (childIdx < children.length) {
+                        typeNode(children[childIdx], clone, () => {
+                            childIdx++;
+                            processNextChild();
+                        });
+                    } else {
+                        callback();
+                    }
+                };
+                processNextChild();
+            } else {
+                callback();
+            }
+        };
+
+        const rootChildren = Array.from(tempDiv.childNodes);
+        let rootIdx = 0;
+        const processRootChild = () => {
+            if (rootIdx < rootChildren.length) {
+                typeNode(rootChildren[rootIdx], targetElement, () => {
+                    rootIdx++;
+                    processRootChild();
+                });
+            } else {
+                ChatWizard.scrollToBottom();
+                if (onComplete) onComplete();
+            }
+        };
+        processRootChild();
     },
 
     appendUserMsg(text) {
