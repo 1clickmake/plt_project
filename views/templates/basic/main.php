@@ -148,38 +148,39 @@ include_header($title, $siteConfig ?? []);
             <div class="row align-items-center gy-5">
                 <div class="col-lg-6">
                     <div class="d-inline-flex align-items-center gap-2 rounded-pill px-3 py-1 fs-7 fw-bold mb-3" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
-                        <i class="fa-solid fa-shield-halved"></i> B2B 단가표 유출 원천 차단 시스템
+                        <i class="fa-solid fa-shield-halved"></i> 파렛트랙 단가표, 다른 사람 못 보게 막는 시스템
                     </div>
                     
                     <h1 class="mt-3 fw-bold tracking-tight text-light" style="font-size: clamp(30px, 4.5vw, 42px); line-height: 1.3; letter-spacing: -1px;">
-                        사장님의 포스트, 빔 원가...<br>
-                        <span class="text-brand-orange">아직도 카톡으로 돌리십니까?</span>
+                        포스트, 빔 단가...<br>
+                        <span class="text-brand-orange">아직도 카톡으로 보내십니까?</span>
                     </h1>
                     
-                    <h2 class="fw-bold mt-3 mb-4" style="color: #94a3b8; font-size: clamp(18px, 2vw, 22px);">
-                        퇴사자 폰에 남은 엑셀 하나가, 수주율 30%를 깎아먹습니다.
+                    <h2 class="fw-bold mt-3 mb-4" style="color: #94a3b8; font-size: clamp(18px, 2vw, 22px); line-height: 1.5;">
+                        퇴사한 직원 폰에 엑셀 파일 그대로 남습니다.<br>
+                        그 파일이 경쟁사로 넘어갑니다.
                     </h2>
                     
                     <div class="mt-4 fs-6 text-light lh-lg bg-white bg-opacity-10 p-4 rounded-3 border border-white border-opacity-20" style="max-width: 540px;">
-                        <p class="mb-2"><i class="fa-solid fa-lock text-brand-orange me-2"></i><strong>직원이 마진율 함부로 못 바꾸게, 대표님 5분 승인 후에만 잠깁니다.</strong></p>
-                        <p class="mb-0"><i class="fa-solid fa-fingerprint text-brand-orange me-2"></i>견적서마다 보이지 않는 지문을 심어, 유출되면 0.1초 만에 잡습니다.</p>
+                        <p class="mb-2"><i class="fa-solid fa-lock text-brand-orange me-2"></i><strong>직원이 단가 마음대로 못 바꿉니다. 대표님이 확인하고 승인해야 바뀝니다.</strong></p>
+                        <p class="mb-0"><i class="fa-solid fa-eye text-brand-orange me-2"></i>견적서를 누가, 언제, 어디서 봤는지 전부 기록됩니다.</p>
                     </div>
                     
                     <div class="mt-5 d-flex flex-wrap gap-3 align-items-center">
                         <a href="#pricing" class="btn-pill btn-orange shadow-lg fs-6 px-4 py-3 text-center" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                            5분 승인 잠금 시스템, 내 회사에 적용하기 <i class="fa-solid fa-arrow-right ms-1"></i>
+                            단가표 안전하게 보관하는 방법 보기 <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
                     </div>
                     
                     <div class="mt-4 d-flex align-items-center gap-4 fs-8 text-light">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fa-solid fa-check text-success"></i>
-                            <span class="text-light opacity-75">견적서 지문 추적</span>
+                            <span class="text-light opacity-75">누가 봤는지 기록됨</span>
                         </div>
                         <div style="width:1px; height:12px; background: rgba(255,255,255,0.3);"></div>
                         <div class="d-flex align-items-center gap-2">
                             <i class="fa-solid fa-check text-success"></i>
-                            <span class="text-light opacity-75">마진율 5분 승인</span>
+                            <span class="text-light opacity-75">대표님 승인 필수</span>
                         </div>
                     </div>
                 </div>
