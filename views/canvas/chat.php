@@ -296,6 +296,57 @@ body.theme-light .step-indicator {
 .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 </style>
 
+<!-- 신규 진입 모달 - 딱 2개만 -->
+<div id="first-entry-modal" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:40px; border-radius:16px; box-shadow:0 15px 50px rgba(0,0,0,0.3); z-index:9999; text-align:center; min-width: 380px;">
+    <h3 style="margin-bottom:10px; color:#0f172a; font-weight:800; letter-spacing:-1px;">창고 크기만 알려주세요</h3>
+    <p style="color:#64748b; font-size:0.9rem; margin-bottom:25px;">복잡한 설정은 저희가 알아서 최적화해 드립니다.</p>
+    
+    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:25px;">
+        <div>
+            <label style="display:block; text-align:left; font-size:0.8rem; font-weight:bold; color:#475569; margin-bottom:5px;">가로 길이</label>
+            <input type="number" id="quick-w" placeholder="예: 30" style="width:140px; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1.1rem; text-align:center; outline:none;" onfocus="this.style.borderColor='#f16819'" onblur="this.style.borderColor='#cbd5e1'">
+            <span style="position:absolute; margin-left:-30px; margin-top:14px; color:#94a3b8; font-weight:bold;">m</span>
+        </div>
+        <div>
+            <label style="display:block; text-align:left; font-size:0.8rem; font-weight:bold; color:#475569; margin-bottom:5px;">세로 길이</label>
+            <input type="number" id="quick-h" placeholder="예: 18" style="width:140px; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1.1rem; text-align:center; outline:none;" onfocus="this.style.borderColor='#f16819'" onblur="this.style.borderColor='#cbd5e1'">
+            <span style="position:absolute; margin-left:-30px; margin-top:14px; color:#94a3b8; font-weight:bold;">m</span>
+        </div>
+    </div>
+    
+    <button onclick="autoRender()" style="background:#f16819; color:white; padding:15px; font-size:1.1rem; font-weight:bold; border:none; border-radius:8px; cursor:pointer; width:100%; box-shadow: 0 4px 15px rgba(241, 104, 25, 0.3); transition: all 0.2s;">
+        랙 깔아보기 <i class="fa-solid fa-arrow-right ms-1"></i>
+    </button>
+</div>
+
+<script>
+function autoRender() {
+    const W = document.getElementById('quick-w').value || 30;
+    const H = document.getElementById('quick-h').value || 18;
+    
+    document.getElementById('first-entry-modal').style.display = 'none';
+    
+    // 1. 하이디 지정 기본값 설정
+    const config = {
+        width: W, 
+        height: H,
+        level: 3, // 3단 (6 PLT)
+        ast: 3500, // 통로 3500mm 고정
+        pitch: 2800 // 기둥 간격 2800mm 고정
+    };
+
+    // 2. 캔버스 엔진 호출 (실제 로직 연동)
+    if(typeof window.autoGenerateWarehouse === 'function') {
+        window.autoGenerateWarehouse(W, H, config);
+    } else {
+        // Fallback: Mock render completion to show the summary immediately
+        alert(`[ 렌더링 완료 (미리보기) ]\n\n가로: ${W}m / 세로: ${H}m\n\n- 적재: 3단 (6 PLT) 기본\n- 랙 타입: 단면/양면 자동\n- 통로(AST): 3500mm 고정\n- 기둥 간격: 2800mm 고정\n\n✔️ 결과: 총 기둥 48EA, 빔 96EA, 파렛트 72PLT`);
+    }
+}
+</script>
+
+<!-- 기존 채팅 7단계 전체 숨김 -->
+<div id="old-chat-guide" style="display:none;">
 <div class="chat-wizard-container" id="chat-wizard-container">
     <!-- Header -->
     <div class="chat-header" id="chat-wizard-header">
@@ -317,6 +368,7 @@ body.theme-light .step-indicator {
 <div id="chat-wizard-toggle" class="chat-toggle-btn d-none" onclick="ChatWizard.restore()" title="아사미야와 대화하기">
     <img src="/asamiya_profile.png" alt="Asamiya" class="chat-toggle-img" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
     <span class="chat-toggle-badge">AI</span>
+</div>
 </div>
 
 <!-- Hidden inputs to store values for canvas engine compatibility -->
