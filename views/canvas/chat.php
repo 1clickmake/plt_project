@@ -329,46 +329,166 @@ body.theme-light .step-indicator {
 </div>
 
 <script>
+// 직사각형 창고 실시간 렌더링 & 랙 자동배치 실행 함수
 function autoRender() {
-    const W = document.getElementById('quick-w').value || 30;
-    const H = document.getElementById('quick-h').value || 18;
+    const W = parseFloat(document.getElementById('quick-w').value) || 30;
+    const H = parseFloat(document.getElementById('quick-h').value) || 18;
     
-    document.getElementById('first-entry-modal').style.display = 'none';
+    // 1. 모달 닫기
+    const entryModal = document.getElementById('first-entry-modal');
+    if (entryModal) entryModal.style.display = 'none';
     
-    // 1. 하이디 지정 기본값 설정
-    const config = {
-        width: W, 
-        height: H,
-        level: 3, // 3단 (6 PLT)
-        ast: 3500, // 통로 3500mm 고정
-        pitch: 2800 // 기둥 간격 2800mm 고정
+    // 2. 가이드 텍스트 숨기고 캔버스 표시
+    const guideEl = document.getElementById('canvas-guide');
+    if (guideEl) guideEl.style.display = 'none';
+    const canvasEl = document.getElementById('drawingCanvas');
+    if (canvasEl) canvasEl.style.display = 'block';
+
+    const wMm = Math.round(W * 1000);
+    const hMm = Math.round(H * 1000);
+
+    // 3. 뷰포트 크기 기반으로 이상적인 축척(Scale) 계산
+    const parent = canvasEl ? canvasEl.parentElement : null;
+    const viewW = parent ? parent.clientWidth : 1200;
+    const viewH = parent ? parent.clientHeight : 700;
+
+    const availW = Math.max(400, viewW - 480); // 우측 아사미야 채팅창 공간 480px 확보
+    const availH = Math.max(300, viewH - 180); // 상하단 여백 확보
+    const scale = Math.min(availW / wMm, availH / hMm, 0.035);
+
+    const startX = 80;
+    const startY = 70;
+    const pxW = wMm * scale;
+    const pxH = hMm * scale;
+
+    const rectPoints = [
+        { x: startX, y: startY },
+        { x: startX + pxW, y: startY },
+        { x: startX + pxW, y: startY + pxH },
+        { x: startX, y: startY + pxH },
+        { x: startX, y: startY }
+    ];
+
+    const rawData = {
+        points: rectPoints,
+        edgeLengths: [wMm, hMm, wMm, hMm],
+        edge_lengths_str: `${wMm},${hMm},${wMm},${hMm}`,
+        currentScale: scale,
+        pallet_w: 1100,
+        pallet_d: 1100,
+        pallet_h: 1000,
+        pallet_weight: 1000,
+        rack_levels: 3,
+        rack_height: 4500,
+        obstacles: [],
+        racks: []
     };
 
-    // 2. 캔버스 엔진 호출 (실제 로직 연동)
-    if(typeof window.autoGenerateWarehouse === 'function') {
-        window.autoGenerateWarehouse(W, H, config);
+    // 4. 캔버스 엔진에 직사각형 창고 복원 및 렌더링
+    if (typeof window.restoreCanvasData === 'function') {
+        window.restoreCanvasData(rawData);
     } else {
-        // Fallback: Mock render completion to show the summary immediately
-        alert(`[ 렌더링 완료 (미리보기) ]\n\n가로: ${W}m / 세로: ${H}m\n\n- 적재: 3단 (6 PLT) 기본\n- 랙 타입: 단면/양면 자동\n- 통로(AST): 3500mm 고정\n- 기둥 간격: 2800mm 고정\n\n✔️ 결과: 총 기둥 48EA, 빔 96EA, 파렛트 72PLT\n\n💡 팁: 창고가 직사각형이 아니신가요? 캔버스 모서리를 드래그해서 모양을 자유롭게 변경해보세요!`);
+        if (typeof points !== 'undefined') {
+            points.length = 0;
+            points.push(...rectPoints);
+        }
+        if (typeof edgeLengths !== 'undefined') {
+            edgeLengths.length = 0;
+            edgeLengths.push(wMm, hMm, wMm, hMm);
+        }
+        if (typeof window.currentScale !== 'undefined') {
+            window.currentScale = scale;
+        }
+    }
+
+    // 5. 숨겨진 폼 값 동기화 (기본 추천 제원: 3단, 1100x1100 파렛트, 2585 로드빔, 1000 랙깊이, AST 3500)
+    if (document.getElementById('pallet-w')) document.getElementById('pallet-w').value = 1100;
+    if (document.getElementById('pallet-d')) document.getElementById('pallet-d').value = 1100;
+    if (document.getElementById('pallet-h')) document.getElementById('pallet-h').value = 1000;
+    if (document.getElementById('pallet-weight')) document.getElementById('pallet-weight').value = 1000;
+    if (document.getElementById('rack-levels')) document.getElementById('rack-levels').value = 3;
+    if (document.getElementById('rack-beam-length')) document.getElementById('rack-beam-length').value = 2585;
+    if (document.getElementById('rack-depth')) document.getElementById('rack-depth').value = 1000;
+    if (document.getElementById('forklift-ast')) document.getElementById('forklift-ast').value = 3500;
+
+    // 6. 벽면 길이 입력 폼 생성
+    if (typeof window.generateCustomInputs === 'function') {
+        window.generateCustomInputs(4, true);
+    }
+
+    // 7. 랙 자동 배치 스폰 (초기 랙 생성)
+    if (typeof window.spawnInitialRacks === 'function') {
+        window.spawnInitialRacks();
+    } else if (typeof draw === 'function') {
+        draw();
+    }
+
+    // 8. 리모컨 패널 활성화
+    const remoteCtrl = document.getElementById('canvas-remote-ctrl');
+    if (remoteCtrl) remoteCtrl.classList.remove('d-none');
+    const remoteQuoteBtn = document.getElementById('remote-quote-btn');
+    if (remoteQuoteBtn) remoteQuoteBtn.classList.remove('d-none');
+
+    // 9. 상단 뱃지 통계 갱신
+    if (typeof updateRackFormCounts === 'function') {
+        updateRackFormCounts();
+    }
+
+    // 10. 아사미야 채팅창 복구 및 안내 메시지 출력!
+    const oldGuide = document.getElementById('old-chat-guide');
+    if (oldGuide) oldGuide.style.display = 'block';
+
+    if (typeof ChatWizard !== 'undefined') {
+        ChatWizard.currentStep = 7;
+        if (ChatWizard.body) {
+            ChatWizard.body.innerHTML = '';
+            ChatWizard.appendBotMsg(`
+                🎉 <b>${W}m × ${H}m 창고에 3단 랙 배치가 완료되었습니다! 💕</b><br><br>
+                <span class="small">
+                • <b>적재 사양:</b> 3단 (6 PLT 적재)<br>
+                • <b>통로(AST):</b> 3,500mm 지게차 안전 통로 확보<br>
+                • <b>기둥 간격:</b> 2,800mm (2585mm 로드빔 기성품)<br><br>
+                💡 <b>조작 안내:</b><br>
+                • <b>마우스 휠</b>을 굴리면 도면을 확대/축소할 수 있어요.<br>
+                • 랙을 클릭하여 원하는 위치로 자유롭게 이동하세요.<br>
+                • 우측 상단 <b>리모컨</b>으로 랙 회전, 연장, 복사가 가능해요.<br>
+                • 창고 모서리 점을 드래그하면 모양을 바꿀 수 있어요!
+                </span>
+                <div class="mt-3">
+                    <button onclick="if(typeof openQuoteRequestModal==='function') openQuoteRequestModal(); else alert('견적 요청 창을 엽니다');" class="chat-btn w-100 fw-bold shadow-sm" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.95rem; padding: 10px 14px; border-radius: 20px;">💾 도면 저장 및 견적 요청</button>
+                </div>
+            `, true);
+        }
     }
 }
 
 // 5% 비정형(오각형, 마름모, L자형) 창고 직접 그리기 모드 전환
 function openIrregularWizard() {
     const entryModal = document.getElementById('first-entry-modal');
-    const oldGuide = document.getElementById('old-chat-guide');
     if (entryModal) entryModal.style.display = 'none';
+    
+    const oldGuide = document.getElementById('old-chat-guide');
     if (oldGuide) oldGuide.style.display = 'block';
     
+    const guideEl = document.getElementById('canvas-guide');
+    if (guideEl) guideEl.style.display = 'block';
+    
     if (typeof ChatWizard !== 'undefined') {
-        if (typeof ChatWizard.restore === 'function') {
-            ChatWizard.restore();
-        }
-        if (typeof ChatWizard.init === 'function') {
-            ChatWizard.init();
-        }
+        ChatWizard.currentStep = 1;
+        if (ChatWizard.body) ChatWizard.body.innerHTML = '';
+        ChatWizard.startStep1();
     }
 }
+
+// 저장된 도면 복원 데이터가 있으면 신규 모달 건너뛰기
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.RAW_RESTORE_DATA !== 'undefined' && window.RAW_RESTORE_DATA) {
+        const modal = document.getElementById('first-entry-modal');
+        if (modal) modal.style.display = 'none';
+        const oldGuide = document.getElementById('old-chat-guide');
+        if (oldGuide) oldGuide.style.display = 'block';
+    }
+});
 </script>
 
 <!-- 기존 채팅 7단계 전체 숨김 -->
