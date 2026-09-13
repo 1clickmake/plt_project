@@ -336,6 +336,27 @@ class VendorController extends BaseController {
         $stmtSuppliers->execute(['vuid' => $userId]);
         $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
 
+        // If no suppliers exist, auto-create default '세화 (기본)'
+        if (empty($suppliers)) {
+            // Check if user already has an existing pricing excel in vendor_settings
+            $stmtSet = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :vuid");
+            $stmtSet->execute(['vuid' => $userId]);
+            $existExcel = $stmtSet->fetchColumn();
+
+            $initStatus = !empty($existExcel) ? 'excel' : 'none';
+            $initExcelName = !empty($existExcel) ? basename($existExcel) : null;
+
+            $stmtIns = $db->prepare("INSERT INTO suppliers (vendor_user_id, name, color, status, factory_name, excel_file) VALUES (:vuid, '세화 (기본)', '#fde047', :st, '세화스틸랙 본사/공장', :ef)");
+            $stmtIns->execute([
+                'vuid' => $userId,
+                'st' => $initStatus,
+                'ef' => $initExcelName
+            ]);
+            
+            $stmtSuppliers->execute(['vuid' => $userId]);
+            $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
         // Fetch manual pricing for each supplier
         $manualPrices = [];
         if ($suppliers) {
