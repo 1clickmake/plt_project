@@ -365,8 +365,8 @@ include_header($title, $siteConfig ?? []);
                 <!-- Plan 2: 금고 플랜 - 실제 운영용 (Featured) -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box pricing-card-pro h-100 bg-white p-4 p-xl-5 border d-flex flex-column justify-content-between position-relative shadow-lg" style="transition-delay: 100ms;">
-                        <div class="position-absolute top-0 start-50 translate-middle badge bg-brand-orange rounded-pill px-4 py-2 fs-8 fw-bold shadow">
-                            ⭐ 파렛트랙 사장님 95%가 선택한 플랜
+                        <div class="position-absolute top-0 start-50 translate-middle badge bg-brand-orange rounded-pill px-4 py-2 fs-8 fw-bold shadow text-nowrap" style="max-width: 90%;">
+                            ⭐ 사장님 95% 선택
                         </div>
 
                         <div>
