@@ -20,6 +20,10 @@ $displayBrand = $companyNameSidebar ?: 'SETTING';
             <i class="fa-solid fa-users"></i>
             <span>직원 관리</span>
         </a>
+        <a href="/vendor/audit_logs" class="menu-item <?= (strpos($currentUri, '/vendor/audit_logs') === 0) ? 'active' : '' ?>">
+            <i class="fa-solid fa-shield-halved text-warning"></i>
+            <span>단가 유출 보안 추적</span>
+        </a>
         <a href="/vendor/profiles" class="menu-item <?= (strpos($currentUri, '/vendor/profiles') === 0) ? 'active' : '' ?>">
             <i class="fa-solid fa-people-arrows"></i>
             <span>프로필 전환</span>

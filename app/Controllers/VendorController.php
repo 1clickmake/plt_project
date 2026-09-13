@@ -1563,5 +1563,92 @@ class VendorController extends BaseController {
             'user' => $_SESSION['user']
         ]);
     }
+
+    /**
+     * 🛡️ B2B 보안 무기: 단가 유출 추적 감사 로그 (3초 컷 검색 UI)
+     */
+    public function auditLogs() {
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            $this->redirect('/login');
+            return;
+        }
+
+        $db = Database::getInstance();
+        
+        // 검색 필터 파라미터
+        $searchUser = trim($_GET['user_id'] ?? '');
+        $searchAction = trim($_GET['action'] ?? '');
+        $searchIp = trim($_GET['ip_address'] ?? '');
+        $dateFrom = trim($_GET['date_from'] ?? '');
+        $dateTo = trim($_GET['date_to'] ?? '');
+        $page = max(1, intval($_GET['page'] ?? 1));
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
+
+        $where = ["1=1"];
+        $params = [];
+
+        if ($searchUser !== '') {
+            $where[] = "(user_id LIKE :u1 OR details LIKE :u2)";
+            $params['u1'] = "%{$searchUser}%";
+            $params['u2'] = "%{$searchUser}%";
+        }
+        if ($searchAction !== '') {
+            $where[] = "action = :act";
+            $params['act'] = $searchAction;
+        }
+        if ($searchIp !== '') {
+            $where[] = "ip_address LIKE :ip";
+            $params['ip'] = "%{$searchIp}%";
+        }
+        if ($dateFrom !== '') {
+            $where[] = "created_at >= :df";
+            $params['df'] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo !== '') {
+            $where[] = "created_at <= :dt";
+            $params['dt'] = $dateTo . ' 23:59:59';
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        // 총 카운트
+        $countStmt = $db->prepare("SELECT COUNT(*) FROM price_access_logs WHERE {$whereSql}");
+        $countStmt->execute($params);
+        $totalCount = intval($countStmt->fetchColumn());
+        $totalPages = max(1, ceil($totalCount / $limit));
+
+        // 목록 조회 (복합 인덱스 활용)
+        $listStmt = $db->prepare("
+            SELECT * FROM price_access_logs 
+            WHERE {$whereSql} 
+            ORDER BY id DESC 
+            LIMIT {$limit} OFFSET {$offset}
+        ");
+        $listStmt->execute($params);
+        $logs = $listStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // 요약 통계
+        $todayCount = $db->query("SELECT COUNT(*) FROM price_access_logs WHERE DATE(created_at) = CURDATE()")->fetchColumn();
+        $topUser = $db->query("SELECT user_id, COUNT(*) as cnt FROM price_access_logs GROUP BY user_id ORDER BY cnt DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        $recentLeakRisk = $db->query("SELECT COUNT(*) FROM price_access_logs WHERE created_at >= NOW() - INTERVAL 1 HOUR")->fetchColumn();
+
+        $this->view('vendor/audit_logs', [
+            'user' => $_SESSION['user'],
+            'logs' => $logs,
+            'totalCount' => $totalCount,
+            'totalPages' => $totalPages,
+            'currentPage' => $page,
+            'searchUser' => $searchUser,
+            'searchAction' => $searchAction,
+            'searchIp' => $searchIp,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'todayCount' => $todayCount,
+            'topUser' => $topUser,
+            'recentLeakRisk' => $recentLeakRisk
+        ]);
+    }
 }
+
 

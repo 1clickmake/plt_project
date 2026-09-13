@@ -1037,5 +1037,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
         }
     });
     </script>
+    <!-- 🛡️ B2B Stealth Security Watermark Overlay -->
+    <?php include __DIR__ . '/watermark.php'; ?>
 </body>
 </html>

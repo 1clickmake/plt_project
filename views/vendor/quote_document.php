@@ -579,6 +579,45 @@ $region = trim(($addrParts[0] ?? '') . ' ' . ($addrParts[1] ?? ''));
 
   <div class="footer-bar"><?= strtoupper(htmlspecialchars($settings['company_name'] ?? '')) ?></div>
 
+<?php
+// 🛡️ B2B 법적 증거력 확보용 감사 토큰 (HMAC-SHA256 디지털 검증 지문)
+$audit_user_id = $user['username'] ?? ($_SESSION['user_id'] ?? 'USER_GUEST');
+$audit_emp_name = !empty($_SESSION['employee_name']) ? $_SESSION['employee_name'] : ($user['username'] ?? '미지정');
+$audit_time_full = date('Y-m-d H:i:s');
+$audit_time_ymd = date('Y-m-d');
+$audit_ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+$quote_id_str = strval($quote['id'] ?? '0');
+
+// 위변조 불가 고유 검증 해시
+$audit_raw_token = hash_hmac('sha256', $quote_id_str . '|' . $audit_user_id . '|' . $audit_time_ymd, 'ASAMIYA_FORENSIC_SALT_2026');
+$audit_token = strtoupper(substr($audit_raw_token, 0, 4) . '-' . substr($audit_raw_token, 4, 4) . '-' . substr($audit_raw_token, 8, 4));
+?>
+  <!-- 🛡️ B2B 법적 증거력 감사 푸터 (Screen, Print & PDF Forensic Footer) -->
+  <div class="legal-audit-footer" style="
+      margin-top: 8px;
+      padding: 5px 10px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 10.5px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  ">
+      <div>
+          <span style="font-weight: 700; color: #334155;"><i class="fa-solid fa-shield-halved" style="color:#10b981;"></i> 보안인증문서</span>
+          <span style="margin: 0 5px; color: #cbd5e1;">|</span>
+          <span>열람/발행: <b><?= htmlspecialchars($audit_emp_name) ?></b> (<?= htmlspecialchars($audit_user_id) ?>)</span>
+          <span style="margin: 0 5px; color: #cbd5e1;">|</span>
+          <span>IP: <?= htmlspecialchars($audit_ip) ?></span>
+      </div>
+      <div>
+          <span>일시: <?= $audit_time_full ?></span>
+          <span style="margin: 0 5px; color: #cbd5e1;">|</span>
+          <span style="font-weight: bold; color: #0284c7; letter-spacing: 0.5px;">감사토큰: #<?= $audit_token ?></span>
+      </div>
+  </div>
+
 </div></div></div></div></div></main>
 
 
@@ -1202,5 +1241,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+    <!-- 🛡️ B2B Stealth Security Watermark Overlay -->
+    <?php include __DIR__ . '/watermark.php'; ?>
 </body>
 </html>

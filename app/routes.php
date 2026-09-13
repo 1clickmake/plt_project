@@ -141,6 +141,7 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/vendor/employees/update', ['App\Controllers\VendorEmployeeController', 'update']);
     $r->addRoute('POST', '/vendor/employees/delete', ['App\Controllers\VendorEmployeeController', 'delete']);
     $r->addRoute(['GET', 'POST'], '/vendor/settings', ['App\Controllers\VendorController', 'settings']);
+    $r->addRoute('GET',  '/vendor/audit_logs', ['App\Controllers\VendorController', 'auditLogs']);
     $r->addRoute(['GET', 'POST'], '/vendor/pricing', ['App\Controllers\VendorController', 'pricing']);
     $r->addRoute('POST', '/vendor/pricing/supplier/add', ['App\Controllers\VendorController', 'addSupplier']);
     $r->addRoute('POST', '/vendor/addSupplier', ['App\Controllers\VendorController', 'addSupplier']);

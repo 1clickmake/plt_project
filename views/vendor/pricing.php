@@ -454,6 +454,8 @@ $pageTitle = "다공급사 단가표 관리 v2";
             }
         }
     </script>
+    <!-- 🛡️ B2B Stealth Security Watermark Overlay -->
+    <?php include __DIR__ . '/watermark.php'; ?>
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
