@@ -371,7 +371,7 @@ include_header($title, $siteConfig ?? []);
 
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-3 mt-2">
-                                <span class="badge bg-brand-orange bg-opacity-10 text-brand-orange rounded-pill px-3 py-1 fs-8 fw-bold">금고 플랜 - 실제 운영용</span>
+                                <span class="badge badge-soft-orange rounded-pill px-3 py-1 fs-8 fw-bold">금고 플랜 - 실제 운영용</span>
                                 <span class="badge bg-success bg-opacity-10 text-success fs-8">무제한 보안 지원</span>
                             </div>
                             <div class="d-flex align-items-baseline gap-2 mb-1">
