@@ -200,8 +200,30 @@ function isDoubleRow() {
 }
 
 function getLogicalPos(e, forceRaw = false) {
-    const rawX = e.offsetX / cameraZoom;
-    const rawY = e.offsetY / cameraZoom;
+    let rawX, rawY;
+    
+    // 터치(Touch) 이벤트 지원: clientX/clientY를 캔버스 기준 좌표로 변환
+    if (e && (e.touches || e.changedTouches)) {
+        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : (e.changedTouches && e.changedTouches[0]);
+        if (touch && canvas) {
+            const rect = canvas.getBoundingClientRect();
+            rawX = (touch.clientX - rect.left) / cameraZoom;
+            rawY = (touch.clientY - rect.top) / cameraZoom;
+        } else {
+            rawX = (e.offsetX || 0) / cameraZoom;
+            rawY = (e.offsetY || 0) / cameraZoom;
+        }
+    } else if (e && e.offsetX !== undefined && e.offsetY !== undefined) {
+        rawX = e.offsetX / cameraZoom;
+        rawY = e.offsetY / cameraZoom;
+    } else if (e && e.clientX !== undefined && e.clientY !== undefined && canvas) {
+        const rect = canvas.getBoundingClientRect();
+        rawX = (e.clientX - rect.left) / cameraZoom;
+        rawY = (e.clientY - rect.top) / cameraZoom;
+    } else {
+        rawX = 0;
+        rawY = 0;
+    }
     
     // 도면 작성 모드가 아니거나, 랙/장애물 이동 중이거나, Shift키를 누른 경우 픽셀 정밀도로 부드럽게 추적
     if (forceRaw || !isDrawingMode || isMovingRack || (typeof isExtendingRack !== 'undefined' && isExtendingRack) || (e && e.shiftKey)) {
@@ -216,6 +238,13 @@ function getLogicalPos(e, forceRaw = false) {
         };
     }
     return { x: rawX, y: rawY };
+}
+
+// 터치 및 마우스 반응성 강화를 위한 동적 터치/클릭 판정 반경 계산 (줌아웃/모바일 환경에서도 손쉬운 조작 보장)
+function getInteractiveHitRadius(baseRadius = 15) {
+    const isTouchDevice = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const minR = isTouchDevice ? 24 : 16;
+    return Math.max(minR, (baseRadius * 1.5) / (cameraZoom || 1));
 }
 
 // 스냅 가이드 토글 함수
@@ -294,10 +323,10 @@ function applyZoom(oldZoom = null, mousePoint = null) {
     }
 }
 
-// 전역 줌 컨트롤 (최대 25배 확대 지원 - 초대형 100m+ 창고 대응)
+// 전역 줌 컨트롤 (성능 최적화: 과도한 GPU 렌더링 랙 방지를 위해 최대 5.0배로 제한)
 window.zoomIn = function (mouseEvt = null) {
     const oldZoom = cameraZoom;
-    cameraZoom = Math.min(cameraZoom * 1.25, 25.0);
+    cameraZoom = Math.min(cameraZoom * 1.25, 5.0);
     applyZoom(oldZoom, mouseEvt);
 };
 
@@ -380,7 +409,21 @@ window.clearEdgeLengths = function () {
 };
 
 window.updateEdgeLength = function (index, value) {
-    const valInt = parseInt(value) || 0;
+    let valInt = parseInt(value) || 0;
+
+    // 30m(30,000mm) 소형 창고 초과 감지 및 안내
+    if (valInt > 30000) {
+        valInt = 30000;
+        const inputEl = document.getElementById(`edge-input-${index}`);
+        if (inputEl) inputEl.value = 30000;
+        if (typeof showCustomToast === 'function') {
+            showCustomToast('⚠️ 웹 도면 그리기는 최대 30m(30,000mm) 창고까지 최적화되어 있습니다. 30m 초과 대형 물류창고는 현장 방문 실측 상담을 권장합니다.');
+        } else if (typeof alert === 'function' && !window.__suppressLimitAlert) {
+            window.__suppressLimitAlert = true;
+            setTimeout(() => { window.__suppressLimitAlert = false; }, 3000);
+            alert('⚠️ 웹 자동 설계는 최대 30m(30,000mm) 창고까지 지원됩니다.\n30,000mm로 자동 조정되며, 초과 창고는 현장 실측 상담을 이용해주세요.');
+        }
+    }
 
     // 수동 입력 이력 배열에서 기존 인덱스 제거
     const idx = userEnteredEdges.indexOf(index);
@@ -827,8 +870,9 @@ canvas.addEventListener('mousedown', (e) => {
             if (typeof getRackHandlesPos === 'function') {
                 const handles = getRackHandlesPos(r);
                 if (handles) {
+                    const hitRadius = (typeof getInteractiveHitRadius === 'function') ? getInteractiveHitRadius(15) : 15;
                     // 1) 회전 핸들 (10도 회전 - 리모컨 모드에 맞게 작동하며 Shift 클릭 시 방향 전환)
-                    if (handles.rotate && Math.hypot(handles.rotate.x - clickX, handles.rotate.y - clickY) <= 15) {
+                    if (handles.rotate && Math.hypot(handles.rotate.x - clickX, handles.rotate.y - clickY) <= hitRadius) {
                         let step = (window.activeInteractMode === 'rotate-ccw') ? -10 : 10;
                         if (e.shiftKey) {
                             step = -step; // Shift 누르면 방향 반전
@@ -845,7 +889,7 @@ canvas.addEventListener('mousedown', (e) => {
                     }
 
                     // 2) 연장/축소 핸들
-                    if (handles.extend && Math.hypot(handles.extend.x - clickX, handles.extend.y - clickY) <= 15) {
+                    if (handles.extend && Math.hypot(handles.extend.x - clickX, handles.extend.y - clickY) <= hitRadius) {
                         isExtendingRack = true;
                         extendingRackIndex = i;
                         r.smallConnected = 0;
@@ -858,7 +902,7 @@ canvas.addEventListener('mousedown', (e) => {
                     }
 
                     // 3) 복사 핸들 (드래그 복제)
-                    if (handles.copy && Math.hypot(handles.copy.x - clickX, handles.copy.y - clickY) <= 15) {
+                    if (handles.copy && Math.hypot(handles.copy.x - clickX, handles.copy.y - clickY) <= hitRadius) {
                         isMovingRack = true;
                         currentRackPreview = JSON.parse(JSON.stringify(r));
                         // 복제된 랙은 angle도 포함해야함
@@ -873,7 +917,8 @@ canvas.addEventListener('mousedown', (e) => {
             } else {
                 // fallback to original circle handle logic
                 const tail = getRackTailPos(r);
-                if (Math.hypot(tail.x - clickX, tail.y - clickY) <= 20) {
+                const hitRadius = (typeof getInteractiveHitRadius === 'function') ? getInteractiveHitRadius(20) : 20;
+                if (Math.hypot(tail.x - clickX, tail.y - clickY) <= hitRadius) {
                     isExtendingRack = true;
                     extendingRackIndex = i;
                     r.smallConnected = 0;
@@ -1202,6 +1247,52 @@ canvas.addEventListener('mouseup', (e) => {
         draw();
     }
 });
+
+// ==================== 모바일 터치(Touch) 지원 및 반응성 최적화 ====================
+if (canvas) {
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const mouseEvt = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+                cancelable: true
+            });
+            if (isDrawingMode || isMovingRack || (typeof isExtendingRack !== 'undefined' && isExtendingRack) || currentScale > 0) {
+                e.preventDefault();
+            }
+            canvas.dispatchEvent(mouseEvt);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const mouseEvt = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+                cancelable: true
+            });
+            if (isMovingRack || (typeof isExtendingRack !== 'undefined' && isExtendingRack) || isDrawingMode) {
+                e.preventDefault();
+            }
+            canvas.dispatchEvent(mouseEvt);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        const mouseEvt = new MouseEvent('mouseup', {
+            bubbles: true,
+            cancelable: true
+        });
+        if (isMovingRack || (typeof isExtendingRack !== 'undefined' && isExtendingRack)) {
+            e.preventDefault();
+        }
+        canvas.dispatchEvent(mouseEvt);
+    }, { passive: false });
+}
 
 function checkAndMergeRack(movingRack) {
     const movingAngle = getRackAngle(movingRack);

@@ -28,7 +28,7 @@ class CanvasController extends BaseController {
             // Ignore if table doesn't exist or other DB errors occur during visit logging
         }
 
-        $this->view('canvas/index', ['vendor' => $vendor]);
+        $this->view('canvas/cad', ['vendor' => $vendor]);
     }
 
     public function showEasyCanvas($vars) {
@@ -76,7 +76,7 @@ class CanvasController extends BaseController {
             // Ignore
         }
 
-        $this->view('canvas/board', ['vendor' => $vendor]);
+        $this->view('canvas/index', ['vendor' => $vendor]);
     }
 
     public function showVideoManual($vars) {

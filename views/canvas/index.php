@@ -8,9 +8,8 @@ $isLightTheme = in_array($theme, ['light', 'white']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>파렛트랙 자동 견적 시스템 - B2B SaaS</title>
+    <title><?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>게시판 문의 - 파렛트랙 자동 견적 시스템</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -18,38 +17,16 @@ $isLightTheme = in_array($theme, ['light', 'white']);
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #f8fafc;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 1rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .step-badge {
-            background: rgba(56, 189, 248, 0.2);
-            color: #38bdf8;
-            font-weight: 800;
-            padding: 0.3rem 0.6rem;
-            border-radius: 0.5rem;
-            margin-right: 0.5rem;
-        }
-        .shape-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #94a3b8;
-            transition: all 0.2s ease;
-        }
-        .shape-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-        .shape-btn.active {
-            background: rgba(56, 189, 248, 0.2);
-            border-color: #38bdf8;
-            color: #38bdf8;
         }
         .btn-primary-gradient {
             background: linear-gradient(to right, #0ea5e9, #3b82f6);
@@ -59,1160 +36,312 @@ $isLightTheme = in_array($theme, ['light', 'white']);
             transition: all 0.3s ease;
         }
         .btn-primary-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.4);
+            background: linear-gradient(to right, #0284c7, #2563eb);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+            transform: translateY(-1px);
         }
-        .canvas-container {
-            background: #0f172a;
-            border: 1px dashed #334155;
+        .form-control, .form-select {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #f8fafc !important;
             border-radius: 0.5rem;
-            min-height: 500px;
-            position: relative;
-            overflow: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        #drawingCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: crosshair;
+        .form-control:focus, .form-select:focus {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25) !important;
         }
-        .drag-item {
-            cursor: grab;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 0.3rem;
-            padding: 0.5rem;
-            display: inline-block;
-            margin-right: 0.5rem;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-        }
-        .drag-item:active {
-            cursor: grabbing;
-        }
-        .shape-diagram {
-            background: rgba(0,0,0,0.2);
+        .attachment-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 0.5rem;
-            padding: 1rem;
-            text-align: center;
-        }
-        .shape-diagram svg {
-            max-width: 100%;
-            height: 120px;
-        }
-        .shape-diagram text {
-            fill: #38bdf8;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .shape-diagram path, .shape-diagram rect, .shape-diagram polygon {
-            stroke: #94a3b8;
-            stroke-width: 3;
-            fill: rgba(56, 189, 248, 0.1);
-        }
-        .file-drop-zone {
-            border: 2px dashed rgba(56, 189, 248, 0.4);
-            border-radius: 0.75rem;
-            padding: 1.2rem;
-            text-align: center;
-            cursor: pointer;
+            padding: 0.6rem;
             transition: all 0.2s ease;
-            background: rgba(56, 189, 248, 0.03);
         }
-        .file-drop-zone:hover, .file-drop-zone.dragover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.1);
-        }
-        #file-preview-area {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
+        .attachment-item:hover {
+            border-color: rgba(56, 189, 248, 0.3);
         }
         .file-preview-thumb {
             position: relative;
-            width: 70px;
-            height: 70px;
-            border-radius: 0.5rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 0.4rem;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.2);
-            background: #1e293b;
+            background: rgba(15, 23, 42, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: #94a3b8;
+            flex-shrink: 0;
         }
         .file-preview-thumb img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .file-preview-thumb .del-btn {
+        .del-btn {
             position: absolute;
-            top: 2px;
-            right: 2px;
-            background: rgba(239,68,68,0.85);
-            color: white;
-            border: none;
-            border-radius: 50%;
+            top: 4px;
+            right: 4px;
             width: 16px;
             height: 16px;
-            font-size: 10px;
-            line-height: 16px;
-            cursor: pointer;
-            padding: 0;
-            text-align: center;
-        }
-        .section-required-note { font-size: 0.72rem; color: #94a3b8; font-weight: 400; }
-        .required-star { color: #f87171; font-size: 0.7rem; margin-left: 3px; }
-        .quote-submit-btn {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border: none;
+            background: transparent;
             color: white;
-            font-weight: 700;
-            transition: all 0.3s ease;
-        }
-        .quote-submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
-            color: white;
-        }
-
-        /* ☀️ 화이트 모드 (Theme Light) 스타일 오버라이드 */
-        html[data-bs-theme="light"] body,
-        body.theme-light {
-            background: #f1f5f9 !important;
-            color: #1e293b !important;
-        }
-        body.theme-light .glass-panel {
-            background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
-        }
-        body.theme-light .canvas-container {
-            background: #ffffff !important;
-            border: 1px dashed #cbd5e1 !important;
-        }
-        body.theme-light .text-light,
-        body.theme-light .text-white {
-            color: #0f172a !important;
-        }
-        body.theme-light .text-secondary,
-        body.theme-light .text-muted {
-            color: #64748b !important;
-        }
-        body.theme-light .border-secondary {
-            border-color: #e2e8f0 !important;
-        }
-        body.theme-light .form-control,
-        body.theme-light .form-select {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #cbd5e1 !important;
-        }
-        body.theme-light .form-control:focus,
-        body.theme-light .form-select:focus {
-            border-color: #0ea5e9 !important;
-            box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.15) !important;
-        }
-        body.theme-light .form-control::placeholder {
-            color: #94a3b8 !important;
-        }
-        body.theme-light .drag-item {
-            background: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #1e293b !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-        }
-        body.theme-light .shape-diagram {
-            background: #f8fafc !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-        body.theme-light .shape-btn {
-            background: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #475569 !important;
-        }
-        body.theme-light .shape-btn:hover {
-            background: #e2e8f0 !important;
-            color: #0f172a !important;
-        }
-        body.theme-light .file-drop-zone {
-            background: rgba(14, 165, 233, 0.04) !important;
-            border-color: rgba(14, 165, 233, 0.4) !important;
-        }
-        body.theme-light .file-preview-thumb {
-            background: #f8fafc !important;
-            border-color: #cbd5e1 !important;
-            color: #64748b !important;
-        }
-        body.theme-light #canvas-summary-badge {
-            background: #ffffff !important;
-            border-color: #bae6fd !important;
-            color: #1e293b !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
-        }
-        /* 🎮 리모컨 패널: 화이트 모드에서도 시크하고 묵직한 프리미엄 다크 스타일 유지 */
-        body.theme-light #canvas-remote-ctrl > div {
-            background: linear-gradient(160deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
-            border: 1px solid rgba(56, 189, 248, 0.4) !important;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-        }
-        body.theme-light #remote-header {
-            color: #38bdf8 !important;
-        }
-        body.theme-light #canvas-remote-ctrl div[style*="EDIT MODE"] {
-            color: rgba(148, 163, 184, 0.8) !important;
-        }
-        body.theme-light #canvas-remote-ctrl button[onclick*="panCanvas"] {
-            background: rgba(51, 65, 85, 0.75) !important;
-            color: #94a3b8 !important;
-            border: none !important;
-        }
-        body.theme-light #canvas-remote-ctrl button[onclick*="zoomIn"],
-        body.theme-light #canvas-remote-ctrl button[onclick*="zoomOut"] {
-            background: rgba(56, 189, 248, 0.13) !important;
-            color: #38bdf8 !important;
-        }
-        body.theme-light #canvas-remote-ctrl button[onclick*="resetZoom"] {
-            background: rgba(99, 102, 241, 0.18) !important;
-            color: #a5b4fc !important;
-        }
-        body.theme-light #canvas-remote-ctrl div[style*="width:36px"] {
-            background: rgba(22, 33, 52, 0.8) !important;
-            border-color: rgba(56, 189, 248, 0.12) !important;
-        }
-        body.theme-light #canvas-remote-ctrl div[style*="height:1px"] {
-            background: rgba(56, 189, 248, 0.18) !important;
-        }
-        body.theme-light .modal-content {
-            background: #ffffff !important;
-            color: #1e293b !important;
-            border: 1px solid #cbd5e1 !important;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
-        }
-        body.theme-light .modal-content .text-white {
-            color: #1e293b !important;
-        }
-        body.theme-light .modal-content .text-bg-dark {
-            background: #ffffff !important;
-            color: #1e293b !important;
-        }
-        body.theme-light .offcanvas {
-            background: #ffffff !important;
-            color: #1e293b !important;
-            border-left-color: #e2e8f0 !important;
-        }
-        body.theme-light .offcanvas .text-white {
-            color: #0f172a !important;
-        }
-        body.theme-light .offcanvas .btn-close,
-        body.theme-light .modal .btn-close {
-            filter: none !important;
-        }
-
-        /* 📱 아이프레임(iframe) 임베드 시 컴팩트 레이아웃 */
-        body.is-embed {
-            height: 100vh;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        body.is-embed .container-fluid {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-            padding-left: 10px !important;
-        }
-
-        /* 📑 엑셀 스타일 각진 사선 탭 바 (마진 0, 각진 폴리곤 디자인) */
-        .floor-tab-bar {
-            background: rgba(15, 23, 42, 0.98);
-            border-bottom: 2px solid #0284c7;
-            padding: 6px 12px 0 12px;
             display: flex;
-            align-items: flex-end;
-            gap: 0;
-            overflow-x: auto;
-            white-space: nowrap;
-            scrollbar-width: thin;
-            z-index: 10;
-            user-select: none;
-        }
-        .excel-tab-group {
-            position: relative;
-            display: inline-flex;
-            align-items: stretch;
-            height: 32px;
-            margin: 0;
-            margin-left: -12px; /* 사선 폭만큼 자연스럽게 맞물림 (마진 없음) */
-            z-index: 1;
-            cursor: pointer;
-            filter: drop-shadow(0 -1px 2px rgba(0,0,0,0.35));
-            transition: all 0.15s ease;
-        }
-        .excel-tab-group:first-child {
-            margin-left: 0;
-        }
-        .excel-tab-group.active {
-            height: 35px;
-            z-index: 5;
-        }
-        .excel-tab-shape {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            background: #334155; /* 외곽선 색상 */
-            clip-path: polygon(14px 0%, 100% 0%, 100% 100%, 0% 100%);
-            padding: 1px 1px 0 1px;
-            height: 100%;
-        }
-        .excel-tab-group.active .excel-tab-shape {
-            background: #38bdf8; /* 활성 탭 외곽선 강조 */
-        }
-        .excel-tab-inner {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            height: 100%;
-            padding: 0 12px 0 20px;
-            background: #1e293b;
-            clip-path: polygon(13px 0%, 100% 0%, 100% 100%, 0% 100%);
-            color: #94a3b8;
-            font-size: 0.82rem;
-            font-weight: 700;
-            white-space: nowrap;
-            border-radius: 0 !important;
-            transition: background 0.15s ease, color 0.15s ease;
-        }
-        .excel-tab-group.active .excel-tab-inner {
-            background: #0284c7;
-            color: #ffffff;
-        }
-        .excel-tab-group:not(.active):hover .excel-tab-inner {
-            background: #243247;
-            color: #e2e8f0;
-        }
-        .excel-tab-badge {
-            background: rgba(0, 0, 0, 0.45);
-            color: #fde047;
-            font-size: 0.68rem;
-            font-weight: 700;
-            padding: 1px 5px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 0 !important;
-        }
-        .excel-tab-btn-icon {
-            display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: transparent;
-            border: none;
-            color: inherit;
-            opacity: 0.7;
-            padding: 2px 4px;
+            font-size: 0.9rem;
             cursor: pointer;
-            font-size: 0.75rem;
-            border-radius: 0 !important;
-            transition: opacity 0.1s ease, background 0.1s ease;
+            z-index: 10;
+            filter: drop-shadow(0 0 3px rgba(0,0,0,0.9));
+            transition: transform 0.2s, color 0.2s;
         }
-        .excel-tab-btn-icon:hover {
-            opacity: 1;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .excel-tab-btn-del:hover {
-            background: rgba(239, 68, 68, 0.3) !important;
-            color: #fca5a5 !important;
-        }
-        /* 층/창고 추가 버튼: 엑셀 새 시트 버튼처럼 각지고 마진 없이 연결 */
-        .excel-tab-add-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            height: 30px;
-            margin-left: 8px;
-            margin-bottom: 2px;
-            padding: 0 12px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-bottom: 2px solid #0284c7;
-            color: #38bdf8;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            border-radius: 0 !important;
-            transition: all 0.15s ease;
-            white-space: nowrap;
-        }
-        .excel-tab-add-btn:hover {
-            background: #0284c7;
-            border-color: #38bdf8;
-            color: #ffffff;
-        }
-        /* 각진 전체 층 요약 배지 */
-        .excel-tab-summary {
-            background: #1e293b;
-            color: #fde047;
-            border: 1px solid #475569;
-            border-bottom: 2px solid #eab308;
-            border-radius: 0 !important;
-            padding: 3px 8px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            margin-bottom: 2px;
-            white-space: nowrap;
-        }
-
-        /* 라이트 모드 지원 */
-        body.theme-light .floor-tab-bar {
-            background: #e2e8f0 !important;
-            border-bottom-color: #0284c7 !important;
-        }
-        body.theme-light .excel-tab-shape {
-            background: #cbd5e1 !important;
-        }
-        body.theme-light .excel-tab-group.active .excel-tab-shape {
-            background: #0284c7 !important;
-        }
-        body.theme-light .excel-tab-inner {
-            background: #ffffff !important;
-            color: #475569 !important;
-        }
-        body.theme-light .excel-tab-group:not(.active):hover .excel-tab-inner {
-            background: #f1f5f9 !important;
-            color: #0f172a !important;
-        }
-        body.theme-light .excel-tab-group.active .excel-tab-inner {
-            background: #0284c7 !important;
-            color: #ffffff !important;
-        }
-        body.theme-light .excel-tab-badge {
-            background: rgba(0, 0, 0, 0.1) !important;
-            color: #0369a1 !important;
-            border-color: rgba(0, 0, 0, 0.1) !important;
-        }
-        body.theme-light .excel-tab-add-btn {
-            background: #ffffff !important;
-            border-color: #cbd5e1 !important;
-            border-bottom-color: #0284c7 !important;
-            color: #0284c7 !important;
-        }
-        body.theme-light .excel-tab-add-btn:hover {
-            background: #0284c7 !important;
-            color: #ffffff !important;
-        }
-        body.theme-light .excel-tab-summary {
-            background: #ffffff !important;
-            color: #854d0e !important;
-            border-color: #cbd5e1 !important;
-            border-bottom-color: #ca8a04 !important;
+        .del-btn:hover {
+            transform: scale(1.2);
+            color: #ef4444;
         }
     </style>
 </head>
-<body class="<?= $isLightTheme ? 'theme-light' : '' ?> <?= $isEmbed ? 'is-embed' : '' ?>">
-<script>
-window.vendorUserId = <?= json_encode($vendor['url_slug'] ?? 0) ?>;
-window.CANVAS_THEME = <?= json_encode($isLightTheme ? 'light' : 'dark') ?>;
-window.IS_EMBED = <?= json_encode($isEmbed) ?>;
-</script>
-<div class="container-fluid pt-3 px-4 d-flex flex-column h-100">
-    <?php if (!$isEmbed): ?>
-    <div class="text-center mb-3 flex-shrink-0 position-relative">
-        <h2 class="fw-bold" style="background: -webkit-linear-gradient(#38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-           <?= htmlspecialchars($vendor['company_name']) ?> - 스마트 창고 배치 견적
-        </h2>
-        <p class="text-muted small m-0">복잡한 창고 형태도 드래그 앤 드롭으로 5분 만에 완성! <?php if(!empty($vendor['contact_number'])) echo " (문의: " . htmlspecialchars($vendor['contact_number']) . ")"; ?></p>
-        
+<body class="<?= $isLightTheme ? 'theme-light' : '' ?> p-3 p-md-4">
+<div class="container-xl py-2">
+
+    <!-- 상단 헤더 & 모드 전환 네비게이션 -->
+    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-secondary flex-wrap gap-3">
+        <div>
+            <h4 class="fw-bold m-0" style="background: -webkit-linear-gradient(#38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                <?= !empty($vendor['company_name']) ? htmlspecialchars($vendor['company_name']) . ' - ' : '' ?>창고 견적 문의
+            </h4>
+            <p class="text-muted small m-0 mt-1">도면 작성이 번거로우신가요? 글과 파일만 남겨주시면 전문가가 도면 및 맞춤 견적서를 제작해 드립니다.</p>
+        </div>
+
+        <!-- 모드 전환 버튼 제거 및 간소화 -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad?tutorial=1" class="btn btn-sm btn-outline-info">🎮 AI 도면 리모콘 사용법</a>
+        </div>
     </div>
-    <?php endif; ?>
 
-    <div class="row g-4 flex-grow-1" style="min-height: 0;">
-        <!-- 캔버스 및 시각화 -->
-        <div class="col-12 h-100">
-            <div class="glass-panel p-4 h-100 d-flex flex-column">
-                <!-- 상단 배지 바 (한 줄 컴팩트) -->
-                <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
-                    <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
-                        <h5 class="fw-semibold text-info m-0 me-1">실시간 2D 배치 도면</h5>
-                        <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
-                            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">2585×1000×4500 (2S 3단)</span>
-                            <span class="text-secondary">|</span>
-                            <span>독립 <strong id="top-badge-indep" class="text-primary">0</strong>대</span>
-                            <span class="text-secondary">|</span>
-                            <span>연결 <strong id="top-badge-conn" class="text-primary">0</strong>대</span>
-                            <span id="top-badge-small-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-info">작은연결 <strong id="top-badge-small-conn" class="text-info">0</strong>대</span></span>
-                            <span id="top-badge-bypass-wrap" class="d-none"><span class="text-secondary">|</span> <span class="text-danger">연결 <strong id="top-badge-bypass" class="text-danger">0</strong>대 (바이패스)</span></span>
-                            <span class="text-secondary">|</span>
-                            <span class="text-warning">🔗 <strong id="top-badge-holders" class="text-warning">0</strong>홀더</span>
-                            <span class="text-secondary">|</span>
-                            <span class="text-success">📦 <strong id="top-badge-pallets" class="text-success">0</strong> PLT</span>
+    <!-- 메인 문의 작성 카드 (투트랙 하이브리드) -->
+    <div class="row">
+        <!-- 좌측: 간편 게시판 폼 (col-lg-8) -->
+        <div class="col-lg-8 mb-4">
+            <div class="glass-panel p-4 p-md-5 h-100">
+                
+                <div class="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-secondary">
+                    <span class="fs-4">📋</span>
+                    <h5 class="fw-bold m-0 text-info">고객 맞춤 견적 문의 작성</h5>
+                    <span class="badge bg-primary-subtle text-info border border-info ms-auto">게시판 모드</span>
+                </div>
+
+                <form id="boardInquiryForm" onsubmit="event.preventDefault(); submitBoardInquiry();">
+                    
+                    <!-- 1. 기본 인적사항 -->
+                    <h6 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-user-tie text-info"></i> 기본 연락처 정보 <span class="text-danger small">(★ 필수)</span>
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">회사명 / 상호 <span class="text-danger">★</span></label>
+                            <input type="text" class="form-control" id="board-company" placeholder="예: (주)파로퀘스트 로지스" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">담당자 성함 <span class="text-danger">★</span></label>
+                            <input type="text" class="form-control" id="board-name" placeholder="예: 홍길동 팀장" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">연락처 (카카오톡 알림 수신) <span class="text-danger">★</span></label>
+                            <input type="tel" class="form-control" id="board-phone" placeholder="예: 010-1234-5678" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">이메일 주소 (견적서 수신용) <span class="text-danger">★</span></label>
+                            <input type="email" class="form-control" id="board-email" placeholder="example@company.com" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-1">시공 현장 주소 <span class="text-danger">★</span></label>
+                            <input type="text" class="form-control" id="board-address" placeholder="예: 경기도 평택시 포승읍 평택항로 123" required>
                         </div>
                     </div>
-                    <div class="flex-shrink-0 d-flex align-items-center gap-2 flex-wrap">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-primary-gradient px-3 fw-bold">📐 스마트 캔버스 배치</a>
-                            <!-- <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a> -->
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-outline-info px-3">📝 게시판 문의</a>
+
+                    <!-- 2. 설치 및 자재 옵션 -->
+                    <h6 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked text-warning"></i> 견적 희망 옵션
+                    </h6>
+                    <div class="row g-3 mb-4 p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-2 d-block">자재 상태 선택</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="board_condition" id="b_cond_new" value="new" checked>
+                                <label class="form-check-label text-light small" for="b_cond_new">신규 자재</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="board_condition" id="b_cond_used" value="used">
+                                <label class="form-check-label text-light small" for="b_cond_used">중고 자재</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="board_condition" id="b_cond_both" value="both">
+                                <label class="form-check-label text-light small" for="b_cond_both">모두(비교 견적)</label>
+                            </div>
                         </div>
-                        <button type="button" onclick="startRemoteControlTutorial()" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</button>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="board-self-install" value="1">
+                                <label class="form-check-label text-light small" for="board-self-install">
+                                    직접 설치 (시공 인건비 제외, 자재만 납품받기)
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- 📑 멀티 플로어(층/창고별) 탭 바 영역 -->
-                <div class="floor-tab-bar" id="floor-tabs-container">
-                    <!-- JS renderFloorTabs()에 의해 동적 렌더링됨 -->
-                </div>
-
-                <!-- 캔버스 영역 (리모컨 패널 포함, position:relative) -->
-                <div class="canvas-container flex-grow-1 position-relative" id="canvas-wrapper" style="overflow: auto; scrollbar-width: thin; min-height: 0;">
-
-
-                    <!-- 기본 가이드 텍스트 -->
-                    <div class="text-center text-secondary" id="canvas-guide">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">✏️</div>
-                        <p>좌측 치수를 기반으로<br>창고 평면도가 여기에 실시간으로 그려집니다.</p>
+                    <!-- 3. 문의 내용 -->
+                    <h6 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-success"></i> 문의 상세 내용
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-1">문의 제목 <span class="text-danger">★</span></label>
+                            <input type="text" class="form-control" id="board-title" placeholder="예: [창고 100평] 3단 파렛트랙 설치 견적 및 배치 문의드립니다." required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-1">상세 요청사항</label>
+                            <textarea class="form-control" id="board-content" rows="4" placeholder="창고 크기, 보관할 화물의 규격(파렛트 크기 및 무게), 지게차 보유 유무 등 알려주실 수 있는 모든 정보를 자유롭게 남겨주세요."></textarea>
+                        </div>
                     </div>
-                    <!-- 커스텀 드로잉용 캔버스 (평소엔 숨김) -->
-                    <canvas id="drawingCanvas" width="800" height="600" style="display:none;"></canvas>
 
-                    <!-- 🎮 TV 리모컨 스타일 플로팅 컨트롤 패널 (fixed: 캔버스 바깥 우측 상단 고정) -->
+                    <!-- 4. 다중 첨부파일 (멀티 업로드) -->
+                    <div class="mb-4">
+                        <label class="form-label text-white fw-bold small mb-2 d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-paperclip text-info"></i> 도면 및 현장 사진 첨부
+                        </label>
+                        <p class="text-muted small mb-2" style="font-size: 0.78rem;">
+                            💡 창고 건축도면(CAD, PDF), 손그림 스케치, 현장 사진 등을 한 번에 여러 장 선택하여 첨부하실 수 있습니다.
+                        </p>
+                        
+                        <div class="attachment-item">
+                            <input type="file" id="board-file-input" class="form-control form-control-sm extra-file-input" accept="image/*,.pdf,.xls,.xlsx,.zip" multiple>
+                        </div>
+                        <!-- 미리보기 영역 -->
+                        <div id="file-preview-area" class="d-flex flex-wrap gap-2 mt-3"></div>
+                    </div>
+
+                    <!-- 제출 버튼 -->
+                    <div class="pt-3 border-top border-secondary text-center">
+                        <button type="submit" id="boardSubmitBtn" class="btn btn-primary-gradient w-100 py-3 rounded-3 shadow-lg fs-6">
+                            🚀 문의 및 견적 요청 접수하기
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+        <!-- 우측: AI CAD 배너 (col-lg-4) -->
+        <div class="col-lg-4 mb-4">
+            <div class="glass-panel p-4 p-md-5 d-flex flex-column h-100 justify-content-center align-items-center text-center" style="background: rgba(14, 165, 233, 0.03); border-color: rgba(56, 189, 248, 0.2);">
+                <div class="mb-4">
+                    <span style="font-size: 4rem; filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.4));">🤖</span>
                 </div>
+                <h4 class="fw-bold text-white mb-3">AI 도면 직접 그리기</h4>
+                <p class="text-muted small mb-5" style="line-height: 1.6;">
+                    5각형, 기둥 등 특수한 형태의 창고인가요?<br><br>
+                    직접 도면을 그려주시면<br>더욱 정확하고 빠른 자동 견적이 가능합니다.
+                </p>
+                <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="btn btn-outline-info rounded-pill px-4 py-3 fw-bold w-100" style="transition: all 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+                    📐 AI 스마트 도면 체험하기 <i class="fa-solid fa-arrow-right ms-2"></i>
+                </a>
             </div>
         </div>
     </div>
-</div>
 
-<!-- 입력 가이드라인 오프캔버스 -->
-<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="helpOffcanvas" aria-labelledby="helpOffcanvasLabel" style="width: 400px; border-left: 1px solid rgba(255,255,255,0.1);">
-  <div class="offcanvas-header border-bottom border-secondary">
-    <h5 class="offcanvas-title text-info fw-bold" id="helpOffcanvasLabel">📘 스마트 견적 입력 가이드</h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-  </div>
-  <div class="offcanvas-body" style="font-size: 0.95rem;">
-    <p class="text-muted mb-4">각 단계별 입력란에 대한 상세 설명입니다. 헷갈리시는 부분을 확인해주세요!</p>
-
-    <div id="help-step1" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">📍 1단계: 창고 평면도 그리기</h6>
-        <p class="text-secondary mb-0">캔버스에 점을 찍어 창고의 대략적인 형태를 그립니다. 마지막에 처음 찍었던 점 근처를 클릭하면 도형이 닫히며 도면이 완성됩니다.<br>
-        <strong class="text-warning">주의: 반드시 도형을 닫아야 다음 단계를 진행할 수 있습니다!</strong></p>
-    </div>
-
-    <div id="help-step2" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">📏 2단계: 벽면 길이 입력</h6>
-        <p class="text-secondary mb-0">도면이 완성되면 각 벽면의 실제 길이(mm 단위)를 입력하는 칸이 나타납니다. <strong>첫 번째 길이 하나만 정확하게 입력하시면</strong> 나머지 길이들은 그린 도면의 비율에 맞춰 시스템이 똑똑하게 자동으로 채워줍니다! (물론 직접 수정도 가능합니다)</p>
-    </div>
-
-    <div id="help-step3" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">🚧 3단계: 장애물 배치</h6>
-        <p class="text-secondary mb-0">출입문, 기둥 등의 아이콘을 도면 위로 끌어다 놓으세요. <strong class="text-info">출입문과 셔터</strong>는 벽면에 자동으로 스냅(달라붙음)되며, <strong class="text-danger">기둥과 장애물</strong>은 도면 내부 어디든 자유롭게 배치할 수 있습니다. 캔버스에 배치한 후 좌측에서 상세 길이나 크기를 정밀하게 조절할 수 있습니다.</p>
-    </div>
-
-    <div id="help-pallet-direction" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">📦 파랫트 진입 방향 (포크 방향)</h6>
-        <p class="text-secondary mb-0">지게차의 포크(발)가 파랫트의 어느 쪽으로 들어가는지 선택합니다.<br>
-        예를 들어 <strong>1100(W) x 1200(D)</strong> 파랫트일 때, <br>
-        1) <strong>1100면으로 포크가 진입</strong>하면 랙 깊이는 1200쪽을 기준으로 깊게 설계되며,<br>
-        2) <strong>1200면으로 진입</strong>하면 랙 깊이는 1100쪽을 기준으로 설계됩니다.<br>
-        이는 로드빔 길이와 전체 랙 면적 계산에 매우 중요합니다.</p>
-    </div>
-
-    <div id="help-pallet-height" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">📦 적재 높이 (H)</h6>
-        <p class="text-secondary mb-0"><strong class="text-warning">순수 나무/플라스틱 파랫트의 두께 + 그 위에 실제로 쌓인 화물의 높이</strong>를 모두 합친 총 높이입니다.<br>이 높이를 기준으로 단(Level) 사이의 간격(피치)이 결정되며, 리프트업을 위한 필수 여유 공간(클리어런스 100~200mm)은 시스템이 규격에 맞게 <strong>알아서 추가로 계산</strong>해 드립니다.</p>
-    </div>
-
-    <div id="help-forklift" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">🚜 지게차 제원 (AST & 인상높이)</h6>
-        <ul class="text-secondary ps-3 mb-0">
-            <li class="mb-2"><strong>최대 인상높이:</strong> 지게차가 최대로 들어 올릴 수 있는 한계 높이입니다. 창고 층고가 아무리 높아도 이 수치 이상으로는 랙을 높게 설계할 수 없습니다.</li>
-            <li><strong>직각교차 통로폭(AST):</strong> 지게차가 파랫트를 들고 직각으로 회전하여 랙에 적재하기 위해 필요한 <strong>최소 작업 통로 폭</strong>입니다. 사용하시는 지게차 카탈로그에 기재된 AST 값을 입력해주세요. (통상 리치형 2800mm, 카운터발란스형 3300mm~ 이상)</li>
-        </ul>
-    </div>
-
-    <div id="help-rack-specs" class="mb-4 p-3 rounded" style="transition: background-color 1.5s ease;">
-        <h6 class="text-white fw-bold">📋 랙 설치 희망 제원 (단수, 칸수, 높이)</h6>
-        <ul class="text-secondary ps-3 mb-0">
-            <li class="mb-2"><strong>설치 단수 (필수):</strong> 설치하고자 하는 파렛트랙의 층수(적재단수)를 입력합니다. (예: 3단이면 바닥 포함 총 3개 층에 적재)</li>
-            <li class="mb-2"><strong>설치 칸수 (선택):</strong> 설치하고자 하는 가로 칸(Bay) 수를 입력합니다. <strong>만약 입력하지 않고 빈칸으로 두시면</strong>, 지정하신 벽면이나 라인에 물리적으로 들어갈 수 있는 최대 칸수를 자동으로 꽉 채워서 설계해 드립니다.</li>
-            <li><strong>설치 높이 (선택):</strong> 희망하는 랙 기둥(Upright Frame)의 총 높이(mm)입니다. 비워두시면 적재 높이(H)와 단수를 바탕으로 시스템이 가장 이상적인 기둥 높이를 **자동 계산**해 드립니다.</li>
-        </ul>
-    </div>
-  </div>
-</div>
-
-<!-- 견적 요청 모달 -->
-<div class="modal fade" id="quoteRequestModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content text-bg-dark" style="border: 1px solid rgba(56,189,248,0.3); border-radius: 1rem;">
-      <div class="modal-header border-bottom border-secondary">
-        <h5 class="modal-title text-info fw-bold" id="quoteModalLabel">📝 견적 요청 정보 입력</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-4">배치도가 마음에 드시나요? 연락처를 남겨주시면 담당자가 빠르게 안내드리겠습니다! <span class="text-warning">(★ 는 필수 입력사항)</span></p>
-        <div class="row g-3">
-          
-          <!-- 자재 상태 선택 -->
-          <div class="col-12">
-            <label class="form-label text-muted small mb-2 d-block">자재 상태 선택 <span class="text-danger">★</span></label>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="condition_type" id="cond_new" value="new" checked>
-              <label class="form-check-label text-white small" for="cond_new">신규</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="condition_type" id="cond_used" value="used">
-              <label class="form-check-label text-white small" for="cond_used">중고</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="condition_type" id="cond_both" value="both">
-              <label class="form-check-label text-white small" for="cond_both">모두</label>
-            </div>
-          </div>
-
-          <!-- 직접설치 체크박스 -->
-          <div class="col-12">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="modal-self-install" value="1">
-              <label class="form-check-label text-white small" for="modal-self-install">
-                직접 설치 (자재만 납품받기)
-              </label>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label text-muted small mb-1">회사명 <span class="text-danger">★</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-company" placeholder="예: 주식회사 파로퀘스">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label text-muted small mb-1">담당자 이름 <span class="text-danger">★</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-name" placeholder="예: 홍길동">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label text-muted small mb-1">연락처 (카카오톡 수신용) <span class="text-danger">★</span></label>
-            <input type="tel" class="form-control bg-transparent text-white border-secondary" id="modal-phone" placeholder="010-0000-0000">
-          </div>
-          <div class="col-12">
-            <label class="form-label text-muted small mb-1">이메일 (견적서 수신용) <span class="text-danger">★</span></label>
-            <input type="email" class="form-control bg-transparent text-white border-secondary" id="modal-email" placeholder="example@email.com">
-          </div>
-          
-          <div class="col-12">
-            <label class="form-label text-muted small mb-1">시공 현장 주소 <span class="text-danger">★</span> <span class="text-secondary" style="font-size:0.7rem;">(최소 시/군/구 수준)</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-address" placeholder="예: 경기도 성남시 분당구">
-          </div>
-          <div class="col-12">
-            <label class="form-label text-muted small mb-1">상세내용 입력</label>
-            <textarea class="form-control bg-transparent text-white border-secondary" id="modal-details" rows="2" placeholder="추가적인 요청사항이나 현장 특이사항을 적어주세요."></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer border-top border-secondary">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn quote-submit-btn px-4" onclick="submitQuoteRequest()">🚀 견적 요청 제출</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="/assets/js/canvas2d.js?v=<?= time() ?>"></script>
-<script src="/assets/js/canvas-interactions.js?v=<?= time() ?>"></script>
-<script src="/assets/js/tutorial.js?v=<?= time() ?>"></script>
 <script>
+window.vendorUserId = <?= json_encode($vendor['url_slug'] ?? '') ?>;
 
-// --- 도움말 오프캔버스 스크롤 ---
-function scrollToHelp(id) {
-    const el = document.getElementById(id);
-    if (el) {
-        setTimeout(() => {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            el.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-            setTimeout(() => { el.style.backgroundColor = 'transparent'; }, 1500);
-        }, 350);
-    }
-}
+// --- 첨부파일 미리보기 처리 ---
+let selectedFilesList = [];
 
-// --- 파일 업로드 미리보기 ---
-let uploadedFiles = [];
-
-function handleFileSelect(files) {
-    Array.from(files).forEach(file => uploadedFiles.push(file));
-    renderPreviews();
-}
-
-function renderPreviews() {
-    const area = document.getElementById('file-preview-area');
-    if (!area) return;
-    area.innerHTML = '';
-    uploadedFiles.forEach((file, i) => {
-        const thumb = document.createElement('div');
-        thumb.className = 'file-preview-thumb';
-        const delBtn = `<button class="del-btn" onclick="removeFile(${i})">✕</button>`;
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                thumb.innerHTML = `<img src="${e.target.result}" alt="미리보기">${delBtn}`;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            const shortName = file.name.length > 12 ? file.name.substring(0, 10) + '…' : file.name;
-            thumb.innerHTML = `<div style="font-size:1.5rem;">📄</div><div style="padding:2px 4px;text-align:center;word-break:break-all;">${shortName}</div>${delBtn}`;
-        }
-        area.appendChild(thumb);
-    });
-}
-
-function removeFile(index) {
-    uploadedFiles.splice(index, 1);
-    renderPreviews();
-}
-
-// 창고 벽면 길이 입력 검증 헬퍼 함수
-function checkWarehouseLengthsEntered(isSubmitting = false) {
-    if (typeof isPolygonClosed === 'function' && !isPolygonClosed()) {
-        alert('⚠️ 1단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!\n(점을 찍어 다각형 외곽선을 닫아야 합니다)');
-        return false;
-    }
-
-    const inputs = document.querySelectorAll('#chat-inputs-container input[id^="edge-input-"]');
-    if (inputs.length === 0) {
-        alert('⚠️ 1단계와 2단계: 우측 캔버스에 창고 평면도를 먼저 완성해주세요!');
-        return false;
-    }
-
-    for (let i = 0; i < inputs.length; i++) {
-        const val = parseInt(inputs[i].value);
-        if (!val || val <= 0) {
-            alert(`⚠️ 2단계: ${i + 1}번 선분(벽면)의 길이를 입력해주세요!\n모든 벽면의 실제 길이를 입력해야 AI가 정확한 치수로 랙을 배치할 수 있습니다.`);
-            inputs[i].focus();
-            return false;
-        }
-    }
-    return true;
-}
-
-// 드래그앤드롭 파일 업로드 및 AI 요청창 클릭 감지
 document.addEventListener('DOMContentLoaded', () => {
-    const dropZone = document.getElementById('file-drop-zone');
-    if (dropZone) {
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            handleFileSelect(e.dataTransfer.files);
+    const fileInput = document.querySelector('.extra-file-input');
+    const previewArea = document.getElementById('file-preview-area');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const newFiles = Array.from(e.target.files);
+            selectedFilesList = selectedFilesList.concat(newFiles);
+            updateFileInputAndPreview();
         });
     }
+    
+    window.removeFileFromPreview = function(index) {
+        selectedFilesList.splice(index, 1);
+        updateFileInputAndPreview();
+    };
 
-    // AI에게 남길 요청사항 클릭/포커스 시 창고 길이 미입력 체크
-    const aiRequestInput = document.getElementById('ai-request');
-    if (aiRequestInput) {
-        let hasWarnedFocus = false;
-        aiRequestInput.addEventListener('focus', () => {
-            if (!hasWarnedFocus) {
-                if (!checkWarehouseLengthsEntered()) {
-                    hasWarnedFocus = true;
-                    setTimeout(() => { hasWarnedFocus = false; }, 3000);
-                }
+    function updateFileInputAndPreview() {
+        const dt = new DataTransfer();
+        selectedFilesList.forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+        
+        previewArea.innerHTML = '';
+        selectedFilesList.forEach((file, index) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'file-preview-thumb shadow-sm';
+            
+            const delBtn = document.createElement('div');
+            delBtn.className = 'del-btn';
+            delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            delBtn.onclick = () => removeFileFromPreview(index);
+            thumb.appendChild(delBtn);
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const img = document.createElement('img');
+                    img.src = ev.target.result;
+                    img.alt = 'preview';
+                    thumb.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const shortName = file.name.length > 9 ? file.name.substring(0, 7) + '…' : file.name;
+                const docDiv = document.createElement('div');
+                docDiv.innerHTML = `<div style="font-size:1.5rem; margin-bottom:2px; color:#38bdf8; text-align:center;">📄</div><div style="text-align:center;word-break:break-all;line-height:1.1;padding:0 2px;">${shortName}</div>`;
+                thumb.appendChild(docDiv);
             }
-        });
-        aiRequestInput.addEventListener('click', () => {
-            if (!hasWarnedFocus) {
-                if (!checkWarehouseLengthsEntered()) {
-                    hasWarnedFocus = true;
-                    setTimeout(() => { hasWarnedFocus = false; }, 3000);
-                }
-            }
+            previewArea.appendChild(thumb);
         });
     }
 });
 
-// --- 배치 실행 (수동 모드 진입) ---
-function runAutoLayout() {
-    // 1단계 & 2단계: 도면 및 벽면 길이 입력 확인
-    if (!checkWarehouseLengthsEntered(true)) {
-        return;
-    }
-    // 4단계: 필수값 확인
-    const checks = [
-        ['pallet-w',             '파렛트 가로(W)'],
-        ['pallet-d',             '파렛트 세로/깊이(D)'],
-        ['pallet-h',             '적재 높이(H)'],
-        ['pallet-weight',        '총 중량'],
-        ['forklift-lift-height', '최대 인상높이'],
-        ['forklift-ast',         '직각교차 통로폭(AST)'],
-        ['rack-levels',          '설치 단수'],
-    ];
-    for (const [id, label] of checks) {
-        const el = document.getElementById(id);
-        if (!el || !el.value || parseInt(el.value) <= 0) {
-            alert(`⚠️ 4단계 [${label}]를 입력해주세요!`);
-            el?.focus();
-            return;
-        }
-    }
+
+// --- 게시판 문의 폼 제출 함수 ---
+function submitBoardInquiry() {
+    const company = document.getElementById('board-company').value.trim();
+    const name    = document.getElementById('board-name').value.trim();
+    const phone   = document.getElementById('board-phone').value.trim();
+    const email   = document.getElementById('board-email').value.trim();
+    const address = document.getElementById('board-address').value.trim();
+    const title   = document.getElementById('board-title').value.trim();
+    const content = document.getElementById('board-content').value.trim();
+
+    const conditionNode = document.querySelector('input[name="board_condition"]:checked');
+    const conditionType = conditionNode ? conditionNode.value : 'new';
     
-    // 지게차 인상높이 vs 랙 설치높이 검증
-    const palletH = parseInt(document.getElementById('pallet-h')?.value) || 0;
-    const levels = parseInt(document.getElementById('rack-levels')?.value) || 0;
-    const maxLiftH = parseInt(document.getElementById('forklift-lift-height')?.value) || 0;
-    let rackH = parseInt(document.getElementById('rack-height')?.value) || 0;
-    
-    if (rackH <= 0 && palletH > 0 && levels > 0) {
-        const rawH = (palletH * levels) + (levels * 200) + 300;
-        rackH = Math.ceil(rawH / 500) * 500;
-    }
-    
-    if (rackH > maxLiftH) {
-        alert(`⚠️ 계산된 랙 설치 높이(${rackH.toLocaleString()}mm)가 지게차 최대 인상높이(${maxLiftH.toLocaleString()}mm)를 초과합니다!\n단수를 낮추거나 지게차 제원을 확인해주세요.`);
-        document.getElementById('rack-levels')?.focus();
-        return;
-    }
-
-    const btn = document.getElementById('run-layout-btn');
-    if (btn) {
-        btn.innerHTML = '✅ 도면 활성화 완료';
-        btn.classList.remove('btn-primary-gradient');
-        btn.classList.add('btn-success');
-    }
-
-    // 리모컨 패널 자동 표시
-    const remoteCtrl = document.getElementById('canvas-remote-ctrl');
-    if (remoteCtrl) remoteCtrl.classList.remove('d-none');
-    
-    // 리모컨 내 견적 버튼 표시
-    const remoteQuoteBtn = document.getElementById('remote-quote-btn');
-    if (remoteQuoteBtn) remoteQuoteBtn.classList.remove('d-none');
-
-    // 단식 1개, 복식 1개를 중앙에 생성
-    if (typeof window.spawnInitialRacks === 'function') {
-        window.spawnInitialRacks();
-    } else if (typeof draw === 'function') {
-        draw();
-    }
-}
-
-// --- AI 분석 결과 (fixed 위치, 좌측 하단, 전체 내용 스크롤) ---
-function showAiResult(d) {
-    const old = document.getElementById('ai-result-panel');
-    if (old) old.remove();
-
-    const panel = document.createElement('div');
-    panel.id = 'ai-result-panel';
-    // fixed 위치: 화면 우측 하단 고정 (캔버스 스크롤과 무관)
-    panel.style.cssText = [
-        'position:fixed',
-        'bottom:20px',
-        'right:20px',
-        'width:420px',
-        'max-height:65vh',
-        'display:flex',
-        'flex-direction:column',
-        'background:rgba(10,15,30,0.97)',
-        'border:1px solid rgba(56,189,248,0.5)',
-        'border-radius:0.85rem',
-        'padding:0',
-        'font-size:0.85rem',
-        'z-index:9999',
-        'color:#e2e8f0',
-        'line-height:1.6',
-        'box-shadow:0 12px 40px rgba(0,0,0,0.75)',
-        'backdrop-filter:blur(16px)'
-    ].join(';');
-    
-    let text = d.summary || '설치 계획이 정상적으로 수립되었습니다.';
-    
-    // 1. 마크다운 JSON 블록 제거
-    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
-    
-    // 2. JSON 문자열 내 summary 값만 추출
-    if (text.includes('"summary"')) {
-        const match = text.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
-        if (match && match[1]) {
-            text = match[1];
-        } else {
-            text = text.replace(/^\s*\{?\s*"summary"\s*:\s*"?/i, '');
-        }
-    }
-    
-    // 3. 이스케이프된 줄바꿈 → 실제 줄바꿈
-    text = text.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\t/g, ' ');
-    text = text.replace(/\\"/g, '"');
-    
-    // 4. 마크다운 헤더 → 이모지 소제목
-    text = text.replace(/###\s*(.*)/g, '📌 $1');
-    text = text.replace(/##\s*(.*)/g, '📋 $1');
-    text = text.replace(/#\s*(.*)/g,  '📍 $1');
-    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    
-    // 5. 앞뒤 불필요한 따옴표/괄호 제거
-    text = text.replace(/^[\{\s"'\\]+/, '').replace(/[\}\s"'\\]+$/, '').trim();
-    
-    // 정제된 순수 텍스트 리포트를 전역 변수에 임시 저장 (견적요청 제출 시 DB 저장용)
-    window.lastAiSummary = text;
-    
-    // 6. 줄바꿈을 <br>로 변환 (innerHTML 출력용)
-    const htmlText = text.replace(/\n/g, '<br>');
-
-    panel.innerHTML = `
-        <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(56,189,248,0.2);display:flex;justify-content:space-between;align-items:center;background:rgba(56,189,248,0.08);border-top-left-radius:0.85rem;border-top-right-radius:0.85rem;flex-shrink:0;">
-            <div class="text-info fw-bold d-flex align-items-center gap-1" style="font-size:0.86rem;">
-                <span>💡</span>
-                <span>AI 설계 요약 및 시공 리포트</span>
-            </div>
-            <button onclick="document.getElementById('ai-result-panel').remove()" style="background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;padding:0;line-height:1;" title="닫기">✕</button>
-        </div>
-        <div style="padding:12px 14px 14px;overflow-y:auto;flex:1 1 auto;white-space:normal;color:#e2e8f0;word-break:keep-all;line-height:1.7;font-size:0.83rem;">
-            ${htmlText}
-        </div>
-    `;
-    document.body.appendChild(panel);
-}
-
-
-// 배치된 랙 유효성 검사 (겹침, 설치 불가 빨간색 상태 판별)
-function checkAllRacksValid() {
-    let currentRacks = [];
-    if (typeof window.getRacks === 'function') {
-        currentRacks = window.getRacks();
-    } else if (typeof racks !== 'undefined' && Array.isArray(racks)) {
-        currentRacks = racks;
-    } else if (window.racks && Array.isArray(window.racks)) {
-        currentRacks = window.racks;
-    }
-
-    const indep = document.getElementById('top-badge-indep') ? (parseInt(document.getElementById('top-badge-indep').innerText) || 0) : 0;
-    const conn = document.getElementById('top-badge-conn') ? (parseInt(document.getElementById('top-badge-conn').innerText) || 0) : 0;
-    const totalBays = indep + conn;
-
-    // 배열도 비어있고 상단 뱃지 랙 수량도 0일 때만 랙 없음 안내
-    if ((!currentRacks || currentRacks.length === 0) && totalBays === 0) {
-        return {
-            valid: false,
-            message: '⚠️ 도면에 배치된 랙이 없습니다. 먼저 랙을 배치해 주세요!'
-        };
-    }
-
-    let invalidCount = 0;
-    const validator = window.checkRackValidPlacement || (typeof checkRackValidPlacement === 'function' ? checkRackValidPlacement : null);
-
-    if (currentRacks && currentRacks.length > 0) {
-        for (let r of currentRacks) {
-            if (validator) {
-                r.isValid = validator(r);
-            }
-            if (r.isValid === false) {
-                invalidCount++;
-            }
-        }
-    }
-
-    if (invalidCount > 0) {
-        if (typeof draw === 'function') draw(); // 빨간색 하이라이트 화면 즉시 갱신
-        return {
-            valid: false,
-            message: `⚠️ 현재 다른 랙과 겹치거나 설치 불가능한 위치에 있는 랙(빨간색 표시)이 ${invalidCount}대 있습니다!\n\n도면에서 빨간색 테두리로 표시된 랙의 위치나 간격을 안전하게 조정한 후 다시 견적을 요청해 주세요.`
-        };
-    }
-
-    return { valid: true };
-}
-
-// 견적 요청 모달 열기 전 유효성 사전 검사
-function openQuoteRequestModal() {
-    const check = checkAllRacksValid();
-    if (!check.valid) {
-        alert(check.message);
-        return;
-    }
-    const modalEl = document.getElementById('quoteRequestModal');
-    if (modalEl) {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-    }
-}
-
-// --- 견적 요청 모달 제출 ---
-function submitQuoteRequest() {
-    // 랙 유효성 재검사 (겹침 및 설치 불가 랙 제출 차단)
-    const check = checkAllRacksValid();
-    if (!check.valid) {
-        alert(check.message);
-        const submitBtn = document.querySelector('.quote-submit-btn');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '🚀 견적 요청 제출';
-        }
-        return;
-    }
-
-    if (typeof updateRackFormCounts === 'function') {
-        updateRackFormCounts();
-    }
-    const company = document.getElementById('modal-company').value.trim();
-    const name    = document.getElementById('modal-name').value.trim();
-    const phone   = document.getElementById('modal-phone').value.trim();
-    const email   = document.getElementById('modal-email').value.trim();
-    const address = document.getElementById('modal-address').value.trim();
-    const details = document.getElementById('modal-details') ? document.getElementById('modal-details').value.trim() : '';
-
-    const conditionTypeNode = document.querySelector('input[name="condition_type"]:checked');
-    const conditionType = conditionTypeNode ? conditionTypeNode.value : 'new';
-    
-    const selfInstallNode = document.getElementById('modal-self-install');
+    const selfInstallNode = document.getElementById('board-self-install');
     const selfInstall = (selfInstallNode && selfInstallNode.checked) ? 1 : 0;
 
-    if (!company || !name || !phone || !email || !address) {
+    if (!company || !name || !phone || !email || !address || !title) {
         alert('★ 표시된 필수 항목을 모두 입력해주세요.');
         return;
     }
 
-    const submitBtn = document.querySelector('.quote-submit-btn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = '⏳ 제출 중...';
-    }
-
-    const canvas = document.getElementById('drawingCanvas');
-    let imgData = '';
-    if (canvas) {
-        // 화이트모드/다크모드 여부와 관계없이 견적서 저장용 도면 이미지는
-        // 항상 최고 가독성을 자랑하는 CAD 청사진(1번 다크모드 반전 스타일)으로 일관되게 캡처합니다.
-        const prevTheme = window.CANVAS_THEME;
-        const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
-        
-        // 1. 임시로 다크 팔레트로 전환 후 캔버스 그리기
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = 'dark';
-            document.body.classList.remove('theme-light');
-            if (typeof draw === 'function') draw();
-        }
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // 색상 반전: 다크모드 선을 고대비 CAD 도면 스타일(주황/갈색 랙, 또렷한 치수선)로 반전
-        ctx.filter = 'invert(1)';
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none'; // 필터 초기화
-        imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
-
-        // 2. 원래 테마로 즉시 복구
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = prevTheme;
-            document.body.classList.add('theme-light');
-            if (typeof draw === 'function') draw();
-        }
-    }
-
-    let edge_lengths_array = [];
-    const edgeInputs = document.querySelectorAll('#chat-inputs-container input[id^="edge-input-"]');
-    if (edgeInputs.length > 0) {
-        edgeInputs.forEach(input => {
-            edge_lengths_array.push(input.value || 0);
-        });
-    } else if (window.edgeLengths && window.edgeLengths.length > 0) {
-        window.edgeLengths.forEach(len => {
-            edge_lengths_array.push(len);
-        });
-    }
-    const edge_lengths_str = edge_lengths_array.join(', ');
-
-    const pw = document.getElementById('pallet-w') ? document.getElementById('pallet-w').value : '';
-    const pd = document.getElementById('pallet-d') ? document.getElementById('pallet-d').value : '';
-    const ph = document.getElementById('pallet-h') ? document.getElementById('pallet-h').value : '';
-    const pWeight = document.getElementById('pallet-weight') ? document.getElementById('pallet-weight').value : '';
-    
-    let forkDir = 'W';
-    if (document.getElementById('forkD') && document.getElementById('forkD').checked) {
-        forkDir = 'D';
-    }
-
-    let forkliftText = '';
-    const forkliftSelect = document.getElementById('forklift-type');
-    if (forkliftSelect) {
-        forkliftText = forkliftSelect.options[forkliftSelect.selectedIndex].text;
-    }
-    const forkliftLiftHeight = document.getElementById('forklift-lift-height') ? document.getElementById('forklift-lift-height').value : '';
-    const forkliftAst = document.getElementById('forklift-ast') ? document.getElementById('forklift-ast').value : '';
-
-    const levels = document.getElementById('rack-levels') ? document.getElementById('rack-levels').value : '3';
-    let rHeight = document.getElementById('rack-height') ? document.getElementById('rack-height').value : '';
-
-    const spec = document.getElementById('top-badge-spec') ? document.getElementById('top-badge-spec').innerText : '';
-    let rackSpec = '';
-    let rackType = '';
-    if (spec) {
-        const parts = spec.split('(');
-        rackSpec = parts[0].trim();
-        if (parts[1]) {
-            rackType = parts[1].replace(')', '').trim();
-        }
-    }
-    
-    let indep = document.getElementById('top-badge-indep') ? document.getElementById('top-badge-indep').innerText : '0';
-    let conn = document.getElementById('top-badge-conn') ? document.getElementById('top-badge-conn').innerText : '0';
-    let small_conn = document.getElementById('top-badge-small-conn') ? document.getElementById('top-badge-small-conn').innerText : '0';
-    let bypass = document.getElementById('top-badge-bypass') ? document.getElementById('top-badge-bypass').innerText : '0';
-    let holders = document.getElementById('top-badge-holders') ? document.getElementById('top-badge-holders').innerText : '0';
-    let pallets = document.getElementById('top-badge-pallets') ? document.getElementById('top-badge-pallets').innerText : '0';
-
-    // 📑 멀티 플로어(다중 층/창고) 전체 합산 계산
-    let floorsPayload = null;
-    if (typeof window.getCombinedFloorsSummary === 'function') {
-        const grand = window.getCombinedFloorsSummary();
-        if (grand && grand.totalFloors > 1) {
-            indep = String(grand.grandIndep || grand.totalIndep || 0);
-            conn = String(grand.grandConn || grand.totalConn || 0);
-            small_conn = String(grand.grandSmallConn || grand.totalSmallConn || 0);
-            bypass = String(grand.grandBypass || grand.totalBypass || 0);
-            holders = String(grand.grandTieHolders || grand.totalHolders || 0);
-            pallets = String(grand.grandPallets || grand.totalPallets || 0);
-            floorsPayload = grand.floors;
-            const floorSpecs = grand.floors.map(f => f.name + ': ' + (f.spec || '기본')).join(' / ');
-            if (floorSpecs) rackSpec = floorSpecs;
-        }
-    }
-
-    if (!rHeight && spec) {
-        const match = spec.match(/×\s*\d+\s*×\s*(\d+)/);
-        if (match) {
-            rHeight = match[1] + ' (자동 계산)';
-        }
-    } else if (!rHeight) {
-        const p_h = parseInt(ph) || 1000;
-        const l = parseInt(levels) || 3;
-        rHeight = ((p_h + 200) * l) + ' (자동 계산)';
-    } else if (rHeight) {
-        rHeight += ' mm';
-    }
-
-    if (indep === '0' && conn === '0') {
-        alert('⚠️ 6단계 [배치 실행] 버튼을 눌러 도면에 랙을 배치한 후 견적을 제출해주세요!');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '🚀 견적 요청 제출';
-        }
-        return;
-    }
-
-    let rackBypassType = '';
-    if (parseInt(bypass) > 0) {
-        const l = parseInt(levels) || 3;
-        const bpLevels = Math.max(1, l - 1);
-        const spanS = Math.max(1, l - 1);
-        const bpS = Math.max(1, spanS - 1);
-        rackBypassType = bpS + 'S ' + bpLevels + '단';
-    }
+    const submitBtn = document.getElementById('boardSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ 문의 접수 중...';
 
     const payload = {
         vendor_user_id: window.vendorUserId || 0,
@@ -1223,46 +352,23 @@ function submitQuoteRequest() {
         address: address,
         condition_type: conditionType,
         self_install: selfInstall,
-        canvas_data: JSON.stringify({
-            racks: typeof racks !== 'undefined' ? racks : [],
-            points: typeof points !== 'undefined' ? points : [],
-            obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
-            currentScale: typeof currentScale !== 'undefined' ? currentScale : 1,
-            floors: floorsPayload || undefined
-        }),
-        floors_data: floorsPayload ? JSON.stringify(floorsPayload) : '',
-        total_floors: floorsPayload ? floorsPayload.length : 1,
-        summary: details || (window.lastAiSummary || ''),
-        source_mode: 'expert',
-        edge_lengths: edge_lengths_str,
-        pallet_w: pw,
-        pallet_d: pd,
-        pallet_h: ph,
-        pallet_weight: pWeight,
-        fork_direction: forkDir,
-        forklift_type: forkliftText,
-        forklift_lift_height: forkliftLiftHeight,
-        forklift_ast: forkliftAst,
-        rack_levels: levels,
-        rack_height: rHeight,
-        rack_spec: rackSpec,
-        rack_type: rackType,
-        rack_indep: indep,
-        rack_conn: conn,
-        rack_small_conn: small_conn,
-        rack_bypass: bypass,
-        rack_bypass_type: rackBypassType,
-        rack_holders: holders,
-        rack_pallets: pallets,
-        image_data: imgData
+        canvas_data: '',
+        summary: content,
+        source_mode: 'board',
+        rack_indep: 0,
+        rack_conn: 0,
+        image_data: '',
+        title: title,
+        content: content
     };
 
     const formData = new FormData();
     formData.append('json_payload', JSON.stringify(payload));
-    
-    // 첨부된 파일들 추가
-    if (typeof uploadedFiles !== 'undefined' && uploadedFiles.length > 0) {
-        uploadedFiles.forEach(file => {
+
+    // 다중 첨부파일 수집 (멀티 업로드 처리)
+    const fileInput = document.querySelector('.extra-file-input');
+    if (fileInput && fileInput.files) {
+        Array.from(fileInput.files).forEach(file => {
             formData.append('extra_files[]', file);
         });
     }
@@ -1272,692 +378,23 @@ function submitQuoteRequest() {
         body: formData
     })
     .then(res => res.json())
-    .then(res => {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '🚀 견적 요청 제출';
-        }
-        if (res.success) {
-            bootstrap.Modal.getInstance(document.getElementById('quoteRequestModal'))?.hide();
-            // 1. 견적 요청 성공 안내 경고창 먼저 출력
-            alert(`✅ 견적 요청이 성공적으로 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n공급사 담당자가 확인 후 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
-
-            // 2. 확인 누른 후 서비스 경험 남기기(별점 평가) 모달 띄우기
-            if (document.getElementById('reviewModal')) {
-                document.getElementById('review-company').value = company;
-                document.getElementById('review-name').value = name;
-                const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
-                reviewModal.show();
-            }
+    .then(data => {
+        if (data.success) {
+            alert('🎉 고객님의 문의 및 견적 요청이 성공적으로 접수되었습니다!\n담당자가 확인 후 신속히 연락드리겠습니다.');
+            window.location.reload();
         } else {
-            alert('❌ 오류: ' + res.message);
+            alert('❌ 저장 실패: ' + (data.message || '알 수 없는 오류'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '🚀 문의 및 견적 요청 접수하기';
         }
     })
     .catch(err => {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '🚀 견적 요청 제출';
-        }
-        alert('❌ 서버 통신 오류가 발생했습니다: ' + err.message);
-    });
-}
-
-// --- 도면 입력 생성 함수 ---
-window.generateCustomInputs = function(numEdges, keepExisting = false) {
-    const diagramContainer = document.getElementById('diagram-container');
-    const inputsContainer  = document.getElementById('chat-inputs-container');
-
-    if(diagramContainer) {
-        diagramContainer.innerHTML = `<p class="text-success fw-bold py-3 m-0">🎉 총 ${numEdges}각형 도면이 확정되었습니다!</p>`;
-    }
-
-    // 기존 입력된 값이 있다면 날리지 않고 보존
-    const hasExistingLengths = (typeof edgeLengths !== 'undefined' && edgeLengths.some(v => v > 0));
-    if (!keepExisting && !hasExistingLengths && typeof clearEdgeLengths === 'function') {
-        clearEdgeLengths();
-    }
-
-    let html = '';
-    
-    for (let i = 1; i <= numEdges; i++) {
-        const existingVal = (typeof edgeLengths !== 'undefined' && edgeLengths[i-1] > 0) ? edgeLengths[i-1] : '';
-        if (!existingVal && typeof edgeLengths !== 'undefined' && !hasExistingLengths) {
-            edgeLengths[i-1] = 0;
-        }
-
-        html += `
-        <div class="col-6 mb-3">
-            <label class="form-label small mb-1 fw-bold text-secondary">${i}번 선분 (mm)</label>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" id="edge-input-${i-1}" onclick="this.select()" class="form-control form-control-sm bg-white text-dark border-secondary small" value="${existingVal}" placeholder="길이 입력" oninput="this.value=this.value.replace(/[^0-9]/g, ''); updateEdgeLength(${i-1}, this.value)">
-        </div>`;
-    }
-    
-    if(inputsContainer) {
-        inputsContainer.innerHTML = `<div class="row g-2">${html}</div>`;
-    }
-    
-    // 초기 정렬 및 축적 렌더링 강제 트리거
-    if (typeof alignAndScalePolygon === 'function') {
-        alignAndScalePolygon();
-    }
-
-    // ChatWizard 연동
-    if (typeof ChatWizard !== 'undefined') {
-        ChatWizard.step2Html = `<div class="row g-2">${html}</div>`;
-        ChatWizard.onPolygonClosed();
-    }
-};
-
-// --- 전역 인터랙션 모드 제어 ---
-window.activeInteractMode = null; // 기본은 null (이동 모드)
-
-window.setInteractMode = function(mode) {
-    const btnRotate = document.getElementById('mode-btn-rotate');
-    const btnExtend = document.getElementById('mode-btn-extend');
-    const btnCopy = document.getElementById('mode-btn-copy');
-    const btnBypass = document.getElementById('mode-btn-bypass');
-    const btnDelete = document.getElementById('mode-btn-delete');
-    
-    // 이미 활성화된 모드를 다시 클릭 시 모드 해제(null)
-    if (window.activeInteractMode === mode) {
-        window.activeInteractMode = null;
-    } else {
-        window.activeInteractMode = mode;
-    }
-    
-    // 항상 뱃지 정보 즉시 업데이트
-    if (typeof updateRackFormCounts === 'function') {
-        updateRackFormCounts();
-    }
-    
-    // 버튼 스타일 리셋
-    if (btnRotate) {
-        btnRotate.style.background = 'rgba(251,191,36,0.06)';
-        btnRotate.style.color = '#fbbf24';
-    }
-    if (btnExtend) {
-        btnExtend.style.background = 'rgba(56,189,248,0.06)';
-        btnExtend.style.color = '#38bdf8';
-    }
-    if (btnCopy) {
-        btnCopy.style.background = 'rgba(52,211,153,0.06)';
-        btnCopy.style.color = '#34d399';
-    }
-    if (btnBypass) {
-        btnBypass.style.background = 'rgba(244,63,94,0.06)';
-        btnBypass.style.color = '#f43f5e';
-    }
-    if (btnDelete) {
-        btnDelete.style.background = 'rgba(239,68,68,0.06)';
-        btnDelete.style.color = '#ef4444';
-    }
-    const btnLevels = document.getElementById('mode-btn-levels');
-    if (btnLevels) {
-        btnLevels.style.background = 'rgba(168,85,247,0.06)';
-        btnLevels.style.color = '#a855f7';
-    }
-    
-    // 활성화된 모드 버튼 하이라이트
-    if (window.activeInteractMode === 'rotate' && btnRotate) {
-        btnRotate.style.background = '#fbbf24';
-        btnRotate.style.color = '#000';
-    } else if (window.activeInteractMode === 'extend' && btnExtend) {
-        btnExtend.style.background = '#38bdf8';
-        btnExtend.style.color = '#000';
-    } else if (window.activeInteractMode === 'copy' && btnCopy) {
-        btnCopy.style.background = '#34d399';
-        btnCopy.style.color = '#000';
-    } else if (window.activeInteractMode === 'bypass' && btnBypass) {
-        btnBypass.style.background = '#f43f5e';
-        btnBypass.style.color = '#000';
-    } else if (window.activeInteractMode === 'delete' && btnDelete) {
-        btnDelete.style.background = '#ef4444';
-        btnDelete.style.color = '#fff';
-    } else if (window.activeInteractMode === 'levels' && btnLevels) {
-        btnLevels.style.background = '#a855f7';
-        btnLevels.style.color = '#fff';
-    }
-    
-    // 캔버스 즉시 갱신 (핸들 렌더링 변경 반영)
-    if (typeof updateRackFormCounts === 'function') {
-        updateRackFormCounts();
-    }
-    if (typeof draw === 'function') {
-        draw();
-    }
-};
-
-// --- 초기 로딩 ---
-window.addEventListener('DOMContentLoaded', () => {
-    const diagramContainer = document.getElementById('diagram-container');
-    const inputsContainer  = document.getElementById('chat-inputs-container');
-    const canvasGuide      = document.getElementById('canvas-guide');
-    const drawingCanvas    = document.getElementById('drawingCanvas');
-
-    if (diagramContainer) diagramContainer.innerHTML = '<p class="text-info fw-bold py-3 m-0">우측 캔버스에 점을 찍어 창고 모양을 완성해주세요!</p>';
-    if (inputsContainer) inputsContainer.innerHTML = '';
-    if (canvasGuide) canvasGuide.style.display = 'none';
-    if (drawingCanvas) drawingCanvas.style.display = 'block';
-
-    if (typeof startCustomDrawing === 'function') startCustomDrawing();
-});
-</script>
-
-<!-- 🎮 TV 리모컨 컨트롤 패널 (position:fixed - 항상 우측 상단 고정) -->
-<div id="canvas-remote-ctrl" class="d-none" style="position:fixed; bottom:210px; right:100px; z-index:9998; user-select:none;">
-    <div style="
-        background: linear-gradient(160deg, rgba(10,15,28,0.98) 0%, rgba(22,33,52,0.98) 100%);
-        border: 1px solid rgba(56,189,248,0.4);
-        border-radius: 22px;
-        padding: 14px 11px 14px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
-        width: 128px;
-        backdrop-filter: blur(16px);
-    ">
-        <!-- 헤더 -->
-        <div id="remote-header" class="text-center mb-2" style="font-size:0.63rem; color:rgba(148,163,184,0.75); letter-spacing:0.1em; font-weight:700; cursor:grab;">📐 CANVAS</div>
-
-        <!-- 줌 버튼 행 -->
-        <div class="d-flex justify-content-between gap-1 mb-2">
-            <button onclick="zoomIn()" title="줌인" style="
-                flex:1; padding:6px 0; border-radius:8px; border:none;
-                background: rgba(56,189,248,0.13); color:#38bdf8; font-size:1.05rem;
-                cursor:pointer; transition: background 0.15s;
-            " onmouseover="this.style.background='rgba(56,189,248,0.3)'" onmouseout="this.style.background='rgba(56,189,248,0.13)'">＋</button>
-            <button onclick="resetZoom()" title="원위치" style="
-                flex:1; padding:6px 0; border-radius:8px; border:none;
-                background: rgba(99,102,241,0.18); color:#a5b4fc; font-size:0.68rem; font-weight:700;
-                cursor:pointer; transition: background 0.15s;
-            " onmouseover="this.style.background='rgba(99,102,241,0.38)'" onmouseout="this.style.background='rgba(99,102,241,0.18)'">원위치</button>
-            <button onclick="zoomOut()" title="줌아웃" style="
-                flex:1; padding:6px 0; border-radius:8px; border:none;
-                background: rgba(56,189,248,0.13); color:#38bdf8; font-size:1.05rem;
-                cursor:pointer; transition: background 0.15s;
-            " onmouseover="this.style.background='rgba(56,189,248,0.3)'" onmouseout="this.style.background='rgba(56,189,248,0.13)'">－</button>
-        </div>
-
-        <!-- 방향 십자 키패드 -->
-        <div style="display:flex; justify-content:center; margin-bottom:4px;">
-            <button onclick="panCanvas(0,-60)" title="위로" style="
-                width:36px; height:30px; border-radius:7px; border:none;
-                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
-                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▲</button>
-        </div>
-        <div style="display:flex; justify-content:center; gap:4px; margin-bottom:4px;">
-            <button onclick="panCanvas(-60,0)" title="왼쪽" style="
-                width:36px; height:30px; border-radius:7px; border:none;
-                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
-                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">◀</button>
-            <div style="width:36px; height:30px; border-radius:7px; background:rgba(22,33,52,0.8); border:1px solid rgba(56,189,248,0.12);"></div>
-            <button onclick="panCanvas(60,0)" title="오른쪽" style="
-                width:36px; height:30px; border-radius:7px; border:none;
-                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
-                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▶</button>
-        </div>
-        <div style="display:flex; justify-content:center; margin-bottom:10px;">
-            <button onclick="panCanvas(0,60)" title="아래로" style="
-                width:36px; height:30px; border-radius:7px; border:none;
-                background: rgba(51,65,85,0.75); color:#94a3b8; font-size:0.9rem;
-                cursor:pointer; transition: all 0.12s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(56,189,248,0.28)';this.style.color='#38bdf8'" onmouseout="this.style.background='rgba(51,65,85,0.75)';this.style.color='#94a3b8'">▼</button>
-        </div>
-
-        <!-- 구분선 -->
-        <div style="height:1px; background: rgba(56,189,248,0.18); margin: 6px 0 8px;"></div>
-
-        <!-- 🛠️ 편집 모드 선택 패널 -->
-        <div class="text-center mb-1" style="font-size:0.6rem; color:rgba(148,163,184,0.6); letter-spacing:0.05em; font-weight:700;">🛠️ EDIT MODE</div>
-        <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-            <!-- 회전 모드 (Amber) -->
-            <button id="mode-btn-rotate" onclick="setInteractMode('rotate')" style="
-                width:100%; border: 1px solid rgba(251,191,36,0.3); border-radius:8px;
-                background: rgba(251,191,36,0.06); color:#fbbf24; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
-            " onmouseover="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.18)'" onmouseout="if(window.activeInteractMode!=='rotate') this.style.background='rgba(251,191,36,0.06)'">
-                <span>↻</span> <span>회전 모드</span>
-            </button>
-            <!-- 연장 모드 (Sky Blue) -->
-            <button id="mode-btn-extend" onclick="setInteractMode('extend')" style="
-                width:100%; border: 1px solid rgba(56,189,248,0.3); border-radius:8px;
-                background: rgba(56,189,248,0.06); color:#38bdf8; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
-            " onmouseover="if(window.activeInteractMode!=='extend') this.style.background='rgba(56,189,248,0.18)'" onmouseout="if(window.activeInteractMode!=='extend') this.style.background='rgba(56,189,248,0.06)'">
-                <span>⬌</span> <span>연장 편집</span>
-            </button>
-            <!-- 복사 모드 (Emerald) -->
-            <button id="mode-btn-copy" onclick="setInteractMode('copy')" style="
-                width:100%; border: 1px solid rgba(52,211,153,0.3); border-radius:8px;
-                background: rgba(52,211,153,0.06); color:#34d399; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
-            " onmouseover="if(window.activeInteractMode!=='copy') this.style.background='rgba(52,211,153,0.18)'" onmouseout="if(window.activeInteractMode!=='copy') this.style.background='rgba(52,211,153,0.06)'">
-                <span>❐</span> <span>복사 편집</span>
-            </button>
-            <!-- 바이패스 모드 (Rose) - 텍스트만 표시 -->
-            <button id="mode-btn-bypass" onclick="setInteractMode('bypass')" style="
-                width:100%; border: 1px solid rgba(244,63,94,0.3); border-radius:8px;
-                background: rgba(244,63,94,0.06); color:#f43f5e; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.18)'" onmouseout="if(window.activeInteractMode!=='bypass') this.style.background='rgba(244,63,94,0.06)'">
-                <span>Bypass</span>
-            </button>
-            <!-- 삭제 모드 (Red) -->
-            <button id="mode-btn-delete" onclick="setInteractMode('delete')" style="
-                width:100%; border: 1px solid rgba(239,68,68,0.3); border-radius:8px;
-                background: rgba(239,68,68,0.06); color:#ef4444; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;
-            " onmouseover="if(window.activeInteractMode!=='delete') this.style.background='rgba(239,68,68,0.18)'" onmouseout="if(window.activeInteractMode!=='delete') this.style.background='rgba(239,68,68,0.06)'">
-                <span>✕</span> <span>삭제 모드</span>
-            </button>
-            
-            <!-- 단수 편집 모드 (Purple) -->
-            <button id="mode-btn-levels" onclick="setInteractMode('levels')" style="
-                width:100%; border: 1px solid rgba(168,85,247,0.3); border-radius:8px;
-                background: rgba(168,85,247,0.06); color:#a855f7; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:4px; margin-bottom:8px;
-            " onmouseover="if(window.activeInteractMode!=='levels') this.style.background='rgba(168,85,247,0.18)'" onmouseout="if(window.activeInteractMode!=='levels') this.style.background='rgba(168,85,247,0.06)'">
-                <span>☰</span> <span>단수 편집</span>
-            </button>
-            
-            <!-- 도면자동정렬 버튼 -->
-            <button id="remote-align-btn" onclick="if(window.autoAlignRacks) window.autoAlignRacks();" style="
-                width:100%; border: 1px solid rgba(56,189,248,0.5); border-radius:8px;
-                background: rgba(56,189,248,0.1); color:#38bdf8; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.1)'">
-                <span>🎛️</span> <span style="margin-left:4px;">도면자동정렬</span>
-            </button>
-            
-            <!-- 기본 랙 (드래그 스폰) -->
-            <div id="remote-drag-rack" draggable="true" ondragstart="handleDragStart(event, 'rack')" style="
-                width:100%; border: 1px solid rgba(139,92,246,0.5); border-radius:8px;
-                background: rgba(139,92,246,0.15); color:#c4b5fd; font-size:0.7rem; font-weight:700;
-                padding:6px 0; cursor:grab; transition: all 0.2s; display:flex; align-items:center; justify-content:center;
-            " onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
-                <span>🟦</span> <span style="margin-left:4px;">기본 랙 (드래그)</span>
-            </div>
-        </div>
-
-        <!-- 구분선 -->
-        <div style="height:1px; background: rgba(56,189,248,0.18); margin: 2px 0 8px;"></div>
-
-        <!-- 견적 요청 버튼 (빨간색) -->
-        <button id="remote-quote-btn" class="d-none" onclick="openQuoteRequestModal()" style="
-            width:100%; border: 1px solid rgba(239,68,68,0.7); border-radius:10px;
-            background: rgba(220,38,38,0.2); color:#fca5a5;
-            font-size:0.7rem; font-weight:700; padding:18px 4px;
-            cursor:pointer; transition: all 0.2s; line-height:1.35; letter-spacing:0.01em;
-        " onmouseover="this.style.background='rgba(220,38,38,0.42)';this.style.color='#fff'" onmouseout="this.style.background='rgba(220,38,38,0.2)';this.style.color='#fca5a5'">
-            🔴 견적요청
-        </button>
-    </div>
-</div>
-
-<!-- 개별 칸 단수/높이 커스텀 설정 모달 -->
-<div class="modal fade" id="customLevelModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
-    <div class="modal-content" style="background: rgba(15,23,42,0.95); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; backdrop-filter: blur(10px);">
-      <div class="modal-header border-bottom border-secondary">
-        <h5 class="modal-title" style="color: #a855f7; font-weight: 700;">칸(베이) 설정 변경</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-white">
-        <input type="hidden" id="modal-custom-rack-idx">
-        <input type="hidden" id="modal-custom-row">
-        <input type="hidden" id="modal-custom-span">
-        
-        <div class="mb-3">
-            <label class="form-label text-muted small mb-1">변경할 단수 입력</label>
-            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-level" placeholder="예: 2" min="2">
-        </div>
-        <div class="mb-2">
-            <label class="form-label text-muted small mb-1">변경할 기둥 높이 (선택사항)</label>
-            <input type="number" class="form-control bg-transparent text-white border-secondary" id="modal-custom-height" placeholder="예: 3500" step="500">
-            <div class="form-text text-secondary" style="font-size:0.7rem; margin-top:4px;">
-                ※ 500 단위 입력을 권장합니다.<br>
-                ※ 비워두시면 단수에 맞춰 자동 계산됩니다.
-            </div>
-        </div>
-      </div>
-      <div class="modal-footer border-top border-secondary">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn btn-sm" id="btn-save-custom-level" style="background: rgba(168,85,247,0.2); color:#c084fc; border:1px solid #a855f7; font-weight:600; padding: 4px 16px;">적용하기</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 📐 파렛트랙 규격(빔/깊이/단수) 실시간 변경 모달 -->
-<div class="modal fade" id="rackSpecModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-    <div class="modal-content" style="background: rgba(15,23,42,0.96); border: 1px solid rgba(56,189,248,0.4); border-radius: 14px; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
-      <div class="modal-header border-bottom border-secondary pb-2">
-        <h6 class="modal-title text-info fw-bold d-flex align-items-center">
-            <i class="fa-solid fa-ruler-combined me-2 text-warning"></i> 파렛트랙 규격 변경
-        </h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-light py-3">
-        <!-- 1. 로드빔 가로 길이 -->
-        <div class="mb-3">
-            <label class="form-label small text-secondary fw-bold mb-1">가로 로드빔 길이 (W)</label>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2585)">2,585mm</button>
-                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2785)">2,785mm</button>
-                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(2985)">2,985mm</button>
-                <button type="button" class="btn btn-sm btn-outline-info spec-beam-btn" onclick="setModalBeam(3185)">3,185mm</button>
-            </div>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-dark text-secondary border-secondary">직접입력</span>
-                <input type="number" class="form-control bg-dark text-white border-secondary" id="modal-spec-beam" placeholder="예: 2985">
-                <span class="input-group-text bg-dark text-secondary border-secondary">mm</span>
-            </div>
-        </div>
-
-        <!-- 2. 랙 깊이 (프레임) -->
-        <div class="mb-3">
-            <label class="form-label small text-secondary fw-bold mb-1">세로 랙 깊이 (D)</label>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1000)">1,000mm (표준)</button>
-                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1100)">1,100mm</button>
-                <button type="button" class="btn btn-sm btn-outline-warning spec-depth-btn" onclick="setModalDepth(1200)">1,200mm</button>
-            </div>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-dark text-secondary border-secondary">직접입력</span>
-                <input type="number" class="form-control bg-dark text-white border-secondary" id="modal-spec-depth" placeholder="예: 1000">
-                <span class="input-group-text bg-dark text-secondary border-secondary">mm</span>
-            </div>
-        </div>
-
-        <!-- 3. 단수 및 높이 -->
-        <div class="row g-2">
-            <div class="col-6">
-                <label class="form-label small text-secondary fw-bold mb-1">설치 단수</label>
-                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="modal-spec-levels">
-                    <option value="2">2단 (1S)</option>
-                    <option value="3">3단 (2S)</option>
-                    <option value="4">4단 (3S)</option>
-                    <option value="5">5단 (4S)</option>
-                </select>
-            </div>
-            <div class="col-6">
-                <label class="form-label small text-secondary fw-bold mb-1">기둥 높이(H)</label>
-                <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="modal-spec-height" placeholder="자동(공란)">
-            </div>
-        </div>
-        <div class="form-text text-secondary mt-2" style="font-size:0.7rem;">
-            💡 변경 후 [도면에 적용]을 누르시면 배치된 랙의 치수가 즉시 새 규격으로 자동 리사이징됩니다.
-        </div>
-      </div>
-      <div class="modal-footer border-top border-secondary py-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" onclick="applyModalRackSpecs()">도면에 적용</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-window.openRackSpecModal = function() {
-    let curBeam = (typeof racks !== 'undefined' && racks.length > 0 && racks[0].beamLength) || parseInt(document.getElementById('rack-beam-length')?.value) || 2585;
-    let curDepth = (typeof racks !== 'undefined' && racks.length > 0 && racks[0].rackDepth) || parseInt(document.getElementById('rack-depth')?.value) || 1000;
-    let curLevels = parseInt(document.getElementById('rack-levels')?.value) || 3;
-    let curHeight = parseInt(document.getElementById('rack-height')?.value) || '';
-
-    const inputBeam = document.getElementById('modal-spec-beam');
-    const inputDepth = document.getElementById('modal-spec-depth');
-    const selectLevels = document.getElementById('modal-spec-levels');
-    const inputHeight = document.getElementById('modal-spec-height');
-
-    if (inputBeam) inputBeam.value = curBeam;
-    if (inputDepth) inputDepth.value = curDepth;
-    if (selectLevels) selectLevels.value = curLevels;
-    if (inputHeight) inputHeight.value = curHeight;
-
-    const modalEl = document.getElementById('rackSpecModal');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        bsModal.show();
-    }
-};
-
-window.setModalBeam = function(val) {
-    const el = document.getElementById('modal-spec-beam');
-    if (el) el.value = val;
-};
-
-window.setModalDepth = function(val) {
-    const el = document.getElementById('modal-spec-depth');
-    if (el) el.value = val;
-};
-
-window.applyModalRackSpecs = function() {
-    const newBeam = parseInt(document.getElementById('modal-spec-beam')?.value) || 2585;
-    const newDepth = parseInt(document.getElementById('modal-spec-depth')?.value) || 1000;
-    const newLevels = parseInt(document.getElementById('modal-spec-levels')?.value) || 3;
-    const newHeight = parseInt(document.getElementById('modal-spec-height')?.value) || 0;
-
-    if (document.getElementById('rack-beam-length')) document.getElementById('rack-beam-length').value = newBeam;
-    if (document.getElementById('rack-depth')) document.getElementById('rack-depth').value = newDepth;
-    if (document.getElementById('rack-levels')) document.getElementById('rack-levels').value = newLevels;
-    if (document.getElementById('rack-height')) document.getElementById('rack-height').value = newHeight ? newHeight : '';
-
-    window.rackSpecs = window.rackSpecs || {};
-    window.rackSpecs.beamLength = newBeam;
-    window.rackSpecs.rackDepth = newDepth;
-
-    if (typeof racks !== 'undefined' && racks.length > 0 && typeof currentScale !== 'undefined' && currentScale > 0) {
-        racks.forEach(r => {
-            r.beamLength = newBeam;
-            r.smallBeamLength = (typeof getSmallBeamLength === 'function') ? getSmallBeamLength(newBeam) : Math.max(1000, newBeam - 1200);
-            r.rackDepth = newDepth;
-            const regSpans = (r.independent || 0) + (r.connected || 0);
-            const smSpans = r.smallConnected || 0;
-            const totalLenMm = 85 + (regSpans * newBeam) + (smSpans * r.smallBeamLength);
-            r.totalLengthPx = totalLenMm * currentScale;
-            if (typeof checkRackValidPlacement === 'function') {
-                r.isValid = checkRackValidPlacement(r);
-            }
-        });
-    }
-
-    if (typeof updateRackFormCounts === 'function') updateRackFormCounts();
-    if (typeof draw === 'function') draw();
-
-    const modalEl = document.getElementById('rackSpecModal');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        const bsModal = bootstrap.Modal.getInstance(modalEl);
-        if (bsModal) bsModal.hide();
-    }
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. 바이패스 버튼 제어 로직
-    const rackLevelsInput = document.getElementById('rack-levels');
-    const bypassBtn = document.getElementById('mode-btn-bypass');
-    
-    function updateBypassBtnState() {
-        if (!rackLevelsInput || !bypassBtn) return;
-        const levels = parseInt(rackLevelsInput.value) || 0;
-        if (levels < 3) {
-            bypassBtn.style.display = 'none';
-            
-            if (window.activeInteractMode === 'bypass' && typeof window.setInteractMode === 'function') {
-                window.setInteractMode('bypass'); 
-            }
-        } else {
-            bypassBtn.style.display = 'flex';
-        }
-    }
-
-    if (rackLevelsInput) {
-        rackLevelsInput.addEventListener('input', updateBypassBtnState);
-        rackLevelsInput.addEventListener('change', updateBypassBtnState);
-    }
-    setTimeout(updateBypassBtnState, 500);
-
-    // 2. 리모컨 드래그 로직
-    const remoteCtrl = document.getElementById('canvas-remote-ctrl');
-    const remoteHeader = document.getElementById('remote-header');
-    
-    if (remoteCtrl && remoteHeader) {
-        let isDraggingRemote = false;
-        let remoteOffsetX = 0;
-        let remoteOffsetY = 0;
-        
-        remoteHeader.addEventListener('mousedown', function(e) {
-            isDraggingRemote = true;
-            const rect = remoteCtrl.getBoundingClientRect();
-            remoteOffsetX = e.clientX - rect.left;
-            remoteOffsetY = e.clientY - rect.top;
-            remoteHeader.style.cursor = 'grabbing';
-            // 기존 bottom/right 기준을 top/left로 전환
-            remoteCtrl.style.right = 'auto';
-            remoteCtrl.style.bottom = 'auto';
-            remoteCtrl.style.left = rect.left + 'px';
-            remoteCtrl.style.top = rect.top + 'px';
-        });
-        
-        document.addEventListener('mousemove', function(e) {
-            if (!isDraggingRemote) return;
-            e.preventDefault();
-            let newX = e.clientX - remoteOffsetX;
-            let newY = e.clientY - remoteOffsetY;
-            
-            // 화면 밖으로 안 나가게 방어
-            const maxX = window.innerWidth - remoteCtrl.offsetWidth;
-            const maxY = window.innerHeight - remoteCtrl.offsetHeight;
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-            
-            remoteCtrl.style.left = newX + 'px';
-            remoteCtrl.style.top = newY + 'px';
-        });
-        
-        document.addEventListener('mouseup', function() {
-            if (isDraggingRemote) {
-                isDraggingRemote = false;
-                remoteHeader.style.cursor = 'grab';
-            }
-        });
-    }
-});
-</script>
-<!-- 리뷰 모달 (서비스 경험 남기기) -->
-<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark text-light" data-bs-theme="dark">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title" id="reviewModalLabel">💕 서비스 경험 남기기</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-center fw-bold fs-5 mb-3">견적 산출 속도와 편리함은 어떠셨나요?</p>
-        <div class="text-center mb-3">
-          <div class="star-rating fs-2" style="color: #ffc107; cursor: pointer;">
-            <span data-value="1">★</span>
-            <span data-value="2">★</span>
-            <span data-value="3">★</span>
-            <span data-value="4">★</span>
-            <span data-value="5">★</span>
-          </div>
-          <input type="hidden" id="review-rating" value="5">
-          <input type="hidden" id="review-company" value="">
-          <input type="hidden" id="review-name" value="">
-        </div>
-        <div class="mb-3">
-          <label class="form-label text-secondary">한 줄 피드백 (선택)</label>
-          <textarea id="review-comment" class="form-control" rows="3" placeholder="예: 3시간 걸리던 견적이 5분 만에 끝났어요!"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer justify-content-center border-secondary">
-        <button type="button" class="btn btn-outline-secondary text-light" data-bs-dismiss="modal">나중에 하기</button>
-        <button type="button" class="btn btn-primary px-4" onclick="submitReview()">🚀 피드백 보내기</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const stars = document.querySelectorAll('#reviewModal .star-rating span');
-    const ratingInput = document.getElementById('review-rating');
-    stars.forEach(star => {
-        star.addEventListener('click', function() {
-            const val = this.getAttribute('data-value');
-            ratingInput.value = val;
-            stars.forEach(s => {
-                if (s.getAttribute('data-value') <= val) {
-                    s.style.color = '#ffc107';
-                } else {
-                    s.style.color = '#e4e5e9';
-                }
-            });
-        });
-    });
-});
-function submitReview() {
-    const ratingVal = parseInt(document.getElementById('review-rating').value) || 5;
-    const payload = {
-        company: document.getElementById('review-company').value,
-        name: document.getElementById('review-name').value,
-        rating: ratingVal,
-        comment: document.getElementById('review-comment').value
-    };
-    fetch('/review/submit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-    }).then(res => res.json()).then(res => {
-        bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
-        
-        if (ratingVal >= 3) {
-            // 별점 3점 이상일 경우 특별 리워드 모달 팝업
-            const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
-            exportModal.show();
-        } else {
-            alert('💕 피드백을 남겨주셔서 정말 감사합니다! 더 노력하는 아사미야가 될게요!');
-        }
-    }).catch(err => {
-        bootstrap.Modal.getInstance(document.getElementById('reviewModal'))?.hide();
+        console.error(err);
+        alert('❌ 서버와 통신 중 오류가 발생했습니다.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '🚀 문의 및 견적 요청 접수하기';
     });
 }
 </script>
-
-<!-- 도면 다운로드 리워드 모달 -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark text-light" style="border: 1px solid rgba(56,189,248,0.4); border-radius: 1rem; box-shadow: 0 0 30px rgba(56,189,248,0.15);">
-      <div class="modal-header border-bottom border-secondary">
-        <h5 class="modal-title fw-bold" id="exportModalLabel" style="color: #38bdf8;">🎁 특별한 선물 도착!</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center py-4">
-        <p class="mb-4 text-light" style="font-size: 0.95rem;">
-          좋은 평가를 남겨주셔서 진심으로 감사드립니다! 💕<br>
-          감사의 의미로 방금 그리신 <strong>도면 원본 파일</strong>을<br>무료로 다운로드할 수 있도록 준비했어요.
-        </p>
-        
-        <div class="d-grid gap-3 px-3">
-          <button class="btn btn-outline-info py-3 fw-bold" onclick="exportCanvas('dxf'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();" style="border-width: 2px; background: rgba(56,189,248,0.1);">
-            <span style="font-size:1.8rem; display:block; margin-bottom:5px;">📐</span> 
-            DXF 캐드 원본 파일 다운로드
-          </button>
-          <button class="btn btn-outline-light py-2" onclick="exportCanvas('pdf'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();">
-            📄 PDF 문서로 다운로드
-          </button>
-          <button class="btn btn-outline-secondary py-2" onclick="exportCanvas('jpg'); bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();">
-            🖼️ JPG 이미지로 저장
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 플로팅 챗봇 마법사 -->
-<?php include 'chat.php'; ?>
-
 </body>
 </html>

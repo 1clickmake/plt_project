@@ -157,8 +157,8 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET',  '/vendor/share',         ['App\Controllers\VendorController', 'embed']);
     $r->addRoute('GET',  '/quote/{slug}/video',   ['App\Controllers\CanvasController', 'showVideoManual']);
     $r->addRoute('GET',  '/quote/{slug}/easy',    ['App\Controllers\CanvasController', 'showEasyCanvas']);
-    $r->addRoute('GET',  '/quote/{slug}/board',   ['App\Controllers\CanvasController', 'showBoardCanvas']);
-    $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showVendorCanvas']);
+    $r->addRoute('GET',  '/quote/{slug}/cad',     ['App\Controllers\CanvasController', 'showVendorCanvas']);
+    $r->addRoute('GET',  '/quote/{slug}',         ['App\Controllers\CanvasController', 'showBoardCanvas']);
     $r->addRoute('POST', '/api/canvas/analyze',   ['App\Controllers\CanvasController', 'analyzeLayout']);
     $r->addRoute('POST', '/quote/submit',         ['App\Controllers\CanvasController', 'submitQuote']);
     $r->addRoute('POST', '/review/submit',        ['App\Controllers\CanvasController', 'submitReview']);

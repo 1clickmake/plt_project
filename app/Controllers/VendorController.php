@@ -602,7 +602,7 @@ class VendorController extends BaseController {
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
-        $stmt = $db->prepare("SELECT id, is_mailed, processed_by FROM quote_requests WHERE id = :qid AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)");
+        $stmt = $db->prepare("SELECT id, is_mailed, processed_by, pricing_rule_id, source_mode FROM quote_requests WHERE id = :qid AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)");
         $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userStrId]);
         $row = $stmt->fetch();
         if (!$row) {
@@ -623,12 +623,70 @@ class VendorController extends BaseController {
 
         $modules = $input['modules'] ?? [];
         $customItems = $input['custom_items'] ?? [];
-        $overallTotal = intval($input['overallTotal'] ?? 0);
+        $hasPricingRule = !empty($row['pricing_rule_id']);
+
+        // 🛡️ [보안 강화] 서버 측 가격/마진/BOM 무결성 재계산 및 위변조 방어
+        $calcFinalAmount = function($rawAmount) use ($hasPricingRule) {
+            if (!$hasPricingRule) {
+                return max(0, intval($rawAmount));
+            }
+            return max(0, intval(round(($rawAmount * 1.1) / 100) * 100));
+        };
+
+        $verifiedOverallTotal = 0;
+
+        // 1. 모듈별 BOM 데이터 검증 및 서버 사이드 총액 재계산
+        if (is_array($modules)) {
+            foreach ($modules as &$mod) {
+                $modQty = max(0, intval($mod['rack_count'] ?? 1));
+                $bomItems = $mod['bom'] ?? [];
+                $bomRawSum = 0;
+
+                if (is_array($bomItems)) {
+                    foreach ($bomItems as &$bItem) {
+                        $isLoss = !empty($bItem['is_loss']);
+                        $bQty = max(0, floatval($bItem['quantity'] ?? 0));
+                        $bUnit = max(0, intval($bItem['unit_amount'] ?? 0));
+
+                        if ($isLoss) {
+                            $itemTotal = max(0, intval($bItem['total'] ?? 0));
+                            $bomRawSum += $itemTotal;
+                        } else {
+                            $itemTotal = intval(round($bQty * $bUnit));
+                            $bItem['total'] = $itemTotal;
+                            $bomRawSum += $itemTotal;
+                        }
+                    }
+                    unset($bItem);
+                }
+
+                // 마진 규칙 적용 여부에 따른 모듈 단가 산출
+                $verifiedModUnitPrice = $calcFinalAmount($bomRawSum);
+                $mod['unit_price'] = $verifiedModUnitPrice;
+                $modSubtotal = $modQty * $verifiedModUnitPrice;
+                $mod['subtotal'] = $modSubtotal;
+
+                $verifiedOverallTotal += $modSubtotal;
+            }
+            unset($mod);
+        }
+
+        // 2. 추가/부자재 품목 검증
+        if (is_array($customItems)) {
+            foreach ($customItems as &$cItem) {
+                $cQty = max(0, floatval($cItem['qty'] ?? 0));
+                $cUnit = max(0, intval($cItem['unit_price'] ?? 0));
+                $cTotal = intval(round($cQty * $cUnit));
+                $cItem['total'] = $cTotal;
+                $verifiedOverallTotal += $cTotal;
+            }
+            unset($cItem);
+        }
 
         $detailsData = [
             'modules' => $modules,
             'custom_items' => $customItems,
-            'overallTotal' => $overallTotal,
+            'overallTotal' => $verifiedOverallTotal, // 클라이언트가 변조한 값 대신 서버 검증 합계로 안전 저장
             'updated_at' => date('Y-m-d H:i:s'),
             'updated_by' => $_SESSION['employee_name'] ?? $_SESSION['user']['username'] ?? 'User'
         ];
@@ -638,7 +696,11 @@ class VendorController extends BaseController {
         $upd = $db->prepare("UPDATE quote_requests SET admin_quote_details = :details WHERE id = :qid");
         $upd->execute(['details' => $jsonStr, 'qid' => $quoteId]);
 
-        echo json_encode(['success' => true, 'message' => '단가 및 부품 변경 사항이 안전하게 저장되었습니다!']);
+        echo json_encode([
+            'success' => true, 
+            'message' => '단가 및 부품 변경 사항이 서버 무결성 검증을 거쳐 안전하게 저장되었습니다!',
+            'verifiedOverallTotal' => $verifiedOverallTotal
+        ]);
     }
 
     public function resetQuoteDetails($vars) {

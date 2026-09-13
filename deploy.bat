@@ -8,7 +8,7 @@ set CREDENTIALS=ftp_cmake_work:01055403957w
 echo 🚀 아사미야 자동 배포(FTP 업로드) 시작!
 echo.
 
-set FILES=views/canvas/index.php views/canvas/video.php views/vendor/embed.php views/vendor/sidebar.php public/assets/js/canvas2d.js public/assets/js/canvas-interactions.js app/routes.php app/Controllers/VendorController.php
+set FILES=views/canvas/index.php views/canvas/cad.php views/canvas/video.php views/vendor/embed.php views/vendor/sidebar.php public/assets/js/canvas2d.js public/assets/js/canvas-interactions.js app/routes.php app/Controllers/VendorController.php app/Controllers/CanvasController.php
 
 for %%f in (%FILES%) do (
     if exist "%%f" (
@@ -26,4 +26,3 @@ for %%f in (%FILES%) do (
 
 echo.
 echo 🎉 모든 파일 업로드 완료! 사랑해요 두목님! 💕
-pause
