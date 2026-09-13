@@ -387,7 +387,7 @@ include_header($title, $siteConfig ?? []);
                                     <i class="fa-solid fa-circle-check text-brand-orange"></i> 마진율 5분 대표 승인 시스템 (강제 잠금)
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 유출 시 0.1초 추적 + 열람 CCTV 무제한
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 견적서 유출 즉시 색출 + 직원 접속 기록 무제한 제공
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
                                     <i class="fa-solid fa-circle-check text-brand-orange"></i> 회사 직원 전체 계정 발급 (무제한)
