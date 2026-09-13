@@ -34,6 +34,10 @@ $pageTitle = "다공급사 단가표 관리 v2";
             align-items: center; justify-content: center;
         }
         .modal-overlay.active { display: flex; }
+
+        .glass-panel { background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; backdrop-filter:blur(12px); }
+        .flow-step { background:rgba(255,255,255,0.03); border:1px dashed rgba(253,224,71,0.3); border-radius:12px; padding:16px; text-align:center; }
+        .arrow { color:#fde047; font-size:1.5rem; }
     </style>
 </head>
 <body class="selection:bg-[#fde047]/30">
@@ -43,6 +47,16 @@ $pageTitle = "다공급사 단가표 관리 v2";
 
     <!-- 💻 우측 메인 대시보드 영역 -->
     <main class="main-content">
+        <div class="top-navbar">
+            <div class="navbar-title fw-bold text-light" style="font-size: 1.1rem;">
+                SaaS Dashboard &gt; 다공급사 단가표 관리
+            </div>
+            <div class="user-profile d-flex align-items-center gap-2">
+                <i class="fa-solid fa-circle-user text-info fs-5"></i>
+                <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
+            </div>
+        </div>
+
         <!-- 꼬리표 배경 효과 -->
         <div class="pointer-events-none fixed inset-0 z-0">
             <div class="absolute -top-32 -left-32 w-[600px] h-[600px] bg-[#fde047]/10 blur-[120px] rounded-full"></div>
@@ -51,23 +65,22 @@ $pageTitle = "다공급사 단가표 관리 v2";
 
         <div class="relative z-10 max-w-[1280px] mx-auto px-4 md:px-8 py-6 md:py-8">
         <!-- 상단 헤더 -->
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-9 h-9 rounded-xl bg-[#fde047] flex items-center justify-center text-black">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </div>
-                    <span class="text-[11px] tracking-[0.2em] text-white/40 font-medium">CMAKE.WORK / VENDOR / PRICING</span>
-                </div>
-                <h1 class="text-[32px] md:text-[38px] font-[700] leading-none tracking-tight">다공급사 단가표 관리 <span class="text-[#fde047]">v2</span></h1>
-                <p class="text-[13px] text-white/50 mt-3 max-w-[560px] leading-relaxed">
-                    엑셀이 없으면 수동 단가로 자동 폴백되어 견적이 끊기지 않습니다.
-                </p>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="/vendor/settings" class="h-8 px-3 rounded-full bg-white text-black text-[12px] font-semibold flex items-center gap-1.5 hover:bg-white/90 transition">
-                    <i class="fa-solid fa-gear"></i> 환경설정
-                </a>
+        <!-- 상단 헤더 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-file-excel text-success me-2"></i> 단가표 관리 <span class="text-[#fde047] fs-6 ms-2">v2 - 다공급사 지원</span></h3>
+            <span class="small text-white/50">SaaS Dashboard > 공급사 단가표 관리</span>
+        </div>
+
+        <!-- FLOW -->
+        <div class="glass-panel p-3 mb-5">
+            <div class="row g-2 align-items-center text-center small m-0">
+                <div class="col-md-2"><div class="flow-step" style="border-color:#10b981;"><i class="fa-solid fa-industry text-success mb-1 d-block fs-5"></i><b class="text-white">1. 공급사 선택</b><br><span class="text-white/50">세화/기타 추가공급사</span></div></div>
+                <div class="col-md-1 d-none d-md-block"><span class="arrow">→</span></div>
+                <div class="col-md-2"><div class="flow-step"><i class="fa-solid fa-cube text-info mb-1 d-block fs-5"></i><b class="text-white">2. 랙 도면 생성</b><br><span class="text-white/50">고객이 직접 그리기</span></div></div>
+                <div class="col-md-1 d-none d-md-block"><span class="arrow">→</span></div>
+                <div class="col-md-3"><div class="flow-step" style="border-color:#3b82f6; background:rgba(59,130,246,0.08);"><i class="fa-solid fa-coins text-[#fde047] mb-1 d-block fs-5"></i><b class="text-white">3. 단가 자동 매칭</b><br><span class="text-white/70">COALESCE(엑셀, 수동, 직접입력)</span></div></div>
+                <div class="col-md-1 d-none d-md-block"><span class="arrow">→</span></div>
+                <div class="col-md-2"><div class="flow-step"><i class="fa-solid fa-file-invoice-dollar text-[#fde047] mb-1 d-block fs-5"></i><b class="text-white">4. 견적서 완성</b><br><span class="text-white/50">실시간 자동 계산</span></div></div>
             </div>
         </div>
 
@@ -181,6 +194,48 @@ $pageTitle = "다공급사 단가표 관리 v2";
                             <?php endif; ?>
                         </div>
                     </form>
+
+                    <!-- 단가표 적용 내역 (History) -->
+                    <div class="mt-6">
+                        <h3 class="text-[13px] font-semibold tracking-wide flex items-center gap-2 mb-3 text-white/80">
+                            <i class="fa-solid fa-clock-rotate-left text-white/40"></i> 최근 업로드 내역
+                        </h3>
+                        <div class="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+                            <table class="w-full text-[12px] text-left">
+                                <thead>
+                                    <tr class="border-b border-white/5 bg-white/[0.02]">
+                                        <th class="px-4 py-3 font-semibold text-white/50">업체명</th>
+                                        <th class="px-4 py-3 font-semibold text-white/50">파일명</th>
+                                        <th class="px-4 py-3 font-semibold text-white/50">일시</th>
+                                        <th class="px-4 py-3 font-semibold text-white/50 text-center">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    <?php if(!empty($rules)): foreach($rules as $rule): ?>
+                                    <tr class="hover:bg-white/[0.02] transition">
+                                        <td class="px-4 py-2.5 text-white/70 font-medium"><?= htmlspecialchars($rule['supplier_name'] ?? '기본') ?></td>
+                                        <td class="px-4 py-2.5 text-white/70 truncate max-w-[200px]" title="<?= htmlspecialchars($rule['source_file'] ?? '수동') ?>">
+                                            <i class="fa-solid fa-file-excel text-emerald-400/50 mr-1"></i>
+                                            <?= htmlspecialchars($rule['source_file'] ?? '수동') ?>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-white/50 font-mono">
+                                            <?= date('Y.m.d H:i', strtotime($rule['created_at'])) ?>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-center">
+                                            <button type="button" onclick="deleteHistory(<?= $rule['id'] ?>)" class="text-white/30 hover:text-red-400 transition" title="삭제">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; else: ?>
+                                    <tr>
+                                        <td colspan="4" class="px-4 py-8 text-center text-white/30 text-[13px]">내역이 없습니다.</td>
+                                    </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 수동 단가 영역 -->
@@ -198,7 +253,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <!-- 기둥 -->
                                 <div>
-                                    <div class="text-[11px] font-semibold tracking-widest text-white/40 mb-3 flex items-center gap-2">
+                                    <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
                                         <div class="w-1.5 h-1.5 rounded-full bg-[#fde047]"></div> 기둥 (완제품 단가)
                                     </div>
                                     <div class="space-y-3">
@@ -210,9 +265,9 @@ $pageTitle = "다공급사 단가표 관리 v2";
                                         ];
                                         foreach($cols as $code => $label): ?>
                                         <label class="block">
-                                            <span class="text-[11px] text-white/50"><?= $label ?></span>
+                                            <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
                                             <div class="mt-1.5 relative">
-                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
+                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
                                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-white/30">원</span>
                                             </div>
                                         </label>
@@ -222,7 +277,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
                                 
                                 <!-- 빔 -->
                                 <div>
-                                    <div class="text-[11px] font-semibold tracking-widest text-white/40 mb-3 flex items-center gap-2">
+                                    <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
                                         <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div> 로드빔 (완제품 단가)
                                     </div>
                                     <div class="space-y-3">
@@ -234,9 +289,9 @@ $pageTitle = "다공급사 단가표 관리 v2";
                                         ];
                                         foreach($beams as $code => $label): ?>
                                         <label class="block">
-                                            <span class="text-[11px] text-white/50"><?= $label ?></span>
+                                            <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
                                             <div class="mt-1.5 relative">
-                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
+                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
                                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-white/30">원</span>
                                             </div>
                                         </label>
@@ -247,7 +302,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
                             
                             <!-- 부자재 -->
                             <div class="mt-6">
-                                <div class="text-[11px] font-semibold tracking-widest text-white/40 mb-3 flex items-center gap-2">
+                                <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
                                     <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div> 부자재 & 설치비율
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -261,8 +316,8 @@ $pageTitle = "다공급사 단가표 관리 v2";
                                     ];
                                     foreach($accs as $code => $label): ?>
                                     <label class="block">
-                                        <span class="text-[11px] text-white/50"><?= $label ?></span>
-                                        <input type="text" name="prices[<?= $code ?>]" value="<?= $code=='install' ? ($prices[$code] ?? 10) : number_format($prices[$code] ?? 0) ?>" class="<?= $code!='install' ? 'price-input' : '' ?> mt-1.5 w-full h-9 rounded-xl bg-white/[0.06] border border-white/10 px-3 text-[13px] focus:outline-none focus:border-[#fde047]/50" <?= $code!='install' ? 'onkeyup="formatComma(this)"' : '' ?>>
+                                        <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
+                                        <input type="text" name="prices[<?= $code ?>]" value="<?= $code=='install' ? ($prices[$code] ?? 10) : number_format($prices[$code] ?? 0) ?>" class="<?= $code!='install' ? 'price-input' : '' ?> mt-1.5 w-full h-9 rounded-xl bg-white/[0.06] border border-white/10 px-3 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50" <?= $code!='install' ? 'onkeyup="formatComma(this)"' : '' ?>>
                                     </label>
                                     <?php endforeach; ?>
                                 </div>
@@ -283,6 +338,8 @@ $pageTitle = "다공급사 단가표 관리 v2";
             </div>
         </div>
         
+        <!-- 기존 와이드 히스토리 삭제됨 (왼쪽 단으로 이동) -->
+
         <?php endif; ?>
     </div>
     </main>
@@ -372,6 +429,28 @@ $pageTitle = "다공급사 단가표 관리 v2";
             } catch(e) {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 alert('저장 중 오류가 발생했습니다.');
+            }
+        }
+        async function deleteHistory(id) {
+            if(!confirm('이 단가표 내역을 정말 삭제하시겠습니까?')) return;
+            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch('/vendor/pricing/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'select', ids: [id] })
+                });
+                const data = await res.json();
+                document.getElementById('loadingOverlay').style.display = 'none';
+                if(data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || '삭제 실패');
+                }
+            } catch(e) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                alert('오류가 발생했습니다.');
             }
         }
     </script>

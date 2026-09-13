@@ -118,57 +118,49 @@ class VendorController extends BaseController {
             $pricesData = $settings['prices_data'] ?? null;
 
             if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
-                $uploadDirExcel = __DIR__ . '/../../public/data/excel/';
-                if (!file_exists($uploadDirExcel)) {
-                    @mkdir($uploadDirExcel, 0777, true);
-                }
-                $excelFilename = 'price_' . $userId . '_' . time() . '.' . pathinfo($_FILES['price_excel']['name'], PATHINFO_EXTENSION);
-                $fullExcelPath = $uploadDirExcel . $excelFilename;
+                $tmpFile = $_FILES['price_excel']['tmp_name'];
                 
-                if (@move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
-                    $priceExcelPath = '/data/excel/' . $excelFilename;
+                try {
+                    // AI 파싱 시간 고려 300초 연장
+                    set_time_limit(300);
                     
-                    try {
-                        // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 무제한(또는 300초)으로 연장
-                        set_time_limit(300);
-                        
-                        // AI-driven Excel Parsing
-                        $aiService = \App\Services\AI\AIExtractorFactory::create();
-                        $excelText = $aiService->extractTextFromExcel($fullExcelPath);
-                        $extractedPricing = $aiService->extractPricingFromJson($excelText);
-                        
-                        // 검증 로직 추가 (AI가 일부 값을 찾지 못했거나 실패한 경우 방어)
-                        if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
-                            $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
-                            throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
-                        }
-
-                        // 원본 파일명 삽입
-                        if (!isset($extractedPricing['meta'])) {
-                            $extractedPricing['meta'] = [];
-                        }
-                        $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
-
-                        $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
-
-                        // Save to vendor_pricing_rules (Versioning)
-                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, source_file, pricing_data) VALUES (:vid, :am, :sf, :pd)");
-                        $insertRuleStmt->execute([
-                            'vid' => $userId,
-                            'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
-                            'sf' => $_FILES['price_excel']['name'],
-                            'pd' => $pricesData
-                        ]);
-
-                        // Redirect to settings page with success message
-                        // For now just continue...
-                    } catch (\Exception $e) {
-                        // Keep old data if parsing fails
-                        error_log("Gemini AI Parsing Failed: " . $e->getMessage());
+                    // AI-driven Excel Parsing (임시 파일에서 직접 파싱하여 원본 파일 미저장)
+                    $aiService = \App\Services\AI\AIExtractorFactory::create();
+                    $excelText = $aiService->extractTextFromExcel($tmpFile);
+                    $extractedPricing = $aiService->extractPricingFromJson($excelText);
+                    
+                    // 검증 로직 추가 (AI가 일부 값을 찾지 못했거나 실패한 경우 방어)
+                    if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
+                        $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
+                        throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
                     }
-                } else {
-                    echo "<script>alert('파일 업로드 실패 (권한 문제). 서버의 public/data/excel 폴더 쓰기 권한을 확인해 주세요!'); window.history.back();</script>";
-                    return;
+
+                    // 원본 파일명 삽입 (메타데이터용)
+                    if (!isset($extractedPricing['meta'])) {
+                        $extractedPricing['meta'] = [];
+                    }
+                    $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
+
+                    $plainJson = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
+                    // 🔒 AES-256 암호화 적용 (DB 유출 시에도 안전)
+                    $encryptedPricingData = \App\Services\SecurityService::encrypt($plainJson);
+                    $pricesData = $encryptedPricingData;
+                    $priceExcelPath = null; // 서버 디스크에 엑셀 원본 미저장
+
+                    // Save to vendor_pricing_rules (Versioning)
+                    $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, applied_month, source_file, pricing_data) VALUES (:vid, :am, :sf, :pd)");
+                    $insertRuleStmt->execute([
+                        'vid' => $userId,
+                        'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
+                        'sf' => $_FILES['price_excel']['name'],
+                        'pd' => $encryptedPricingData
+                    ]);
+
+                    // Redirect to settings page with success message
+                    // For now just continue...
+                } catch (\Exception $e) {
+                    // Keep old data if parsing fails
+                    error_log("Gemini AI Parsing Failed: " . $e->getMessage());
                 }
             }
 
@@ -246,79 +238,68 @@ class VendorController extends BaseController {
             }
 
             if (isset($_FILES['price_excel']) && $_FILES['price_excel']['error'] === UPLOAD_ERR_OK) {
-                $uploadDirExcel = __DIR__ . '/../../storage/excel/';
-                if (!file_exists($uploadDirExcel)) {
-                    @mkdir($uploadDirExcel, 0777, true);
-                }
-                $excelFilename = 'price_' . $userId . '_' . time() . '.' . pathinfo($_FILES['price_excel']['name'], PATHINFO_EXTENSION);
-                $fullExcelPath = $uploadDirExcel . $excelFilename;
+                $tmpFile = $_FILES['price_excel']['tmp_name'];
                 
-                if (@move_uploaded_file($_FILES['price_excel']['tmp_name'], $fullExcelPath)) {
-                    $priceExcelPath = $excelFilename;
+                try {
+                    // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 300초로 연장
+                    set_time_limit(300);
                     
-                    try {
-                        // AI 파싱이 오래 걸릴 수 있으므로 PHP 실행 시간 무제한(또는 300초)으로 연장
-                        set_time_limit(300);
-                        
-                        // AI-driven Excel Parsing
-                        $aiService = \App\Services\AI\AIExtractorFactory::create();
-                        $excelText = $aiService->extractTextFromExcel($fullExcelPath);
-                        $extractedPricing = $aiService->extractPricingFromJson($excelText);
-                        
-                        if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
-                            $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
-                            throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
-                        }
-
-                        // 원본 파일명 삽입
-                        if (!isset($extractedPricing['meta'])) {
-                            $extractedPricing['meta'] = [];
-                        }
-                        $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
-
-                        $pricesData = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
-
-                        // Save to vendor_pricing_rules
-                        $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, supplier_id, applied_month, source_file, pricing_data) VALUES (:vid, :sid, :am, :sf, :pd)");
-                        $insertRuleStmt->execute([
-                            'vid' => $userId,
-                            'sid' => $supplierId,
-                            'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
-                            'sf' => $_FILES['price_excel']['name'],
-                            'pd' => $pricesData
-                        ]);
-                        
-                        // Update suppliers table status to excel
-                        $updSup = $db->prepare("UPDATE suppliers SET status = 'excel', excel_file = :ef WHERE id = :sid AND (vendor_user_id = :vuid OR vendor_user_id = :vuid_str)");
-                        $updSup->execute(['ef' => $_FILES['price_excel']['name'], 'sid' => $supplierId, 'vuid' => $userId, 'vuid_str' => $userStrId]);
-
-                        echo "<script>alert('단가표가 성공적으로 분석 및 적용되었습니다.'); window.location.href='/vendor/pricing';</script>";
-                        $stmtCheck = $db->prepare("SELECT id FROM vendor_settings WHERE user_id = :uid");
-                        $stmtCheck->execute(['uid' => $userId]);
-                        if ($stmtCheck->fetchColumn()) {
-                            $updStmt = $db->prepare("UPDATE vendor_settings SET price_excel_path = :pep, prices_data = :pd WHERE user_id = :uid");
-                            $updStmt->execute(['pep' => $priceExcelPath, 'pd' => $pricesData, 'uid' => $userId]);
-                        } else {
-                            $insStmt = $db->prepare("INSERT INTO vendor_settings (user_id, price_excel_path, prices_data) VALUES (:uid, :pep, :pd)");
-                            $insStmt->execute(['uid' => $userId, 'pep' => $priceExcelPath, 'pd' => $pricesData]);
-                        }
-
-                        echo "<script>alert('단가표가 성공적으로 분석 및 적용되었습니다.'); window.location.href='/vendor/pricing';</script>";
-                        return;
-                    } catch (\Exception $e) {
-                        $errorMsg = addslashes("AI 분석 실패: " . $e->getMessage());
-                        echo "<script>alert('{$errorMsg}'); window.history.back();</script>";
-                        return;
+                    // AI-driven Excel Parsing (임시 메모리/파일에서 직접 파싱하여 서버 디스크에 원본 엑셀 미저장)
+                    $aiService = \App\Services\AI\AIExtractorFactory::create();
+                    $excelText = $aiService->extractTextFromExcel($tmpFile);
+                    $extractedPricing = $aiService->extractPricingFromJson($excelText);
+                    
+                    if (isset($extractedPricing['validation']['is_complete']) && $extractedPricing['validation']['is_complete'] !== true) {
+                        $missing = implode(", ", $extractedPricing['validation']['missing_fields'] ?? ['Unknown']);
+                        throw new \Exception("AI 파싱이 불완전합니다. 누락된 필드: " . $missing);
                     }
-                } else {
-                    echo "<script>alert('파일 업로드 실패 (권한 문제). 서버의 public/data/excel 폴더 쓰기 권한을 확인해 주세요!'); window.history.back();</script>";
+
+                    // 원본 파일명 메타데이터 기록
+                    if (!isset($extractedPricing['meta'])) {
+                        $extractedPricing['meta'] = [];
+                    }
+                    $extractedPricing['meta']['source_file'] = $_FILES['price_excel']['name'];
+
+                    $plainJson = json_encode($extractedPricing, JSON_UNESCAPED_UNICODE);
+                    // 🔒 AES-256 단가 데이터 암호화 (서버 디스크 미저장 & DB 탈취 완벽 방어)
+                    $encryptedPricingData = \App\Services\SecurityService::encrypt($plainJson);
+
+                    // Save to vendor_pricing_rules
+                    $insertRuleStmt = $db->prepare("INSERT INTO vendor_pricing_rules (vendor_id, supplier_id, applied_month, source_file, pricing_data) VALUES (:vid, :sid, :am, :sf, :pd)");
+                    $insertRuleStmt->execute([
+                        'vid' => $userId,
+                        'sid' => $supplierId,
+                        'am' => $extractedPricing['meta']['base_month'] ?? date('Y-m'),
+                        'sf' => $_FILES['price_excel']['name'],
+                        'pd' => $encryptedPricingData
+                    ]);
+                    
+                    // Update suppliers table status to excel
+                    $updSup = $db->prepare("UPDATE suppliers SET status = 'excel', excel_file = :ef WHERE id = :sid AND (vendor_user_id = :vuid OR vendor_user_id = :vuid_str)");
+                    $updSup->execute(['ef' => $_FILES['price_excel']['name'], 'sid' => $supplierId, 'vuid' => $userId, 'vuid_str' => $userStrId]);
+
+                    $stmtCheck = $db->prepare("SELECT id FROM vendor_settings WHERE user_id = :uid");
+                    $stmtCheck->execute(['uid' => $userId]);
+                    if ($stmtCheck->fetchColumn()) {
+                        $updStmt = $db->prepare("UPDATE vendor_settings SET price_excel_path = NULL, prices_data = :pd WHERE user_id = :uid");
+                        $updStmt->execute(['pd' => $encryptedPricingData, 'uid' => $userId]);
+                    } else {
+                        $insStmt = $db->prepare("INSERT INTO vendor_settings (user_id, price_excel_path, prices_data) VALUES (:uid, NULL, :pd)");
+                        $insStmt->execute(['uid' => $userId, 'pd' => $encryptedPricingData]);
+                    }
+
+                    echo "<script>alert('단가표가 안전하게 암호화 분석되어 등록되었습니다. (원본 파일은 서버에 저장되지 않습니다)'); window.location.href='/vendor/pricing';</script>";
+                    return;
+                } catch (\Exception $e) {
+                    $errorMsg = addslashes("AI 분석 실패: " . $e->getMessage());
+                    echo "<script>alert('{$errorMsg}'); window.history.back();</script>";
                     return;
                 }
             }
         }
         
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-        $limit = 20;
+        $limit = 5;
         $offset = ($page - 1) * $limit;
 
         $stmtTotal = $db->prepare("SELECT COUNT(*) FROM vendor_pricing_rules WHERE vendor_id = :vuid OR vendor_id = :vuid_str");
@@ -339,7 +320,7 @@ class VendorController extends BaseController {
         $stmtSuppliers->execute(['vuid' => $userId, 'vuid_str' => $userStrId]);
         $suppliers = $stmtSuppliers->fetchAll(\PDO::FETCH_ASSOC);
 
-        // If no suppliers exist, auto-create default '세화 (기본)'
+        // If no suppliers exist, auto-create default '세화'
         if (empty($suppliers)) {
             // Check if user already has an existing pricing excel in vendor_settings
             $stmtSet = $db->prepare("SELECT price_excel_path FROM vendor_settings WHERE user_id = :vuid OR user_id = :vuid_str");
@@ -349,7 +330,7 @@ class VendorController extends BaseController {
             $initStatus = !empty($existExcel) ? 'excel' : 'none';
             $initExcelName = !empty($existExcel) ? basename($existExcel) : null;
 
-            $stmtIns = $db->prepare("INSERT INTO suppliers (vendor_user_id, name, color, status, factory_name, excel_file) VALUES (:vuid, '세화 (기본)', '#fde047', :st, '세화스틸랙 본사/공장', :ef)");
+            $stmtIns = $db->prepare("INSERT INTO suppliers (vendor_user_id, name, color, status, factory_name, excel_file) VALUES (:vuid, '세화', '#fde047', :st, '세화스틸랙 본사/공장', :ef)");
             $stmtIns->execute([
                 'vuid' => $userId,
                 'st' => $initStatus,
@@ -369,7 +350,7 @@ class VendorController extends BaseController {
             $stmtManual->execute($sIds);
             $manualData = $stmtManual->fetchAll(\PDO::FETCH_ASSOC);
             foreach ($manualData as $md) {
-                $manualPrices[$md['supplier_id']][$md['item_code']] = $md['unit_price'];
+                $manualPrices[$md['supplier_id']][$md['item_code']] = \App\Services\SecurityService::decryptValue($md['unit_price']);
             }
         }
 
@@ -449,7 +430,8 @@ class VendorController extends BaseController {
             foreach ($prices as $code => $price) {
                 // remove commas and convert to float/int
                 $val = floatval(str_replace(',', '', $price));
-                $ins->execute([$supplierId, $code, $val]);
+                $encVal = \App\Services\SecurityService::encryptValue($val);
+                $ins->execute([$supplierId, $code, $encVal]);
             }
             
             $upd = $db->prepare("UPDATE suppliers SET status = 'manual' WHERE id = ? AND status = 'none'");
@@ -933,7 +915,8 @@ class VendorController extends BaseController {
             $stmt->execute([$vendorId]);
             $manualPrices = [];
             foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-                $manualPrices[$row['item_code']] = floatval($row['unit_price']);
+                $decVal = \App\Services\SecurityService::decryptValue($row['unit_price']);
+                $manualPrices[$row['item_code']] = floatval($decVal);
             }
 
             $buildUnitBom = function($frames, $beamLevels, $tiePerLevel, $rackH, $depth, $beamL, $barType, $beamThick) use ($manualPrices) {

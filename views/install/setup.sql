@@ -555,7 +555,7 @@ CREATE TABLE `vendor_prices_manual` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `supplier_id` int(11) NOT NULL,
   `item_code` varchar(50) NOT NULL,
-  `unit_price` decimal(12,2) DEFAULT 0.00,
+  `unit_price` varchar(255) DEFAULT NULL COMMENT 'AES-256 암호화 수동단가',
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_supplier_item` (`supplier_id`,`item_code`)

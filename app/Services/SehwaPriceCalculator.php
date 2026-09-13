@@ -47,7 +47,8 @@ class SehwaPriceCalculator
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($row && !empty($row['pricing_data'])) {
-                self::$config = json_decode($row['pricing_data'], true);
+                $rawPricing = \App\Services\SecurityService::decrypt($row['pricing_data']);
+                self::$config = json_decode($rawPricing, true) ?: [];
             } else {
                 self::$config = [];
             }
