@@ -253,9 +253,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-brand-orange bg-opacity-10 text-brand-orange d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-drafting-compass fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 도면은 5초 만에, 단가는 5분 승인 후에만</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 도면은 5분 내로, 단가는 대표님 승인 후에만</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            창고 치수만 입력하면 캐드 도면은 5초 만에 뚝딱 완성됩니다. 하지만 최종 견적 단가는 오직 대표님의 5분 검토와 승인이 있어야만 외부로 나갈 수 있습니다.
+                            창고 치수만 입력하면 캐드 도면은 5분 내로 뚝딱 완성됩니다. 하지만 최종 견적 단가는 오직 대표님의 검토와 승인이 있어야만 외부로 나갈 수 있습니다.
                         </p>
                     </div>
                 </div>
