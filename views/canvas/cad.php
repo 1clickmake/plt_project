@@ -538,7 +538,7 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                     <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
                         <h5 class="fw-semibold text-info m-0 me-1">실시간 2D 배치 도면</h5>
                         <div id="canvas-summary-badge" class="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.82rem;">
-                            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">2585×1000×4500 (2S 3단)</span>
+                            <span id="top-badge-spec" class="badge bg-primary text-white" style="font-size:0.75rem; font-weight:600; padding:4px 8px; letter-spacing:0.02em;">0×0×0 (0S 0단)</span>
                             <span class="text-secondary">|</span>
                             <span>독립 <strong id="top-badge-indep" class="text-primary">0</strong>대</span>
                             <span class="text-secondary">|</span>
@@ -555,10 +555,18 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
                         <div class="btn-group btn-group-sm" role="group">
                             <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-primary-gradient px-3 fw-bold">📐 스마트 캔버스 배치</a>
                             <!-- <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/easy" class="btn btn-outline-info px-3">🟢 이지 모드</a> -->
-                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/board" class="btn btn-outline-info px-3">📝 게시판 문의</a>
+                            <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>" class="btn btn-outline-info px-3">📝 게시판 문의</a>
                         </div>
+                        <button type="button" onclick="confirmResetCanvas()" class="btn btn-sm btn-outline-danger">🔄 새로고침</button>
                         <button type="button" onclick="startRemoteControlTutorial()" class="btn btn-sm btn-outline-info">🎮 리모콘 사용법</button>
                     </div>
+                    <script>
+                    function confirmResetCanvas() {
+                        if (confirm("지금까지 배치한 도면이 모두 초기화 됩니다. 정말 새로고침 하시겠습니까?")) {
+                            window.location.reload();
+                        }
+                    }
+                    </script>
                 </div>
 
                 <!-- 📑 멀티 플로어(층/창고별) 탭 바 영역 -->

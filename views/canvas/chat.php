@@ -277,6 +277,23 @@ body.theme-light .step-indicator {
     color: #0284c7;
     background: rgba(14, 165, 233, 0.12);
 }
+
+/* Typing Indicator Animation */
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+}
+.typing-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #38bdf8;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: typingBounce 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
 </style>
 
 <div class="chat-wizard-container" id="chat-wizard-container">
@@ -356,16 +373,30 @@ const ChatWizard = {
         msgDiv.className = 'chat-msg bot';
         if (fullWidth) msgDiv.style.width = '100%';
         const bubbleStyle = fullWidth ? 'flex: 1; width: 100%;' : '';
+        
+        // 초기에는 타이핑 효과 점 3개만 표시
         msgDiv.innerHTML = `
             <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
-            <div class="chat-bubble" style="${bubbleStyle}">${html}</div>
+            <div class="chat-bubble" style="${bubbleStyle} padding: 8px 12px;">
+                <div class="typing-indicator">
+                    <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                </div>
+            </div>
         `;
         this.body.appendChild(msgDiv);
+        this.scrollToBottom();
+
+        // 800ms 후에 실제 메시지로 교체
         setTimeout(() => {
             if (msgDiv) {
-                msgDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const bubble = msgDiv.querySelector('.chat-bubble');
+                if (bubble) {
+                    bubble.style.padding = ''; // 원래 패딩 복구
+                    bubble.innerHTML = html;
+                }
+                this.scrollToBottom();
             }
-        }, 150);
+        }, 800);
     },
 
     appendUserMsg(text) {
