@@ -82,6 +82,15 @@
             </div>
             <div class="d-flex align-items-center gap-3">
                 <div class="btn-group" role="group">
+                    <?php if (empty($quote['canvas_data'])): ?>
+                        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad?admin_draw=<?= $quote['id'] ?>" class="btn btn-warning btn-sm px-3 fw-bold text-dark" style="font-size:0.85rem;" onclick="window.open(this.href, 'cad_window'); return false;">
+                            📐 고객 맞춤 도면 그려주기
+                        </a>
+                    <?php else: ?>
+                        <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad?admin_draw=<?= $quote['id'] ?>" class="btn btn-success btn-sm px-3 fw-bold text-light" style="font-size:0.85rem;" onclick="window.open(this.href, 'cad_window'); return false;">
+                            ✏️ 도면 다시 열어서 수정하기
+                        </a>
+                    <?php endif; ?>
                     <a href="/vendor/quotes/<?= $quote['id'] ?>" class="btn btn-info btn-sm px-3 fw-bold text-dark" style="font-size:0.85rem;">견적상세보기</a>
                     <a href="/vendor/quotes/<?= $quote['id'] ?>/price" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">단가확인</a>
                     <a href="/vendor/quotes/<?= $quote['id'] ?>/document" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">견적서</a>

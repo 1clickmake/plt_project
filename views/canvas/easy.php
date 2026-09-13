@@ -497,7 +497,7 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
 
         <!-- 우측: 캔버스 및 시각화 -->
         <div class="col-xl-9 col-lg-8 h-100">
-            <div class="glass-panel p-4 h-100 d-flex flex-column">
+            <div class="glass-panel px-4 py-3 h-100 d-flex flex-column">
                 <!-- 상단 배지 바 (한 줄 컴팩트) -->
                 <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
                     <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
@@ -1038,36 +1038,42 @@ function submitQuoteRequest() {
     const canvas = document.getElementById('drawingCanvas');
     let imgData = '';
     if (canvas) {
-        // 화이트모드/다크모드 여부와 관계없이 견적서 저장용 도면 이미지는
-        // 항상 최고 가독성을 자랑하는 CAD 청사진(1번 다크모드 반전 스타일)으로 일관되게 캡처합니다.
-        const prevTheme = window.CANVAS_THEME;
-        const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
-        
-        // 1. 임시로 다크 팔레트로 전환 후 캔버스 그리기
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = 'dark';
-            document.body.classList.remove('theme-light');
-            if (typeof draw === 'function') draw();
+        // 🌟 창고 및 랙 크기에 맞춘 스마트 크롭 (주변 거대 공백 제거 & CAD 인쇄 스타일 반전)
+        if (typeof window.getCroppedCanvas === 'function') {
+            const cropped = window.getCroppedCanvas({ padding: 65, isPrintMode: true });
+            if (cropped) {
+                imgData = cropped.toDataURL('image/jpeg', 0.88);
+            }
         }
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // 색상 반전: 다크모드 선을 고대비 CAD 도면 스타일(주황/갈색 랙, 또렷한 치수선)로 반전
-        ctx.filter = 'invert(1)';
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none'; // 필터 초기화
-        imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+        // 스마트 크롭 실패 시의 안전한 Fallback
+        if (!imgData) {
+            const prevTheme = window.CANVAS_THEME;
+            const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
+            
+            if (isCurrentlyLight) {
+                window.CANVAS_THEME = 'dark';
+                document.body.classList.remove('theme-light');
+                if (typeof draw === 'function') draw();
+            }
 
-        // 2. 원래 테마로 즉시 복구
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = prevTheme;
-            document.body.classList.add('theme-light');
-            if (typeof draw === 'function') draw();
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            ctx.filter = 'invert(1)';
+            ctx.drawImage(canvas, 0, 0);
+            ctx.filter = 'none';
+            imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+
+            if (isCurrentlyLight) {
+                window.CANVAS_THEME = prevTheme;
+                document.body.classList.add('theme-light');
+                if (typeof draw === 'function') draw();
+            }
         }
     }
 

@@ -529,10 +529,31 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($adminDrawData)): ?>
+    <div class="alert alert-warning py-2 mb-3 shadow-sm rounded" style="border: 1px solid #eab308; background-color: rgba(234, 179, 8, 0.15);">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="text-warning fw-bold mb-0" style="font-size: 0.95rem;">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> 관리자 도면 대행 작성 모드 (문의번호: #<?= $adminDrawData['id'] ?>)
+            </h6>
+            <div class="text-light small d-flex gap-2 flex-wrap">
+                <span class="badge bg-dark border border-secondary bg-opacity-50 text-light py-1">
+                    🏢 <?= htmlspecialchars($adminDrawData['company'] ?? '업체명 없음') ?>
+                </span>
+                <span class="badge bg-dark border border-secondary bg-opacity-50 text-light py-1">
+                    👤 <?= htmlspecialchars($adminDrawData['name'] ?? '담당자 미상') ?>
+                </span>
+                <span class="badge bg-dark border border-secondary bg-opacity-50 text-light py-1">
+                    📞 <?= htmlspecialchars($adminDrawData['phone'] ?? '연락처 없음') ?>
+                </span>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="row g-4 flex-grow-1" style="min-height: 0;">
         <!-- 캔버스 및 시각화 -->
         <div class="col-12 h-100">
-            <div class="glass-panel p-4 h-100 d-flex flex-column">
+            <div class="glass-panel px-4 py-3 h-100 d-flex flex-column">
                 <!-- 상단 배지 바 (한 줄 컴팩트) -->
                 <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
                     <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
@@ -691,25 +712,26 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
           </div>
 
           <div class="col-12">
+            <input type="hidden" id="modal-admin-draw-id" value="<?= !empty($adminDrawData) ? $adminDrawData['id'] : '' ?>">
             <label class="form-label text-muted small mb-1">회사명 <span class="text-danger">★</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-company" placeholder="예: 주식회사 파로퀘스">
+            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-company" placeholder="예: 주식회사 파로퀘스" value="<?= htmlspecialchars($adminDrawData['company'] ?? '') ?>" <?= !empty($adminDrawData) ? 'readonly' : '' ?>>
           </div>
           <div class="col-md-6">
             <label class="form-label text-muted small mb-1">담당자 이름 <span class="text-danger">★</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-name" placeholder="예: 홍길동">
+            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-name" placeholder="예: 홍길동" value="<?= htmlspecialchars($adminDrawData['name'] ?? '') ?>" <?= !empty($adminDrawData) ? 'readonly' : '' ?>>
           </div>
           <div class="col-md-6">
             <label class="form-label text-muted small mb-1">연락처 (카카오톡 수신용) <span class="text-danger">★</span></label>
-            <input type="tel" class="form-control bg-transparent text-white border-secondary" id="modal-phone" placeholder="010-0000-0000">
+            <input type="tel" class="form-control bg-transparent text-white border-secondary" id="modal-phone" placeholder="010-0000-0000" value="<?= htmlspecialchars($adminDrawData['phone'] ?? '') ?>" <?= !empty($adminDrawData) ? 'readonly' : '' ?>>
           </div>
           <div class="col-12">
             <label class="form-label text-muted small mb-1">이메일 (견적서 수신용) <span class="text-danger">★</span></label>
-            <input type="email" class="form-control bg-transparent text-white border-secondary" id="modal-email" placeholder="example@email.com">
+            <input type="email" class="form-control bg-transparent text-white border-secondary" id="modal-email" placeholder="example@email.com" value="<?= htmlspecialchars($adminDrawData['email'] ?? '') ?>" <?= !empty($adminDrawData) ? 'readonly' : '' ?>>
           </div>
           
           <div class="col-12">
             <label class="form-label text-muted small mb-1">시공 현장 주소 <span class="text-danger">★</span> <span class="text-secondary" style="font-size:0.7rem;">(최소 시/군/구 수준)</span></label>
-            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-address" placeholder="예: 경기도 성남시 분당구">
+            <input type="text" class="form-control bg-transparent text-white border-secondary" id="modal-address" placeholder="예: 경기도 성남시 분당구" value="<?= htmlspecialchars($adminDrawData['address'] ?? '') ?>" <?= !empty($adminDrawData) ? 'readonly' : '' ?>>
           </div>
           <div class="col-12">
             <label class="form-label text-muted small mb-1">상세내용 입력</label>
@@ -719,7 +741,7 @@ window.IS_EMBED = <?= json_encode($isEmbed) ?>;
       </div>
       <div class="modal-footer border-top border-secondary">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn quote-submit-btn px-4" onclick="submitQuoteRequest()">🚀 견적 요청 제출</button>
+        <button type="button" class="btn quote-submit-btn px-4" onclick="submitQuoteRequest()">🚀 <?= !empty($adminDrawData) ? '도면 갱신 및 첨부하기' : '견적 요청 제출' ?></button>
       </div>
     </div>
   </div>
@@ -1038,6 +1060,15 @@ function openQuoteRequestModal() {
         alert(check.message);
         return;
     }
+    
+    const adminDrawIdNode = document.getElementById('modal-admin-draw-id');
+    if (adminDrawIdNode && adminDrawIdNode.value && adminDrawIdNode.value !== '0') {
+        if(confirm("현재 그려진 도면을 기존 견적 문의글에 첨부하시겠습니까?")) {
+            submitQuoteRequest();
+        }
+        return;
+    }
+
     const modalEl = document.getElementById('quoteRequestModal');
     if (modalEl) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -1089,36 +1120,42 @@ function submitQuoteRequest() {
     const canvas = document.getElementById('drawingCanvas');
     let imgData = '';
     if (canvas) {
-        // 화이트모드/다크모드 여부와 관계없이 견적서 저장용 도면 이미지는
-        // 항상 최고 가독성을 자랑하는 CAD 청사진(1번 다크모드 반전 스타일)으로 일관되게 캡처합니다.
-        const prevTheme = window.CANVAS_THEME;
-        const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
-        
-        // 1. 임시로 다크 팔레트로 전환 후 캔버스 그리기
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = 'dark';
-            document.body.classList.remove('theme-light');
-            if (typeof draw === 'function') draw();
+        // 🌟 창고 및 랙 크기에 맞춘 스마트 크롭 (주변 거대 공백 제거 & CAD 인쇄 스타일 반전)
+        if (typeof window.getCroppedCanvas === 'function') {
+            const cropped = window.getCroppedCanvas({ padding: 65, isPrintMode: true });
+            if (cropped) {
+                imgData = cropped.toDataURL('image/jpeg', 0.88);
+            }
         }
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // 색상 반전: 다크모드 선을 고대비 CAD 도면 스타일(주황/갈색 랙, 또렷한 치수선)로 반전
-        ctx.filter = 'invert(1)';
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none'; // 필터 초기화
-        imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+        // 스마트 크롭 실패 시의 안전한 Fallback
+        if (!imgData) {
+            const prevTheme = window.CANVAS_THEME;
+            const isCurrentlyLight = document.body.classList.contains('theme-light') || window.CANVAS_THEME === 'light';
+            
+            if (isCurrentlyLight) {
+                window.CANVAS_THEME = 'dark';
+                document.body.classList.remove('theme-light');
+                if (typeof draw === 'function') draw();
+            }
 
-        // 2. 원래 테마로 즉시 복구
-        if (isCurrentlyLight) {
-            window.CANVAS_THEME = prevTheme;
-            document.body.classList.add('theme-light');
-            if (typeof draw === 'function') draw();
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; // 프린트용 흰색 배경
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            ctx.filter = 'invert(1)';
+            ctx.drawImage(canvas, 0, 0);
+            ctx.filter = 'none';
+            imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+
+            if (isCurrentlyLight) {
+                window.CANVAS_THEME = prevTheme;
+                document.body.classList.add('theme-light');
+                if (typeof draw === 'function') draw();
+            }
         }
     }
 
@@ -1222,8 +1259,12 @@ function submitQuoteRequest() {
         rackBypassType = bpS + 'S ' + bpLevels + '단';
     }
 
+    const adminDrawIdNode = document.getElementById('modal-admin-draw-id');
+    const adminDrawId = adminDrawIdNode ? adminDrawIdNode.value : '0';
+
     const payload = {
         vendor_user_id: window.vendorUserId || 0,
+        admin_draw_id: adminDrawId,
         company: company,
         name: name,
         phone: phone,
@@ -1287,7 +1328,24 @@ function submitQuoteRequest() {
         }
         if (res.success) {
             bootstrap.Modal.getInstance(document.getElementById('quoteRequestModal'))?.hide();
-            // 1. 견적 요청 성공 안내 경고창 먼저 출력
+
+            // 🌟 관리자 도면 작성 또는 도면 수정 모드일 때: 부모창 갱신 후 창 닫기
+            if (adminDrawId && adminDrawId !== '0') {
+                alert('✅ 도면 저장이 완료되었습니다!');
+                if (window.opener && !window.opener.closed) {
+                    try { window.opener.location.reload(true); } catch(e){}
+                }
+                setTimeout(() => {
+                    window.close();
+                    // 브라우저 보안으로 창 닫기가 안 될 경우 올바른 견적 상세 페이지로 이동
+                    setTimeout(() => {
+                        window.location.href = `/vendor/quotes/${adminDrawId}`;
+                    }, 200);
+                }, 100);
+                return;
+            }
+
+            // 1. 일반 고객 견적 요청 성공 안내 경고창 먼저 출력
             alert(`✅ 견적 요청이 성공적으로 접수되었습니다!\n\n회사: ${company}\n담당자: ${name}\n연락처: ${phone}\n현장: ${address}\n\n공급사 담당자가 확인 후 빠른 시일 안에 연락드리겠습니다! 감사합니다 💕`);
 
             // 2. 확인 누른 후 서비스 경험 남기기(별점 평가) 모달 띄우기
@@ -1606,7 +1664,7 @@ window.addEventListener('DOMContentLoaded', () => {
             font-size:0.7rem; font-weight:700; padding:18px 4px;
             cursor:pointer; transition: all 0.2s; line-height:1.35; letter-spacing:0.01em;
         " onmouseover="this.style.background='rgba(220,38,38,0.42)';this.style.color='#fff'" onmouseout="this.style.background='rgba(220,38,38,0.2)';this.style.color='#fca5a5'">
-            🔴 견적요청
+            <?= !empty($adminDrawData) ? '💾 도면 저장' : '🔴 견적요청' ?>
         </button>
     </div>
 </div>
@@ -1974,6 +2032,35 @@ function submitReview() {
 
 <!-- 플로팅 챗봇 마법사 -->
 <?php include 'chat.php'; ?>
+
+<?php if (!empty($adminDrawData) && !empty($adminDrawData['canvas_data'])): ?>
+<!-- 저장된 도면 복원용 스크립트 -->
+<script>
+    window.RAW_RESTORE_DATA = JSON.parse(<?= json_encode(htmlspecialchars_decode($adminDrawData['canvas_data'], ENT_QUOTES)) ?>);
+    <?php if (!empty($adminDrawData['edge_lengths'])): ?>
+    window.RAW_RESTORE_DATA.edge_lengths_str = <?= json_encode($adminDrawData['edge_lengths']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['pallet_w'])): ?>
+    window.RAW_RESTORE_DATA.pallet_w = <?= json_encode($adminDrawData['pallet_w']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['pallet_d'])): ?>
+    window.RAW_RESTORE_DATA.pallet_d = <?= json_encode($adminDrawData['pallet_d']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['pallet_h'])): ?>
+    window.RAW_RESTORE_DATA.pallet_h = <?= json_encode($adminDrawData['pallet_h']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['pallet_weight'])): ?>
+    window.RAW_RESTORE_DATA.pallet_weight = <?= json_encode($adminDrawData['pallet_weight']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['rack_levels'])): ?>
+    window.RAW_RESTORE_DATA.rack_levels = <?= json_encode($adminDrawData['rack_levels']) ?>;
+    <?php endif; ?>
+    <?php if (!empty($adminDrawData['rack_height'])): ?>
+    window.RAW_RESTORE_DATA.rack_height = <?= json_encode($adminDrawData['rack_height']) ?>;
+    <?php endif; ?>
+</script>
+<script src="/assets/js/canvas-restore.js?v=<?= time() ?>"></script>
+<?php endif; ?>
 
 </body>
 </html>

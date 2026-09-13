@@ -350,7 +350,24 @@ const ChatWizard = {
     
     init() {
         this.body = document.getElementById('chat-wizard-body');
-        setTimeout(() => this.startStep1(), 500); // Slight delay for intro animation
+        setTimeout(() => {
+            if (typeof window.RAW_RESTORE_DATA !== 'undefined' && window.RAW_RESTORE_DATA) {
+                this.currentStep = 7;
+                this.appendBotMsg(`
+                    <p class="mb-2"><strong>🎉 도면이 성공적으로 복원되었습니다! 💕</strong></p>
+                    <p class="text-secondary small mb-2">이전에 작업하시던 상태 그대로 불러왔어요.<br>도면을 수정 후 도면 저장을 클릭하세요.</p>
+                    <div class="mt-2 p-2 rounded text-start" style="background:rgba(56,189,248,0.1); font-size:0.82rem; border:1px dashed rgba(56,189,248,0.5); line-height:1.4;">
+                        • 랙을 클릭하여 원하는 위치로 자유롭게 이동할 수 있어요.<br>
+                        • 리모컨 버튼(회전, 연장, 복사 등)을 눌러 편집해보세요!
+                    </div>
+                    <div class="mt-3">
+                        <button onclick="openQuoteRequestModal()" class="chat-btn w-100 fw-bold shadow-sm" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.95rem; padding: 10px 14px; border-radius: 20px;">💾 도면 저장</button>
+                    </div>
+                `, true);
+            } else {
+                this.startStep1();
+            }
+        }, 500);
     },
 
     minimize() {

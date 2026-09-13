@@ -28,7 +28,23 @@ class CanvasController extends BaseController {
             // Ignore if table doesn't exist or other DB errors occur during visit logging
         }
 
-        $this->view('canvas/cad', ['vendor' => $vendor]);
+        $adminDrawId = $_GET['admin_draw'] ?? 0;
+        $adminDrawData = null;
+        if ($adminDrawId) {
+            if (!isset($_SESSION['user']) || empty($_SESSION['user']) || !isset($_SESSION['employee_id'])) {
+                echo "<script>alert('관리자 로그인이 필요합니다.'); window.location.href='/login';</script>";
+                return;
+            }
+            $stmtDraw = $db->prepare("SELECT * FROM quote_requests WHERE id = :id AND (vendor_user_id = :vuid OR vendor_user_id = :vuid2)");
+            $stmtDraw->execute(['id' => $adminDrawId, 'vuid' => $_SESSION['user']['id'], 'vuid2' => $_SESSION['user']['user_id'] ?? '']);
+            $adminDrawData = $stmtDraw->fetch();
+            if (!$adminDrawData) {
+                echo "<script>alert('접근 권한이 없거나 유효하지 않은 문의글입니다.'); window.location.href='/';</script>";
+                return;
+            }
+        }
+
+        $this->view('canvas/cad', ['vendor' => $vendor, 'adminDrawData' => $adminDrawData]);
     }
 
     public function showEasyCanvas($vars) {
@@ -540,58 +556,103 @@ class CanvasController extends BaseController {
             $ruleStmt->execute(['vid' => $vendorUserId]);
             $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
 
-            $sql = "INSERT INTO quote_requests (
-                        vendor_user_id, source_mode, title, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, extra_files, summary,
-                        edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
-                        forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
-                        rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
-                        condition_type, self_install
-                    ) VALUES (
-                        :vuid, :source_mode, :title, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :extra_files, :summary,
-                        :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
-                        :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
-                        :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
-                        :condition_type, :self_install
-                    )";
-            
-            $stmt = $db->prepare($sql);
-            $stmt->execute([
-                'vuid'    => $vendorUserId,
-                'source_mode' => $sourceMode,
-                'title'   => $title,
-                'prid'    => $pricingRuleId,
-                'company' => $company,
-                'name'    => $name,
-                'phone'   => $phone,
-                'email'   => $email,
-                'address' => $address,
-                'cdata'   => $canvasData,
-                'imgpath' => $imagePath,
-                'extra_files' => $extraFilesJson,
-                'summary' => $summary,
-                'edge_lengths' => $edge_lengths,
-                'pallet_w' => $pallet_w,
-                'pallet_d' => $pallet_d,
-                'pallet_h' => $pallet_h,
-                'pallet_weight' => $pallet_weight,
-                'fork_dir' => $fork_dir,
-                'fork_type' => $fork_type,
-                'fork_lift_h' => $fork_lift_h,
-                'fork_ast' => $fork_ast,
-                'rack_levels' => $rack_levels,
-                'rack_height' => $rack_height,
-                'rack_spec' => $rack_spec,
-                'rack_type' => $rack_type,
-                'rack_indep' => $rack_indep,
-                'rack_conn' => $rack_conn,
-                'rack_small' => $rack_small,
-                'rack_bypass' => $rack_bypass,
-                'rack_bypass_type' => $rack_bypass_type,
-                'rack_holders' => $rack_holders,
-                'rack_pallets' => $rack_pallets,
-                'condition_type' => $condition_type,
-                'self_install' => $self_install
-            ]);
+            $adminDrawId = intval($body['admin_draw_id'] ?? 0);
+
+            if ($adminDrawId > 0) {
+                $sql = "UPDATE quote_requests SET 
+                            canvas_data = :cdata, image_path = :imgpath, extra_files = IFNULL(:extra_files, extra_files),
+                            edge_lengths = :edge_lengths, pallet_w = :pallet_w, pallet_d = :pallet_d, pallet_h = :pallet_h, pallet_weight = :pallet_weight,
+                            fork_direction = :fork_dir, forklift_type = :fork_type, forklift_lift_height = :fork_lift_h, forklift_ast = :fork_ast,
+                            rack_levels = :rack_levels, rack_height = :rack_height, rack_spec = :rack_spec, rack_type = :rack_type,
+                            rack_indep = :rack_indep, rack_conn = :rack_conn, rack_small_conn = :rack_small, rack_bypass = :rack_bypass, rack_bypass_type = :rack_bypass_type,
+                            rack_holders = :rack_holders, rack_pallets = :rack_pallets, condition_type = :condition_type, self_install = :self_install,
+                            source_mode = 'board_with_cad'
+                        WHERE id = :admin_draw_id AND (vendor_user_id = :vuid1 OR vendor_user_id = :vuid2)";
+                $stmt = $db->prepare($sql);
+                $stmt->execute([
+                    'admin_draw_id' => $adminDrawId,
+                    'vuid1' => $_SESSION['user']['id'],
+                    'vuid2' => $_SESSION['user']['user_id'] ?? '',
+                    'cdata'   => $canvasData,
+                    'imgpath' => $imagePath,
+                    'extra_files' => $extraFilesJson,
+                    'edge_lengths' => $edge_lengths,
+                    'pallet_w' => $pallet_w,
+                    'pallet_d' => $pallet_d,
+                    'pallet_h' => $pallet_h,
+                    'pallet_weight' => $pallet_weight,
+                    'fork_dir' => $fork_dir,
+                    'fork_type' => $fork_type,
+                    'fork_lift_h' => $fork_lift_h,
+                    'fork_ast' => $fork_ast,
+                    'rack_levels' => $rack_levels,
+                    'rack_height' => $rack_height,
+                    'rack_spec' => $rack_spec,
+                    'rack_type' => $rack_type,
+                    'rack_indep' => $rack_indep,
+                    'rack_conn' => $rack_conn,
+                    'rack_small' => $rack_small,
+                    'rack_bypass' => $rack_bypass,
+                    'rack_bypass_type' => $rack_bypass_type,
+                    'rack_holders' => $rack_holders,
+                    'rack_pallets' => $rack_pallets,
+                    'condition_type' => $condition_type,
+                    'self_install' => $self_install
+                ]);
+            } else {
+                $sql = "INSERT INTO quote_requests (
+                            vendor_user_id, source_mode, title, pricing_rule_id, company, name, phone, email, address, canvas_data, image_path, extra_files, summary,
+                            edge_lengths, pallet_w, pallet_d, pallet_h, pallet_weight, fork_direction,
+                            forklift_type, forklift_lift_height, forklift_ast, rack_levels, rack_height,
+                            rack_spec, rack_type, rack_indep, rack_conn, rack_small_conn, rack_bypass, rack_bypass_type, rack_holders, rack_pallets,
+                            condition_type, self_install
+                        ) VALUES (
+                            :vuid, :source_mode, :title, :prid, :company, :name, :phone, :email, :address, :cdata, :imgpath, :extra_files, :summary,
+                            :edge_lengths, :pallet_w, :pallet_d, :pallet_h, :pallet_weight, :fork_dir,
+                            :fork_type, :fork_lift_h, :fork_ast, :rack_levels, :rack_height,
+                            :rack_spec, :rack_type, :rack_indep, :rack_conn, :rack_small, :rack_bypass, :rack_bypass_type, :rack_holders, :rack_pallets,
+                            :condition_type, :self_install
+                        )";
+                
+                $stmt = $db->prepare($sql);
+                $stmt->execute([
+                    'vuid'    => $vendorUserId,
+                    'source_mode' => $sourceMode,
+                    'title'   => $title,
+                    'prid'    => $pricingRuleId,
+                    'company' => $company,
+                    'name'    => $name,
+                    'phone'   => $phone,
+                    'email'   => $email,
+                    'address' => $address,
+                    'cdata'   => $canvasData,
+                    'imgpath' => $imagePath,
+                    'extra_files' => $extraFilesJson,
+                    'summary' => $summary,
+                    'edge_lengths' => $edge_lengths,
+                    'pallet_w' => $pallet_w,
+                    'pallet_d' => $pallet_d,
+                    'pallet_h' => $pallet_h,
+                    'pallet_weight' => $pallet_weight,
+                    'fork_dir' => $fork_dir,
+                    'fork_type' => $fork_type,
+                    'fork_lift_h' => $fork_lift_h,
+                    'fork_ast' => $fork_ast,
+                    'rack_levels' => $rack_levels,
+                    'rack_height' => $rack_height,
+                    'rack_spec' => $rack_spec,
+                    'rack_type' => $rack_type,
+                    'rack_indep' => $rack_indep,
+                    'rack_conn' => $rack_conn,
+                    'rack_small' => $rack_small,
+                    'rack_bypass' => $rack_bypass,
+                    'rack_bypass_type' => $rack_bypass_type,
+                    'rack_holders' => $rack_holders,
+                    'rack_pallets' => $rack_pallets,
+                    'condition_type' => $condition_type,
+                    'self_install' => $self_install
+                ]);
+            }
 
             echo json_encode(['success' => true, 'message' => '견적 요청이 성공적으로 저장되었습니다.']);
         } catch (\Exception $e) {

@@ -559,8 +559,8 @@ function alignAndScalePolygon() {
     }
 
     const leftMargin = 90;   // 좌측 눈금자(45px) + 안전 여유(45px)
-    const topMargin = 70;    // 상단 눈금자(22px) + 안전 여유
-    const bottomMargin = 70; // 하단 안전 여유
+    const topMargin = 75;    // 상단 눈금자(22px) + 안전 여유
+    const bottomMargin = 220; // 🌟 하단 치수선, 배지 밑으로 확 트인 여유 공간 대폭 확보 (220px)
 
     const safeWidth = Math.max(300, containerW - leftMargin - rightMargin);
     const safeHeight = Math.max(300, containerH - topMargin - bottomMargin);
@@ -569,7 +569,7 @@ function alignAndScalePolygon() {
     currentScale = Math.min(safeWidth / polyWidthMm, safeHeight / polyHeightMm);
     window.currentScale = currentScale;
 
-    // 안전 가시 영역의 중앙에 완벽 배치
+    // 안전 가시 영역에 쾌적하게 배치 (하단 여유 공간 확보를 위해 상단 35% : 하단 65% 비율 배치)
     const drawnWidthPx = polyWidthMm * currentScale;
     const drawnHeightPx = polyHeightMm * currentScale;
 
@@ -579,7 +579,7 @@ function alignAndScalePolygon() {
     const oldScale = window.currentScale || currentScale;
 
     const offsetX = leftMargin + (safeWidth - drawnWidthPx) / 2 - (minX * currentScale);
-    const offsetY = topMargin + (safeHeight - drawnHeightPx) / 2 - (minY * currentScale);
+    const offsetY = topMargin + Math.max(0, (safeHeight - drawnHeightPx) * 0.35) - (minY * currentScale);
     window.canvasOriginX = offsetX + (minX * currentScale);
     window.canvasOriginY = offsetY + (minY * currentScale);
     window.globalPolyMinX = Math.round(offsetX / currentScale);

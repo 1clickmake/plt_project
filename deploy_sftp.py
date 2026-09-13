@@ -26,6 +26,7 @@ files_to_upload = [
     'public/assets/js/canvas-interactions.js',
     'public/assets/js/canvas2d-easy.js',
     'public/assets/js/canvas-interactions-easy.js',
+    'public/assets/js/canvas-restore.js',
     'public/assets/js/tutorial.js',
     'views/canvas/index.php',
     'views/canvas/cad.php',

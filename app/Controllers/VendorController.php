@@ -532,7 +532,12 @@ class VendorController extends BaseController {
         }
 
         $balanceInfo = $this->getQuoteBalance($userId);
-        $this->view('vendor/quote_detail', ['quote' => $quote, 'balanceInfo' => $balanceInfo]);
+        
+        $stmtSettings = $db->prepare("SELECT url_slug FROM vendor_settings WHERE user_id = :uid");
+        $stmtSettings->execute(['uid' => $userStrId]);
+        $vendor = $stmtSettings->fetch(\PDO::FETCH_ASSOC);
+
+        $this->view('vendor/quote_detail', ['quote' => $quote, 'balanceInfo' => $balanceInfo, 'vendor' => $vendor]);
     }
 
     public function quotePrice($vars) {
