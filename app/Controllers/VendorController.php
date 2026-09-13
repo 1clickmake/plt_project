@@ -233,8 +233,9 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['id']; // 정수 PK (users.id)
-        $userStrId = $_SESSION['user']['user_id'] ?? '';
+        $user = $_SESSION['user'] ?? [];
+        $userId = $user['id'] ?? 0; // 정수 PK ($user['id'])
+        $userStrId = $user['user_id'] ?? '';
         $db = Database::getInstance();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -390,7 +391,8 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['id']; // 정수 PK
+        $user = $_SESSION['user'] ?? [];
+        $userId = $user['id'] ?? 0; // 정수 PK ($user['id'])
         $db = Database::getInstance();
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -419,8 +421,9 @@ class VendorController extends BaseController {
             return;
         }
 
-        $userId = $_SESSION['user']['id']; // 정수 PK
-        $userStrId = $_SESSION['user']['user_id'] ?? '';
+        $user = $_SESSION['user'] ?? [];
+        $userId = $user['id'] ?? 0; // 정수 PK ($user['id'])
+        $userStrId = $user['user_id'] ?? '';
         $db = Database::getInstance();
         $input = json_decode(file_get_contents('php://input'), true);
         
