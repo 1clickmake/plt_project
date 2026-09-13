@@ -307,111 +307,102 @@ include_header($title, $siteConfig ?? []);
         </div>
     </section>
 
-    <!-- Pricing Section (Strictly 2 Plans: FREE & PRO) -->
+    <!-- Pricing Section (Strictly 2 Plans: FREE & PRO -> Trial & Vault) -->
     <section id="pricing" class="section-padding bg-white border-bottom">
         <div class="max-w-1200">
             <div class="text-center max-w-720 mb-5">
                 <div class="reveal d-inline-flex align-items-center gap-2 rounded-pill badge-soft-orange px-3 py-1 fs-7 fw-bold mb-2">
-                    <i class="fa-solid fa-wallet"></i> 투명하고 단순한 요금제
+                    <i class="fa-solid fa-vault"></i> B2B 금고 요금제
                 </div>
                 <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(28px, 4vw, 38px);">
-                    복잡한 옵션 없이, <span class="text-brand-orange">딱 2가지</span> 플랜
+                    단가표 유출 차단, <span class="text-brand-orange">목적에 맞게</span> 선택하세요
                 </h2>
                 <p class="reveal mt-3 text-muted fs-6">
-                    신용카드 등록 없이 1개월 동안 200건의 견적을 무료로 경험해 보세요.<br>
-                    본격적인 비즈니스 수주를 원하시면 무제한 PRO 플랜을 선택하세요.
+                    보안 시스템을 테스트해볼 수 있는 체험 플랜과<br>
+                    실제 회사 단가를 안전하게 잠글 수 있는 실전 금고 플랜 2가지입니다.
                 </p>
             </div>
 
             <div class="row g-4 justify-content-center mt-2 align-items-stretch">
                 
-                <!-- Plan 1: FREE -->
+                <!-- Plan 1: 체험 플랜 - 보안 진단용 -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box h-100 bg-light p-4 p-xl-5 border d-flex flex-column justify-content-between shadow-sm">
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <span class="badge bg-secondary rounded-pill px-3 py-1 fs-8 fw-bold">FREE 플랜</span>
-                                <span class="text-muted fs-8">1달 무료 체험</span>
+                                <span class="badge bg-secondary rounded-pill px-3 py-1 fs-8 fw-bold">체험 플랜 - 보안 진단용</span>
+                                <span class="text-muted fs-8">1달 체험</span>
                             </div>
                             <h3 class="fw-bold text-deep-navy fs-3 mb-1">0원</h3>
-                            <p class="text-muted fs-7 mb-4">솔루션 기능 검증 및 소규모 시공업체용</p>
+                            <p class="text-muted fs-7 mb-4">내 단가표 노출 없이 보안 시스템을 미리 경험</p>
 
                             <div class="py-3 border-top border-bottom mb-4">
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 총 200건 견적서 발행 제공
+                                    <i class="fa-solid fa-circle-check text-success"></i> 보안 시스템 맛보기 (샘플 데이터 사용)
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 직원 계정 3명 등록
+                                    <i class="fa-solid fa-circle-check text-success"></i> 견적서 지문 추적 1회 체험
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 1달(30일) 무료 이용
+                                    <i class="fa-solid fa-circle-check text-success"></i> 1달(30일) 테스트 가능
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-muted fs-7 mb-2">
-                                    <i class="fa-solid fa-check text-muted"></i> 2D Canvas 자동 랙 배치 엔진
-                                </div>
-                                <div class="d-flex align-items-center gap-2 text-muted fs-7 mb-2">
-                                    <i class="fa-solid fa-check text-muted"></i> 자재 BOM 실시간 자동 산출
-                                </div>
-                                <div class="d-flex align-items-center gap-2 text-muted fs-7">
-                                    <i class="fa-solid fa-check text-muted"></i> 표준 PDF 견적서 즉시 발행
+                                    <i class="fa-solid fa-lock text-muted"></i> * 실제 회사 단가 업로드는 불가 (보안상 제한)
                                 </div>
                             </div>
                         </div>
 
                         <div>
                             <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-outline-dark w-100 justify-content-center fs-7 py-3">
-                                1개월 무료로 시작하기 <i class="fa-solid fa-arrow-right"></i>
+                                무료로 보안 진단해보기 <i class="fa-solid fa-arrow-right"></i>
                             </a>
                             <div class="text-center text-muted fs-8 mt-2">신용카드 정보 입력 없음</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Plan 2: PRO (Featured) -->
+                <!-- Plan 2: 금고 플랜 - 실제 운영용 (Featured) -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box pricing-card-pro h-100 bg-white p-4 p-xl-5 border d-flex flex-column justify-content-between position-relative shadow-lg" style="transition-delay: 100ms;">
                         <div class="position-absolute top-0 start-50 translate-middle badge bg-brand-orange rounded-pill px-4 py-2 fs-8 fw-bold shadow">
-                            ⭐ 가장 인기 있는 비즈니스 플랜
+                            ⭐ 파렛트랙 사장님 95%가 선택한 플랜
                         </div>
 
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-3 mt-2">
-                                <span class="badge bg-brand-orange bg-opacity-10 text-brand-orange rounded-pill px-3 py-1 fs-8 fw-bold">PRO 무제한 플랜</span>
-                                <span class="badge bg-success bg-opacity-10 text-success fs-8">무제한 수주 지원</span>
+                                <span class="badge bg-brand-orange bg-opacity-10 text-brand-orange rounded-pill px-3 py-1 fs-8 fw-bold">금고 플랜 - 실제 운영용</span>
+                                <span class="badge bg-success bg-opacity-10 text-success fs-8">무제한 보안 지원</span>
                             </div>
                             <div class="d-flex align-items-baseline gap-2 mb-1">
                                 <h3 class="fw-bold text-deep-navy fs-2 mb-0">₩220,000</h3>
                                 <span class="text-muted fs-7">/ 월 (VAT 별도)</span>
                             </div>
-                            <p class="text-muted fs-7 mb-4">본격적인 수주 확대 및 견적 자동화를 원하는 전문 기업</p>
+                            <p class="text-muted fs-7 mb-4">회사 전체의 영업 비밀과 단가를 완벽하게 통제</p>
 
                             <div class="py-3 border-top border-bottom mb-4">
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-bold text-brand-orange">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 견적서 발행 무제한 (UNLIMITED)
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 포스트/빔 원가 AES-256 금고 보관
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-bold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 직원 등록 무제한 (팀원 전원 계정)
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 마진율 5분 대표 승인 시스템 (강제 잠금)
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 업체 맞춤 단가표 & 엑셀 일괄 연동
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 유출 시 0.1초 추적 + 열람 CCTV 무제한
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 견적 잠금(Lock) 및 승인 관리 시스템
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 회사 직원 전체 계정 발급 (무제한)
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 귀사 전용 독립 견적 링크 & 홈페이지 임베드
-                                </div>
-                                <div class="d-flex align-items-center gap-2 text-dark fs-7 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 24/7 우선 기술 지원 & 전담 온보딩
+                                    <i class="fa-solid fa-circle-check text-brand-orange"></i> 2D 자동설계 & 견적서 PDF 생성 무제한
                                 </div>
                             </div>
                         </div>
 
                         <div>
                             <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=pro'; ?>" class="btn-pill btn-orange w-100 justify-content-center fs-7 py-3 shadow">
-                                PRO 비즈니스 구독하기 <i class="fa-solid fa-arrow-right"></i>
+                                금고 플랜 시작하기 <i class="fa-solid fa-arrow-right"></i>
                             </a>
-                            <div class="text-center text-muted fs-8 mt-2">약정 없이 언제든 변경 및 해지 가능</div>
+                            <div class="text-center text-muted fs-8 mt-2">약정 없이 언제든 해지 가능</div>
                         </div>
                     </div>
                 </div>
@@ -421,11 +412,11 @@ include_header($title, $siteConfig ?? []);
             <!-- Value Comparison Note -->
             <div class="reveal mt-5 p-4 rounded-4 bg-light text-center max-w-720 mx-auto border">
                 <div class="fs-7 text-deep-navy fw-semibold">
-                    <i class="fa-solid fa-calculator text-brand-orange me-2"></i>
-                    PRO 플랜(월 22만원)은 <span class="text-brand-orange fw-bold">견적 단 1건 작성 인건비</span>보다 저렴합니다.
+                    <i class="fa-solid fa-lock text-brand-orange me-2"></i>
+                    금고 플랜(월 22만원)은 <span class="text-brand-orange fw-bold">단가표 한 번 유출로 잃는 막대한 손실액</span>에 비하면 매우 저렴합니다.
                 </div>
                 <div class="fs-8 text-muted mt-1">
-                    월 25건 견적 기준 약 193만 원의 순수 인건비 절감 효과를 즉시 경험하세요.
+                    월 22만원으로 대표님의 20년 노하우와 핵심 영업 마진율을 완벽하게 지키세요.
                 </div>
             </div>
         </div>
