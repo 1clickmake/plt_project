@@ -61,8 +61,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
                 </div>
                 <h1 class="text-[32px] md:text-[38px] font-[700] leading-none tracking-tight">다공급사 단가표 관리 <span class="text-[#fde047]">v2</span></h1>
                 <p class="text-[13px] text-white/50 mt-3 max-w-[560px] leading-relaxed">
-                    엑셀이 없으면 수동 단가로 자동 폴백되어 견적이 끊기지 않습니다. <br>
-                    <span class="text-[#fde047]"><i class="fa-solid fa-check"></i> 두목님 질문 해결: "아무것도 올라가지 않았다면 직접 단가 입력"</span>
+                    엑셀이 없으면 수동 단가로 자동 폴백되어 견적이 끊기지 않습니다.
                 </p>
             </div>
             <div class="flex items-center gap-2">
@@ -94,7 +93,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
                 <span class="text-[10px] px-2 py-0.5 rounded-full font-medium <?= $st['cls'] ?>"><?= $st['text'] ?></span>
             </a>
             <?php endforeach; ?>
-            <button onclick="openAddSupplierModal()" class="shrink-0 h-[44px] px-4 rounded-full border border-dashed border-white/20 text-white/50 hover:text-white/80 hover:border-white/30 flex items-center gap-2 text-[13px] transition">
+            <button onclick="openAddSupplierModal()" class="bg-transparent shrink-0 h-[44px] px-4 rounded-full border border-dashed border-white/20 text-white/50 hover:text-white/80 hover:border-white/30 flex items-center gap-2 text-[13px] transition">
                 <i class="fa-solid fa-plus"></i> 공급사 추가
             </button>
         </div>

@@ -537,4 +537,28 @@ CREATE TABLE `website_portfolios` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='제작 웹사이트 포트폴리오 테이블';
 
+DROP TABLE IF EXISTS `suppliers`;
+CREATE TABLE `suppliers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `vendor_user_id` int(11) NOT NULL COMMENT '소유자(벤더) ID',
+  `name` varchar(50) NOT NULL,
+  `factory_name` varchar(100) DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'none' COMMENT 'excel, manual, none',
+  `color` varchar(20) DEFAULT '#94a3b8',
+  `excel_file` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='공급사 관리 테이블';
+
+DROP TABLE IF EXISTS `vendor_prices_manual`;
+CREATE TABLE `vendor_prices_manual` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `supplier_id` int(11) NOT NULL,
+  `item_code` varchar(50) NOT NULL,
+  `unit_price` decimal(12,2) DEFAULT 0.00,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_supplier_item` (`supplier_id`,`item_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='수동 완제품 단가 테이블';
+
 SET FOREIGN_KEY_CHECKS = 1;
