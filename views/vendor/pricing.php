@@ -316,7 +316,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
             if(!name) { alert('이름을 입력해주세요!'); return; }
             
             try {
-                const res = await fetch('/vendor/addSupplier', {
+                const res = await fetch('/vendor/pricing/supplier/add', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({name})
@@ -356,7 +356,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
 
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const res = await fetch('/vendor/saveManualPricing', {
+                const res = await fetch('/vendor/pricing/manual_save', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({supplier_id: sid, prices: prices})
