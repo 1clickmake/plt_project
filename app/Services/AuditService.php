@@ -4,28 +4,43 @@ namespace App\Services;
 use App\Core\Database;
 
 class AuditService {
+    const SECRET_SALT = 'ASAMIYA_FORENSIC_SALT_2026';
+
     /**
-     * 로그 기록
-     * @param int|string $userId 사용자 ID 또는 고유 식별자 (로그인 안 된 경우 IP 등)
-     * @param string $action 수행한 액션 (VIEW_PRICING, QUOTE_CALC, DOC_VIEW 등)
-     * @param string $target 대상 (예: 세화 단가표, 특정 견적서 등)
-     * @param string $details 상세 설명 (JSON 등)
+     * 디지털 감사 검증 토큰 생성 (HMAC-SHA256)
+     * 위변조 방지 및 1:1 대조용 지문
      */
-    public static function logAccess($userId, $action, $target, $details = '') {
+    public static function generateToken($quoteId, $userId) {
+        $raw = hash_hmac('sha256', "{$quoteId}|{$userId}|" . date('Y-m-d'), self::SECRET_SALT);
+        return strtoupper(substr($raw, 0, 4) . '-' . substr($raw, 4, 4) . '-' . substr($raw, 8, 4));
+    }
+
+    /**
+     * 단가 접근 및 견적 열람 감사 로그 기록
+     * @param int|string $userId 사용자 ID 또는 사번
+     * @param string $action 수행 액션
+     * @param string $target 대상 (공급사명 또는 견적서 ID)
+     * @param string $details 상세 내역
+     * @param string|null $auditToken 법적 감사 검증 토큰
+     */
+    public static function logAccess($userId, $action, $target, $details = '', $auditToken = null) {
         $db = Database::getInstance();
+        if (!$db) return;
+
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN';
 
         $stmt = $db->prepare("
             INSERT INTO price_access_logs 
-            (user_id, action, target, details, ip_address, user_agent, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            (user_id, action, target, details, audit_token, ip_address, user_agent, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         $stmt->execute([
             $userId,
             $action,
             $target,
             $details,
+            $auditToken,
             $ip,
             $userAgent
         ]);

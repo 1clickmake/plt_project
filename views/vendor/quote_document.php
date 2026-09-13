@@ -588,9 +588,9 @@ $audit_time_ymd = date('Y-m-d');
 $audit_ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 $quote_id_str = strval($quote['id'] ?? '0');
 
-// 위변조 불가 고유 검증 해시
-$audit_raw_token = hash_hmac('sha256', $quote_id_str . '|' . $audit_user_id . '|' . $audit_time_ymd, 'ASAMIYA_FORENSIC_SALT_2026');
-$audit_token = strtoupper(substr($audit_raw_token, 0, 4) . '-' . substr($audit_raw_token, 4, 4) . '-' . substr($audit_raw_token, 8, 4));
+// 위변조 불가 고유 검증 해시 (DB 저장 토큰과 1:1 완벽 일치)
+require_once __DIR__ . '/../../app/Services/AuditService.php';
+$audit_token = $auditToken ?? \App\Services\AuditService::generateToken($quote['id'] ?? '0', $audit_user_id);
 ?>
   <!-- 🛡️ B2B 법적 증거력 감사 푸터 (Screen, Print & PDF Forensic Footer) -->
   <div class="legal-audit-footer" style="

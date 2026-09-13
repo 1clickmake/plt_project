@@ -1327,9 +1327,10 @@ class VendorController extends BaseController {
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
 
-        // --- 유출 추적 로그 기록 ---
+        // --- 유출 추적 로그 기록 (HMAC-SHA256 디지털 감사 토큰 생성 및 DB 저장) ---
         require_once __DIR__ . '/../Services/AuditService.php';
-        \App\Services\AuditService::logAccess($userIdStr, 'VIEW_QUOTE_DOCUMENT', 'Quote ID: ' . $quoteId, '견적서(최종문서) 열람 (Employee: ' . $_SESSION['employee_id'] . ')');
+        $auditToken = \App\Services\AuditService::generateToken($quoteId, $userIdStr);
+        \App\Services\AuditService::logAccess($userIdStr, 'VIEW_QUOTE_DOCUMENT', 'Quote ID: ' . $quoteId, '견적서(최종문서) 열람 (Employee: ' . ($_SESSION['employee_id'] ?? '') . ')', $auditToken);
         // ------------------------
 
         $stmt = $db->prepare("
@@ -1362,7 +1363,8 @@ class VendorController extends BaseController {
             'modules' => $modules, 
             'customItems' => $customItems,
             'balanceInfo' => $balanceInfo,
-            'isCustomized' => $isCustomized
+            'isCustomized' => $isCustomized,
+            'auditToken' => $auditToken
         ]);
     }
 
@@ -1577,6 +1579,7 @@ class VendorController extends BaseController {
         
         // 검색 필터 파라미터
         $searchUser = trim($_GET['user_id'] ?? '');
+        $searchToken = trim($_GET['audit_token'] ?? '');
         $searchAction = trim($_GET['action'] ?? '');
         $searchIp = trim($_GET['ip_address'] ?? '');
         $dateFrom = trim($_GET['date_from'] ?? '');
@@ -1592,6 +1595,10 @@ class VendorController extends BaseController {
             $where[] = "(user_id LIKE :u1 OR details LIKE :u2)";
             $params['u1'] = "%{$searchUser}%";
             $params['u2'] = "%{$searchUser}%";
+        }
+        if ($searchToken !== '') {
+            $where[] = "audit_token LIKE :tok";
+            $params['tok'] = "%{$searchToken}%";
         }
         if ($searchAction !== '') {
             $where[] = "action = :act";
@@ -1640,6 +1647,7 @@ class VendorController extends BaseController {
             'totalPages' => $totalPages,
             'currentPage' => $page,
             'searchUser' => $searchUser,
+            'searchToken' => $searchToken,
             'searchAction' => $searchAction,
             'searchIp' => $searchIp,
             'dateFrom' => $dateFrom,

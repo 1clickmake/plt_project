@@ -565,14 +565,15 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- --------------------------------------------------------
 -- 단가표 유출 추적(열람) 로그 테이블 (B2B 보안 감사 무기)
+-- ※ 재설치/패치 시 데이터 유실 방지를 위해 DROP TABLE 금지 (CREATE TABLE IF NOT EXISTS)
 -- --------------------------------------------------------
-DROP TABLE IF EXISTS `price_access_logs`;
-CREATE TABLE `price_access_logs` (
+CREATE TABLE IF NOT EXISTS `price_access_logs` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` varchar(100) DEFAULT NULL,
   `action` varchar(100) NOT NULL,
   `target` varchar(255) DEFAULT NULL,
   `details` text DEFAULT NULL,
+  `audit_token` varchar(64) DEFAULT NULL COMMENT 'HMAC-SHA256 감사 검증 토큰',
   `ip_address` varchar(45) NOT NULL,
   `user_agent` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -580,5 +581,6 @@ CREATE TABLE `price_access_logs` (
   KEY `idx_action` (`action`),
   KEY `idx_created_at` (`created_at`),
   KEY `idx_user_created` (`user_id`, `created_at`),
-  KEY `idx_ip_created` (`ip_address`, `created_at`)
+  KEY `idx_ip_created` (`ip_address`, `created_at`),
+  KEY `idx_audit_token` (`audit_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='단가표 유출 추적(열람) 로그';

@@ -108,10 +108,16 @@ $pageTitle = "단가 유출 보안 추적 (감사 로그)";
             <!-- 필터 & 검색 카드 -->
             <div class="glass-card p-3 mb-4">
                 <form method="GET" action="/vendor/audit_logs" class="row g-2 align-items-center">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-dark border-secondary text-white-50"><i class="fa-solid fa-user"></i></span>
-                            <input type="text" name="user_id" class="form-control bg-dark text-white border-secondary" placeholder="사번 또는 아이디 검색" value="<?= htmlspecialchars($searchUser) ?>">
+                            <input type="text" name="user_id" class="form-control bg-dark text-white border-secondary" placeholder="사번 / ID" value="<?= htmlspecialchars($searchUser) ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-dark border-secondary text-info"><i class="fa-solid fa-fingerprint"></i></span>
+                            <input type="text" name="audit_token" class="form-control bg-dark text-white border-secondary font-monospace" placeholder="감사토큰 (#8F3A...)" value="<?= htmlspecialchars($searchToken ?? '') ?>">
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -128,14 +134,14 @@ $pageTitle = "단가 유출 보안 추적 (감사 로그)";
                             <input type="text" name="ip_address" class="form-control bg-dark text-white border-secondary" placeholder="IP 주소" value="<?= htmlspecialchars($searchIp) ?>">
                         </div>
                     </div>
-                    <div class="col-md-3 d-flex align-items-center gap-1">
+                    <div class="col-md-2 d-flex align-items-center gap-1">
                         <input type="date" name="date_from" class="form-control form-control-sm bg-dark text-white border-secondary" value="<?= htmlspecialchars($dateFrom) ?>">
                         <span class="text-white-50">~</span>
                         <input type="date" name="date_to" class="form-control form-control-sm bg-dark text-white border-secondary" value="<?= htmlspecialchars($dateTo) ?>">
                     </div>
                     <div class="col-md-2 d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm flex-fill fw-bold">
-                            <i class="fa-solid fa-magnifying-glass me-1"></i> 즉시 검색
+                            <i class="fa-solid fa-magnifying-glass me-1"></i> 검색
                         </button>
                         <a href="/vendor/audit_logs" class="btn btn-outline-secondary btn-sm" title="초기화">
                             <i class="fa-solid fa-rotate-left"></i>
@@ -159,19 +165,20 @@ $pageTitle = "단가 유출 보안 추적 (감사 로그)";
                     <table class="table table-dark-custom mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 70px;" class="text-center">번호</th>
-                                <th style="width: 140px;">열람자 (사번/ID)</th>
-                                <th style="width: 150px;">열람 작업</th>
-                                <th style="width: 220px;">대상 문서/공급사</th>
+                                <th style="width: 60px;" class="text-center">번호</th>
+                                <th style="width: 130px;">열람자 (사번/ID)</th>
+                                <th style="width: 140px;">열람 작업</th>
+                                <th style="width: 150px;">감사 토큰 (지문)</th>
+                                <th style="width: 180px;">대상 문서/공급사</th>
                                 <th>상세 내역</th>
-                                <th style="width: 130px;">접속 IP</th>
-                                <th style="width: 160px;" class="text-end">열람 일시</th>
+                                <th style="width: 120px;">접속 IP</th>
+                                <th style="width: 150px;" class="text-end">열람 일시</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($logs)): ?>
                             <tr>
-                                <td colspan="7" class="text-center py-5 text-white-50">
+                                <td colspan="8" class="text-center py-5 text-white-50">
                                     <i class="fa-solid fa-shield-cat fs-1 d-block mb-3 text-secondary"></i>
                                     조회된 보안 감사 로그가 없습니다.
                                 </td>
@@ -203,11 +210,20 @@ $pageTitle = "단가 유출 보안 추적 (감사 로그)";
                                         <?= $actionName ?>
                                     </span>
                                 </td>
+                                <td class="mono small">
+                                    <?php if (!empty($row['audit_token'])): ?>
+                                    <span class="badge bg-dark text-info border border-info border-opacity-50">
+                                        <i class="fa-solid fa-key me-1"></i>#<?= htmlspecialchars($row['audit_token']) ?>
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="text-white-50">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-light">
                                     <i class="fa-regular fa-file-lines text-secondary me-1"></i>
                                     <?= htmlspecialchars($row['target'] ?? '-') ?>
                                 </td>
-                                <td class="text-white-50 small" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($row['details'] ?? '') ?>">
+                                <td class="text-white-50 small" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($row['details'] ?? '') ?>">
                                     <?= htmlspecialchars($row['details'] ?? '-') ?>
                                 </td>
                                 <td class="mono small text-info">
