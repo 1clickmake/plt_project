@@ -230,6 +230,11 @@ class VendorController extends BaseController {
         $userStrId = $user['user_id'] ?? '';
         $db = Database::getInstance();
 
+        // --- 유출 추적 로그 기록 ---
+        require_once __DIR__ . '/../Services/AuditService.php';
+        \App\Services\AuditService::logAccess($userStrId, 'VIEW_PRICING_DASHBOARD', '단가표 설정 메인', 'Employee: ' . $_SESSION['employee_id']);
+        // ------------------------
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $supplierId = intval($_POST['supplier_id'] ?? 0);
             if ($supplierId <= 0) {
@@ -681,6 +686,11 @@ class VendorController extends BaseController {
             echo "<script>alert('존재하지 않거나 접근 권한이 없는 견적 요청입니다.'); window.location.href='/vendor/quotes';</script>";
             return;
         }
+
+        // --- 유출 추적 로그 기록 ---
+        require_once __DIR__ . '/../Services/AuditService.php';
+        \App\Services\AuditService::logAccess($userStrId, 'VIEW_QUOTE_PRICE', 'Quote ID: ' . $quoteId, '단가 계산/견적서 조회 (Employee: ' . $_SESSION['employee_id'] . ')');
+        // ------------------------
 
         $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE user_id = :uid");
         $stmt->execute(['uid' => $userStrId]);
@@ -1316,6 +1326,11 @@ class VendorController extends BaseController {
         $userIdStr = $_SESSION['user']['user_id'];
         $quoteId = intval($vars['id'] ?? 0);
         $db = Database::getInstance();
+
+        // --- 유출 추적 로그 기록 ---
+        require_once __DIR__ . '/../Services/AuditService.php';
+        \App\Services\AuditService::logAccess($userIdStr, 'VIEW_QUOTE_DOCUMENT', 'Quote ID: ' . $quoteId, '견적서(최종문서) 열람 (Employee: ' . $_SESSION['employee_id'] . ')');
+        // ------------------------
 
         $stmt = $db->prepare("
             SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
