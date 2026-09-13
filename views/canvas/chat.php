@@ -368,7 +368,7 @@ const ChatWizard = {
         if (typeof draw === 'function') draw();
     },
 
-    appendBotMsg(html, fullWidth = false) {
+    appendBotMsg(html, fullWidth = false, onComplete = null) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'chat-msg bot';
         if (fullWidth) msgDiv.style.width = '100%';
@@ -392,7 +392,7 @@ const ChatWizard = {
                 const bubble = msgDiv.querySelector('.chat-bubble');
                 if (bubble) {
                     bubble.style.padding = ''; // 원래 패딩 복구
-                    this.typeWriterHTML(html, bubble, 25); // 25ms 간격으로 타이핑
+                    this.typeWriterHTML(html, bubble, 25, onComplete); // 25ms 간격으로 타이핑
                 }
             }
         }, 600);
@@ -652,8 +652,9 @@ const ChatWizard = {
                 </div>
             </div>
             <button class="chat-btn mt-2" onclick="ChatWizard.submitStep4()">입력 완료</button>
-        `);
-        setTimeout(() => this.updateRackSpecOptions(), 80);
+        `, false, () => {
+            this.updateRackSpecOptions();
+        });
     },
 
     updateRackSpecOptions() {
