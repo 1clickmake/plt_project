@@ -9,7 +9,18 @@ $pageTitle = "다공급사 단가표 관리 v2";
     <title><?= $pageTitle ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap 5 CSS (for sidebar layout compatibility) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- External Vendor Dashboard CSS -->
+    <link href="/css/vendor_dashboard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: {
+                preflight: false // Disable Tailwind's CSS reset to avoid breaking Bootstrap sidebar
+            }
+        }
+    </script>
     <style>
         body { font-family: 'Outfit', sans-serif; background-color: #0b0f19; color: #fff; }
         .mono { font-family: 'JetBrains Mono', monospace; }
@@ -25,18 +36,20 @@ $pageTitle = "다공급사 단가표 관리 v2";
         .modal-overlay.active { display: flex; }
     </style>
 </head>
-<body class="selection:bg-[#fde047]/30 relative overflow-x-hidden min-h-screen">
-    <div class="pointer-events-none fixed inset-0 z-0">
-        <div class="absolute -top-32 -left-32 w-[600px] h-[600px] bg-[#fde047]/10 blur-[120px] rounded-full"></div>
-        <div class="absolute top-1/2 -right-48 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full"></div>
-    </div>
+<body class="selection:bg-[#fde047]/30">
 
-    <!-- 좌측 네비게이션 포함 -->
-    <div class="d-none">
-        <?php include __DIR__ . '/sidebar.php'; ?>
-    </div>
+    <!-- 🧭 좌측 네비게이션 사이드바 (Bootstrap layout) -->
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
-    <div class="relative z-10 max-w-[1280px] mx-auto px-4 md:px-8 py-6 md:py-8">
+    <!-- 💻 우측 메인 대시보드 영역 -->
+    <main class="main-content">
+        <!-- 꼬리표 배경 효과 -->
+        <div class="pointer-events-none fixed inset-0 z-0">
+            <div class="absolute -top-32 -left-32 w-[600px] h-[600px] bg-[#fde047]/10 blur-[120px] rounded-full"></div>
+            <div class="absolute top-1/2 -right-48 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full"></div>
+        </div>
+
+        <div class="relative z-10 max-w-[1280px] mx-auto px-4 md:px-8 py-6 md:py-8">
         <!-- 상단 헤더 -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
@@ -273,6 +286,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
         
         <?php endif; ?>
     </div>
+    </main>
 
     <!-- 공급사 추가 모달 -->
     <div id="addSupModal" class="modal-overlay">
@@ -362,5 +376,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
             }
         }
     </script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
