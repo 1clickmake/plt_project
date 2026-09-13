@@ -241,14 +241,19 @@ $isLightTheme = in_array($theme, ['light', 'white']);
         <div class="col-lg-4 mb-4">
             <div class="glass-panel d-flex flex-column h-100 justify-content-between text-center overflow-hidden" style="background: rgba(14, 165, 233, 0.03); border-color: rgba(56, 189, 248, 0.2);">
                 <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="d-block position-relative" style="transition: transform 0.3s; overflow: hidden;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    <img src="/assets/sample_quote_blur.jpg" alt="실제 견적서 샘플 - 단가 모자이크 처리됨" class="img-fluid w-100 border-bottom border-info border-opacity-25" style="object-fit: cover;">
+                    <img src="/assets/images/banner_ai_cad.webp" alt="AI 스마트 랙킹 시스템" class="img-fluid w-100 border-bottom border-info border-opacity-25" style="object-fit: cover;">
                 </a>
                 
                 <div class="p-4 d-flex flex-column align-items-center flex-grow-1 justify-content-center">
-                    <p style="font-size:12px; color:#94a3b8; text-align:left; margin-bottom:20px; line-height:1.4;">* 실제 고객사 견적서 샘플입니다. 보안상 단가는 숨김 처리했습니다.</p>
-                    <h5 class="fw-bold text-white mb-2" style="line-height: 1.4; font-size: 1.1rem;">"창고 사이즈만 입력하세요.<br>견적서는 저희가 그려드립니다."</h5>
-                    <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="btn btn-orange rounded-pill px-4 py-3 fw-bold w-100 mt-2" style="background:#f16819; color:white; border:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(241,104,25,0.3);">
-                        📐 즉시 견적 확인하기 <i class="fa-solid fa-arrow-right ms-2"></i>
+                    <div class="mb-3">
+                        <span style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));">🤖</span>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="line-height: 1.4; font-size: 1.1rem;">"알아서 그려준다는데,<br>굳이 내가 왜 그려야 할까?"</h5>
+                    <p class="text-info small mb-4 text-decoration-underline" data-bs-toggle="modal" data-bs-target="#benefitsModal" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#7dd3fc'" onmouseout="this.style.color='#0dcaf0'">
+                        🎁 직접 그리면 얻게 되는 3가지 혜택 보기
+                    </p>
+                    <a href="/quote/<?= htmlspecialchars($vendor['url_slug'] ?? '') ?>/cad" class="btn btn-outline-info rounded-pill px-4 py-3 fw-bold w-100" style="transition: all 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+                        📐 AI 스마트 설계 시작하기 <i class="fa-solid fa-arrow-right ms-2"></i>
                     </a>
                 </div>
             </div>
@@ -278,8 +283,8 @@ $isLightTheme = in_array($theme, ['light', 'white']);
           <hr class="border-secondary my-4">
           <div class="text-center">
               <span style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">✨</span>
-              <h6 class="text-white fw-bold mt-2">어렵지 않냐고요? 가로/세로만 입력하세요.</h6>
-              <p class="text-muted small mb-0">복잡한 설정 없이 5초 만에 실제 배치도를 확인할 수 있습니다.<br>지금 바로 내 비즈니스 공간의 랙 수량을 정확히 확인해 보세요!</p>
+              <h6 class="text-white fw-bold mt-2">어렵지 않냐고요? AI 설계 비서가 함께합니다!</h6>
+              <p class="text-muted small mb-0">마치 게임을 하듯 쉽고 직관적입니다.<br>지금 바로 내 비즈니스 공간의 진짜 가치를 스마트하게 확인해 보세요!</p>
           </div>
       </div>
       <div class="modal-footer border-secondary justify-content-center pb-4">
