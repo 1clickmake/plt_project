@@ -148,7 +148,7 @@ include_header($title, $siteConfig ?? []);
             <div class="row align-items-center gy-5">
                 <div class="col-lg-6">
                     <div class="d-inline-flex align-items-center gap-2 rounded-pill px-3 py-1 fs-7 fw-bold mb-3" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
-                        <i class="fa-solid fa-shield-halved"></i> 파렛트랙 단가표, 다른 사람 못 보게 막는 시스템
+                        <i class="fa-solid fa-shield-halved"></i> 단가 및 마진율 철통 보안! 강력한 암호화 시스템
                     </div>
                     
                     <h1 class="mt-3 fw-bold tracking-tight text-light" style="font-size: clamp(30px, 4.5vw, 42px); line-height: 1.3; letter-spacing: -1px;">
@@ -158,12 +158,12 @@ include_header($title, $siteConfig ?? []);
                     
                     <h2 class="fw-bold mt-3 mb-4" style="color: #94a3b8; font-size: clamp(18px, 2vw, 22px); line-height: 1.5;">
                         퇴사한 직원 폰에 엑셀 파일 그대로 남습니다.<br>
-                        그 파일이 경쟁사로 넘어갑니다.
+                        그 파일이 경쟁사로 넘어갈 수도 있습니다.
                     </h2>
                     
                     <div class="mt-4 fs-6 text-light lh-lg bg-white bg-opacity-10 p-4 rounded-3 border border-white border-opacity-20" style="max-width: 540px;">
-                        <p class="mb-2"><i class="fa-solid fa-lock text-brand-orange me-2"></i><strong>직원이 단가 마음대로 못 바꿉니다. 대표님이 확인하고 승인해야 바뀝니다.</strong></p>
-                        <p class="mb-0"><i class="fa-solid fa-eye text-brand-orange me-2"></i>견적서를 누가, 언제, 어디서 봤는지 전부 기록됩니다.</p>
+                        <p class="mb-2"><i class="fa-solid fa-lock text-brand-orange me-2"></i><strong>모든 단가 데이터는 AES-256 방식으로 암호화되어 <br>유출 및 보안 사고를 원천 차단합니다.</strong></p>
+                        <p class="mb-0"><i class="fa-solid fa-eye text-brand-orange me-2"></i>직원관리 시스템을 통해<br>견적서를 누가, 언제 작성했는지 모두 기록됩니다.</p>
                     </div>
                     
                     <div class="mt-5 d-flex flex-wrap gap-3 align-items-center">
@@ -175,12 +175,12 @@ include_header($title, $siteConfig ?? []);
                     <div class="mt-4 d-flex align-items-center gap-4 fs-8 text-light">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fa-solid fa-check text-success"></i>
-                            <span class="text-light opacity-75">누가 봤는지 기록됨</span>
+                            <span class="text-light opacity-75">누가 작성했는지 기록됨</span>
                         </div>
                         <div style="width:1px; height:12px; background: rgba(255,255,255,0.3);"></div>
                         <div class="d-flex align-items-center gap-2">
                             <i class="fa-solid fa-check text-success"></i>
-                            <span class="text-light opacity-75">대표님 승인 필수</span>
+                            <span class="text-light opacity-75">강력한 단가 암호화</span>
                         </div>
                     </div>
                 </div>
@@ -240,10 +240,10 @@ include_header($title, $siteConfig ?? []);
                     <i class="fa-solid fa-cubes"></i> 핵심 기능 요약
                 </div>
                 <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(26px, 4vw, 36px);">
-                    도면은 자동으로, 보안은 철저하게 통제합니다
+                    도면은 쉽게, 보안은 철저하게 통제합니다
                 </h2>
                 <p class="reveal mt-3 text-muted fs-6">
-                    대표님의 승인과 통제 없이 단 1%의 마진도 밖으로 나갈 수 없습니다.
+                    모든 단가 데이터는 AES-256 방식으로 암호화되어 유출 걱정이 없습니다.
                 </p>
             </div>
 
@@ -253,9 +253,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-brand-orange bg-opacity-10 text-brand-orange d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-drafting-compass fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 도면은 5분 내로, 단가는 대표님 승인 후에만</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">1. 2D 도면은 5분 내로, 단가 데이터는 암호화</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            창고 치수만 입력하면 캐드 도면은 5분 내로 뚝딱 완성됩니다. 하지만 최종 견적 단가는 오직 대표님의 검토와 승인이 있어야만 외부로 나갈 수 있습니다.
+                            창고 치수만 입력하면 캐드 도면은 5분 내로 뚝딱 완성됩니다. 도면 완성 즉시 암호화된 단가는 내부 계산 엔진을 통해 자동으로 처리됩니다.
                         </p>
                     </div>
                 </div>
@@ -267,7 +267,7 @@ include_header($title, $siteConfig ?? []);
                         </div>
                         <h3 class="fw-bold text-deep-navy fs-5">2. 자재 수량은 자동, 마진율은 대표님만</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            주기둥, 로드빔, 타이빔 수량은 AI가 100% 정확하게 산출합니다. 하지만 회사의 영업 비밀인 '항목별 마진율'은 오직 대표님 계정으로만 통제하고 잠글 수 있습니다.
+                            주기둥, 로드빔, 타이빔 수량은 AI가 100% 정확하게 산출합니다.  회사의 영업 비밀인 '마진율'을 안전하게 통제할 수 있습니다.
                         </p>
                     </div>
                 </div>
@@ -277,9 +277,9 @@ include_header($title, $siteConfig ?? []);
                         <div class="rounded-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center mb-4" style="width: 52px; height: 52px;">
                             <i class="fa-solid fa-file-invoice-dollar fs-4"></i>
                         </div>
-                        <h3 class="fw-bold text-deep-navy fs-5">3. 0.1초 만에 추적하는 지문 견적서</h3>
+                        <h3 class="fw-bold text-deep-navy fs-5">3. 0.1초 만에 색출하는 화면 추적 지문</h3>
                         <p class="text-muted fs-7 mt-3 lh-lg">
-                            발행된 모든 PDF 견적서에는 보이지 않는 추적 지문이 심어집니다. 카톡이나 캡처본이 유출되더라도, 어느 직원이 언제 유출했는지 즉시 색출합니다.
+                            관리자 단가표 화면에는 보이지 않는 스텔스 워터마크가 심어집니다. 직원이 화면을 캡처하거나 사진을 찍어 유출하더라도, 어느 직원이 언제 유출했는지 즉시 색출합니다.
                         </p>
                     </div>
                 </div>
@@ -294,9 +294,9 @@ include_header($title, $siteConfig ?? []);
                 <div class="position-absolute end-0 top-0 w-50 h-100 grid-pattern-dark opacity-30 pointer-events-none"></div>
                 <div class="position-relative z-1">
                     <span class="badge bg-brand-orange text-white mb-2 px-3 py-1 fs-8">도입 효과 심층 분석</span>
-                    <h3 class="fw-bold fs-4 mb-2 text-light">왜 수많은 랙 시공·유통사가 이 솔루션을 선택했을까요?</h3>
+                    <h3 class="fw-bold fs-4 mb-2 text-light">왜 수많은 랙 시공·유통사가 이 솔루션을 주목할까요?</h3>
                     <p class="text-light fs-7 mb-0 lh-base" style="color: rgba(255, 255, 255, 0.9) !important;">
-                        기존 AutoCAD 수작업의 치명적 한계(인건비 월 200만원 낭비)와 정량적 ROI(월 193만 원 절감)를 상세 페이지에서 확인하세요.
+                        가장 수요가 많은 중소형 창고 견적, 매번 AutoCAD를 켜는 시간 낭비를 없앴습니다.<br>자동화된 2D 도면으로 불필요한 수작업과 인건비 누수를 완벽하게 차단하세요.
                     </p>
                 </div>
                 <div class="position-relative z-1 flex-shrink-0">
@@ -316,46 +316,46 @@ include_header($title, $siteConfig ?? []);
                     <i class="fa-solid fa-vault"></i> B2B 금고 요금제
                 </div>
                 <h2 class="reveal mt-3 fw-bold text-deep-navy" style="font-size: clamp(28px, 4vw, 38px);">
-                    단가표 유출 차단, <span class="text-brand-orange">목적에 맞게</span> 선택하세요
+                    단가표 유출 차단, <span class="text-brand-orange">1달간 무료로</span> 체험하세요
                 </h2>
                 <p class="reveal mt-3 text-muted fs-6">
-                    보안 시스템을 테스트해볼 수 있는 체험 플랜과<br>
-                    실제 회사 단가를 안전하게 잠글 수 있는 실전 금고 플랜 2가지입니다.
+                    쉽게 도면을 그리는 2D 설계 기능부터 단가 유출을 막는 자동 견적 시스템까지,<br>
+                    모든 핵심 기능을 1달간 제약 없이 무료로 경험해 보세요.
                 </p>
             </div>
 
             <div class="row g-4 justify-content-center mt-2 align-items-stretch">
                 
-                <!-- Plan 1: 체험 플랜 - 보안 진단용 -->
+                <!-- Plan 1: 체험 플랜 - 1달 전면 무료 -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box h-100 bg-light p-4 p-xl-5 border d-flex flex-column justify-content-between shadow-sm">
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <span class="badge bg-secondary rounded-pill px-3 py-1 fs-8 fw-bold">체험 플랜 - 보안 진단용</span>
-                                <span class="text-muted fs-8">1달 체험</span>
+                                <span class="badge bg-secondary rounded-pill px-3 py-1 fs-8 fw-bold">체험 플랜 - 1달 전면 무료</span>
+                                <span class="text-muted fs-8">모든 기능 오픈</span>
                             </div>
                             <h3 class="fw-bold text-deep-navy fs-3 mb-1">0원</h3>
-                            <p class="text-muted fs-7 mb-4">내 단가표 노출 없이 보안 시스템을 미리 경험</p>
+                            <p class="text-muted fs-7 mb-4">금고 플랜의 모든 기능을 1달간 100% 무료로 체험</p>
 
                             <div class="py-3 border-top border-bottom mb-4">
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 보안 시스템 맛보기 (샘플 데이터 사용)
+                                    <i class="fa-solid fa-circle-check text-success"></i> 실제 회사 단가표 100% 업로드 및 암호화
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 견적서 지문 추적 1회 체험
+                                    <i class="fa-solid fa-circle-check text-success"></i> 회사 직원 무제한 등록 및 권한 통제
                                 </div>
                                 <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-semibold">
-                                    <i class="fa-solid fa-circle-check text-success"></i> 1달(30일) 테스트 가능
+                                    <i class="fa-solid fa-circle-check text-success"></i> 견적서 보안 지문 추적 무제한 체험
                                 </div>
-                                <div class="d-flex align-items-center gap-2 text-muted fs-7 mb-2">
-                                    <i class="fa-solid fa-lock text-muted"></i> * 실제 회사 단가 업로드는 불가 (보안상 제한)
+                                <div class="d-flex align-items-center gap-2 text-dark fs-7 mb-2 fw-bold text-primary">
+                                    <i class="fa-solid fa-unlock-keyhole text-primary"></i> * 30일간 제약 없이 모든 실전 기능 사용 가능
                                 </div>
                             </div>
                         </div>
 
                         <div>
                             <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-outline-dark w-100 justify-content-center fs-7 py-3">
-                                무료로 보안 진단해보기 <i class="fa-solid fa-arrow-right"></i>
+                                무료로 1달간 모든 기능 써보기 <i class="fa-solid fa-arrow-right"></i>
                             </a>
                             <div class="text-center text-muted fs-8 mt-2">신용카드 정보 입력 없음</div>
                         </div>
@@ -421,6 +421,25 @@ include_header($title, $siteConfig ?? []);
                 </div>
             </div>
         </div>
+    </section>    <!-- Website Creation Banner -->
+    <section class="py-5 bg-white border-bottom">
+        <div class="max-w-1200 px-3">
+            <div class="reveal rounded-4 p-4 p-md-5 bg-deep-navy text-light d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 shadow-sm position-relative overflow-hidden">
+                <div class="position-absolute end-0 top-0 w-50 h-100 grid-pattern-dark opacity-30 pointer-events-none"></div>
+                <div class="position-relative z-1">
+                    <span class="badge bg-primary text-white mb-2 px-3 py-1 fs-8">B2B 매출 상승의 핵심</span>
+                    <h3 class="fw-bold fs-4 mb-2 text-light">아직도 제대로 된 회사 홈페이지가 없으신가요?</h3>
+                    <p class="text-light fs-7 mb-0 lh-base" style="color: rgba(255, 255, 255, 0.9) !important;">
+                        파렛트랙 시공·물류 전문 회사에 최적화된 고퀄리티 맞춤형 홈페이지를 제작해 드립니다.<br>온라인 신뢰도를 높이고 더 많은 굵직한 B2B 계약을 끌어오세요.
+                    </p>
+                </div>
+                <div class="position-relative z-1 flex-shrink-0">
+                    <a href="/website" class="btn-pill btn-light text-primary fw-bold px-4 py-3 fs-7 shadow">
+                        홈페이지 제작 안내 보기 <i class="fa-solid fa-arrow-right text-primary ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- 3-Step Simple Integration -->
@@ -446,7 +465,7 @@ include_header($title, $siteConfig ?? []);
                         </div>
                         <h4 class="fw-bold text-deep-navy fs-5">무료 가입</h4>
                         <p class="text-muted fs-7 mt-2 lh-lg mb-0">
-                            이메일과 상호명 입력으로 1분 만에 가입 완료.
+                            간단한 입력으로 1분 만에 가입 완료.
                         </p>
                     </div>
                 </div>
@@ -458,7 +477,7 @@ include_header($title, $siteConfig ?? []);
                         </div>
                         <h4 class="fw-bold text-deep-navy fs-5">전용 링크 발급</h4>
                         <p class="text-muted fs-7 mt-2 lh-lg mb-0">
-                            귀사 로고와 단가표가 적용된 고유 2D 캔버스 링크 자동 발급.
+                            귀사 전용 2D 캔버스 링크 자동 발급.
                         </p>
                     </div>
                 </div>
@@ -488,7 +507,7 @@ include_header($title, $siteConfig ?? []);
             </h2>
             <p class="reveal mt-3 fs-6 text-light lh-lg" style="color: rgba(255, 255, 255, 0.9) !important;">
                 AutoCAD 없이 브라우저에서 끝내는 2D Canvas 자동설계.<br>
-                1개월 무료 체험으로 200건의 실전 견적을 직접 검증하세요.
+                1개월 무료 체험으로 실전 견적을 직접 검증하세요.
             </p>
             <div class="reveal mt-5 d-flex flex-wrap justify-content-center gap-3">
                 <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-orange shadow-lg fs-6 py-3 px-4">
