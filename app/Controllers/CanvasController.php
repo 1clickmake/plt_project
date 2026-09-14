@@ -6,16 +6,22 @@ use App\Core\Database;
 
 class CanvasController extends BaseController {
 
-    public function showVendorCanvas($vars) {
-        $slug = $vars['slug'] ?? '';
+    private function resolveVendor($slug) {
         $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
-        $stmt->execute(['slug' => $slug]);
+        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug OR user_id = :slug2");
+        $stmt->execute(['slug' => $slug, 'slug2' => $slug]);
         $vendor = $stmt->fetch();
 
         if (!$vendor) {
-            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
-            return;
+            http_response_code(404);
+            $errorType = 'VENDOR NOT FOUND';
+            $errorMessage = '공급사 견적 페이지를 찾을 수 없습니다';
+            if (file_exists(__DIR__ . '/../../views/errors/404.php')) {
+                include __DIR__ . '/../../views/errors/404.php';
+            } else {
+                echo "<script>alert('존재하지 않는 공급사 URL입니다.'); window.location.href='/';</script>";
+            }
+            exit;
         }
 
         // 방문 기록 저장
@@ -28,6 +34,13 @@ class CanvasController extends BaseController {
             // Ignore if table doesn't exist or other DB errors occur during visit logging
         }
 
+        return $vendor;
+    }
+
+    public function showVendorCanvas($vars) {
+        $slug = $vars['slug'] ?? '';
+        $vendor = $this->resolveVendor($slug);
+
         $adminDrawId = $_GET['admin_draw'] ?? 0;
         $adminDrawData = null;
         if ($adminDrawId) {
@@ -35,11 +48,12 @@ class CanvasController extends BaseController {
                 echo "<script>alert('관리자 로그인이 필요합니다.'); window.location.href='/login';</script>";
                 return;
             }
+            $db = Database::getInstance();
             $stmtDraw = $db->prepare("SELECT * FROM quote_requests WHERE id = :id AND (vendor_user_id = :vuid OR vendor_user_id = :vuid2)");
             $stmtDraw->execute(['id' => $adminDrawId, 'vuid' => $_SESSION['user']['id'], 'vuid2' => $_SESSION['user']['user_id'] ?? '']);
             $adminDrawData = $stmtDraw->fetch();
             if (!$adminDrawData) {
-                echo "<script>alert('접근 권한이 없거나 유효하지 않은 문의글입니다.'); window.location.href='/';</script>";
+                echo "<script>alert('접근 권한이 없거나 유효하지 않은 문의글입니다.'); window.location.href='/vendor/quotes';</script>";
                 return;
             }
         }
@@ -49,69 +63,25 @@ class CanvasController extends BaseController {
 
     public function showEasyCanvas($vars) {
         $slug = $vars['slug'] ?? '';
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
-        $stmt->execute(['slug' => $slug]);
-        $vendor = $stmt->fetch();
-
-        if (!$vendor) {
-            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
-            return;
-        }
-
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        $vendorUserId = $vendor['user_id'];
-        try {
-            $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
-            $stmtVisit->execute([$vendorUserId, $ip]);
-        } catch (\Exception $e) {
-            // Ignore
-        }
-
+        $vendor = $this->resolveVendor($slug);
         $this->view('canvas/easy', ['vendor' => $vendor]);
     }
 
     public function showBoardCanvas($vars) {
         $slug = $vars['slug'] ?? '';
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
-        $stmt->execute(['slug' => $slug]);
-        $vendor = $stmt->fetch();
-
-        if (!$vendor) {
-            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
-            return;
-        }
-
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        $vendorUserId = $vendor['user_id'];
-        try {
-            $stmtVisit = $db->prepare("INSERT INTO vendor_page_visits (vendor_user_id, ip_address) VALUES (?, ?)");
-            $stmtVisit->execute([$vendorUserId, $ip]);
-        } catch (\Exception $e) {
-            // Ignore
-        }
-
+        $vendor = $this->resolveVendor($slug);
         $this->view('canvas/index', ['vendor' => $vendor]);
     }
 
     public function showVideoManual($vars) {
         $slug = $vars['slug'] ?? '';
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM vendor_settings WHERE url_slug = :slug");
-        $stmt->execute(['slug' => $slug]);
-        $vendor = $stmt->fetch();
-
-        if (!$vendor) {
-            echo "<script>alert('Invalid Vendor URL!'); window.location.href='/';</script>";
-            return;
-        }
-
+        $vendor = $this->resolveVendor($slug);
         $this->view('canvas/video', ['vendor' => $vendor]);
     }
 
     /**
      * POST /api/canvas/analyze
+
      * 캔버스 도면 + 파렛트/지게차 제원을 Gemini AI로 분석하여 배치 제안 반환
      */
     public function analyzeLayout() {
@@ -393,12 +363,29 @@ class CanvasController extends BaseController {
             } else {
                 $body = json_decode($_POST['json_payload'] ?? '{}', true);
             }
-            $vendorUserId = $body['vendor_user_id'] ?? '';
-            $company      = trim($body['company'] ?? '');
-            $name         = trim($body['name'] ?? '');
-            $phone        = trim($body['phone'] ?? '');
-            $email        = trim($body['email'] ?? '');
-            $address      = trim($body['address'] ?? '');
+            // 🛡️ [보안 강화] IP 기반 분당 요청 제한 (Rate Limiting) - 연속 도배/폭탄 방지
+            $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $rateLimitKey = 'rate_quote_' . md5($clientIp);
+            if (!isset($_SESSION[$rateLimitKey])) {
+                $_SESSION[$rateLimitKey] = ['count' => 1, 'start_time' => time()];
+            } else {
+                $elapsed = time() - $_SESSION[$rateLimitKey]['start_time'];
+                if ($elapsed < 60) {
+                    if ($_SESSION[$rateLimitKey]['count'] >= 5) {
+                        throw new \Exception("잠시 후 다시 시도해주세요. (1분 내 견적 요청 횟수 초과)");
+                    }
+                    $_SESSION[$rateLimitKey]['count']++;
+                } else {
+                    $_SESSION[$rateLimitKey] = ['count' => 1, 'start_time' => time()];
+                }
+            }
+
+            // 🛡️ [보안 강화] XSS 방어 및 문자열 길이 유효성 검사 (Sanitization)
+            $company      = htmlspecialchars(strip_tags(mb_substr(trim($body['company'] ?? ''), 0, 100)));
+            $name         = htmlspecialchars(strip_tags(mb_substr(trim($body['name'] ?? ''), 0, 50)));
+            $phone        = htmlspecialchars(strip_tags(mb_substr(trim($body['phone'] ?? ''), 0, 30)));
+            $email        = htmlspecialchars(strip_tags(mb_substr(trim($body['email'] ?? ''), 0, 100)));
+            $address      = htmlspecialchars(strip_tags(mb_substr(trim($body['address'] ?? ''), 0, 255)));
             $canvasData   = $body['canvas_data'] ?? '';
             $summary      = $body['summary'] ?? '';
             $edge_lengths = $body['edge_lengths'] ?? '';
@@ -406,26 +393,35 @@ class CanvasController extends BaseController {
             $pallet_d     = intval($body['pallet_d'] ?? 0);
             $pallet_h     = intval($body['pallet_h'] ?? 0);
             $pallet_weight= intval($body['pallet_weight'] ?? 0);
-            $fork_dir     = $body['fork_direction'] ?? '';
-            $fork_type    = $body['forklift_type'] ?? '';
+            $fork_dir     = htmlspecialchars(strip_tags($body['fork_direction'] ?? ''));
+            $fork_type    = htmlspecialchars(strip_tags($body['forklift_type'] ?? ''));
             $fork_lift_h  = intval($body['forklift_lift_height'] ?? 0);
             $fork_ast     = intval($body['forklift_ast'] ?? 0);
             $rack_levels  = intval($body['rack_levels'] ?? 0);
-            $rack_height  = $body['rack_height'] ?? '';
-            $rack_spec    = $body['rack_spec'] ?? '';
-            $rack_type    = $body['rack_type'] ?? '';
-            $rack_indep   = intval($body['rack_indep'] ?? 0);
-            $rack_conn    = intval($body['rack_conn'] ?? 0);
-            $rack_small   = intval($body['rack_small_conn'] ?? 0);
-            $rack_bypass  = intval($body['rack_bypass'] ?? 0);
-            $rack_bypass_type = $body['rack_bypass_type'] ?? '';
-            $rack_holders = intval($body['rack_holders'] ?? 0);
-            $rack_pallets = intval($body['rack_pallets'] ?? 0);
-            $condition_type = $body['condition_type'] ?? 'new';
+            $rack_height  = htmlspecialchars(strip_tags($body['rack_height'] ?? ''));
+            $rack_spec    = htmlspecialchars(strip_tags($body['rack_spec'] ?? ''));
+            $rack_type    = htmlspecialchars(strip_tags($body['rack_type'] ?? ''));
+            $rack_indep   = max(0, intval($body['rack_indep'] ?? 0));
+            $rack_conn    = max(0, intval($body['rack_conn'] ?? 0));
+            $rack_small   = max(0, intval($body['rack_small_conn'] ?? 0));
+            $rack_bypass  = max(0, intval($body['rack_bypass'] ?? 0));
+            $rack_bypass_type = htmlspecialchars(strip_tags($body['rack_bypass_type'] ?? ''));
+            $rack_holders = max(0, intval($body['rack_holders'] ?? 0));
+            $rack_pallets = max(0, intval($body['rack_pallets'] ?? 0));
+            $condition_type = in_array($body['condition_type'] ?? '', ['new', 'used']) ? $body['condition_type'] : 'new';
             $self_install = intval($body['self_install'] ?? 0);
 
             if ($company === '' || $name === '' || $phone === '' || $address === '') {
-                throw new \Exception("필수 입력 정보가 누락되었습니다.");
+                throw new \Exception("필수 입력 정보(업체명, 담당자, 연락처, 현장주소)가 누락되었습니다.");
+            }
+
+            // 🛡️ [보안 강화] 페이로드 크기 및 랙 수량 무결성 방어 (Max Limit Check)
+            if (strlen($canvasData) > 10 * 1024 * 1024) {
+                throw new \Exception("도면 데이터 용량이 너무 큽니다 (최대 10MB).");
+            }
+            $totalBays = $rack_indep + $rack_conn + $rack_small + $rack_bypass;
+            if ($totalBays > 5000) {
+                throw new \Exception("1회 견적 요청 가능한 최대 랙 칸수를 초과했습니다 (최대 5,000칸).");
             }
 
             // 휴먼 에러 및 악의적 변수 방어 (Sanity Check)
@@ -435,6 +431,7 @@ class CanvasController extends BaseController {
             if ($rack_levels < 0 || $rack_levels > 100) {
                 throw new \Exception("선택된 랙 단수가 비정상적입니다.");
             }
+
 
             $imageData = $body['image_data'] ?? '';
             $imagePath = '';

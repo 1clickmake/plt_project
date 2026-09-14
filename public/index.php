@@ -135,12 +135,24 @@ $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
 switch ($routeInfo[0]) {
     case FastRoute\Dispatcher::NOT_FOUND:
         http_response_code(404);
-        echo "404 Not Found";
+        if (file_exists(__DIR__ . '/../views/errors/404.php')) {
+            $errorType = '404 NOT FOUND';
+            $errorMessage = '요청하신 페이지를 찾을 수 없습니다';
+            include __DIR__ . '/../views/errors/404.php';
+        } else {
+            echo "404 Not Found";
+        }
         break;
     case FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
         $allowedMethods = $routeInfo[1];
         http_response_code(405);
-        echo "405 Method Not Allowed";
+        if (file_exists(__DIR__ . '/../views/errors/404.php')) {
+            $errorType = '405 METHOD NOT ALLOWED';
+            $errorMessage = '허용되지 않은 요청 방식입니다';
+            include __DIR__ . '/../views/errors/404.php';
+        } else {
+            echo "405 Method Not Allowed";
+        }
         break;
     case FastRoute\Dispatcher::FOUND:
         $handler = $routeInfo[1];
@@ -149,7 +161,20 @@ switch ($routeInfo[0]) {
         $controllerName = $handler[0];
         $methodName = $handler[1];
         
-        $controller = new $controllerName();
-        $controller->$methodName($vars);
+        try {
+            $controller = new $controllerName();
+            $controller->$methodName($vars);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            error_log("Unhandled Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            if (file_exists(__DIR__ . '/../views/errors/404.php')) {
+                $errorType = '500 INTERNAL SERVER ERROR';
+                $errorMessage = '일시적인 서버 오류가 발생했습니다';
+                include __DIR__ . '/../views/errors/404.php';
+            } else {
+                echo "500 Internal Server Error";
+            }
+        }
         break;
 }
+

@@ -40,6 +40,8 @@ files_to_upload = [
     'views/install/setup.sql',
     'views/shop/subscribe.php',
     'views/vendor/addon_payment.php',
+    'views/errors/404.php',
+    'public/index.php',
     'storage/templates/pallet_rack_price_template.xlsx',
     'public/asamiya_profile.png'
 ]

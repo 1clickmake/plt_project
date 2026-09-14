@@ -1004,6 +1004,11 @@ class VendorController extends BaseController {
         $this->view('vendor/quote_detail', ['quote' => $quote, 'balanceInfo' => $balanceInfo, 'vendor' => $vendor]);
     }
 
+    public function inquiryDetail($vars) {
+        return $this->quoteDetail($vars);
+    }
+
+
     public function quotePrice($vars) {
         $this->requireVendorEmployees();
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
@@ -1750,9 +1755,9 @@ class VendorController extends BaseController {
             SELECT q.*, e.name as employee_name, e.color_code as employee_color, e.phone as employee_phone, e.title as employee_title
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
-            WHERE q.id = :qid AND q.vendor_user_id = :vuid
+            WHERE q.id = :qid AND (q.vendor_user_id = :vuid1 OR q.vendor_user_id = :vuid2)
         ");
-        $stmt->execute(['qid' => $quoteId, 'vuid' => $userId]);
+        $stmt->execute(['qid' => $quoteId, 'vuid1' => $userId, 'vuid2' => $userIdStr]);
         $quote = $stmt->fetch();
 
         if (!$quote) {
@@ -1863,11 +1868,11 @@ class VendorController extends BaseController {
             
             $employeeId = $_SESSION['employee_id'] ?? null;
             if ($employeeId) {
-                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
-                $stmt->execute([$employeeId, $adminMargin, $adminPrice, $finalDetailsJson, $id, $userId]);
+                $stmt = $db->prepare("UPDATE quote_requests SET processed_by = ?, processed_at = NOW(), is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND (vendor_user_id = ? OR vendor_user_id = ?)");
+                $stmt->execute([$employeeId, $adminMargin, $adminPrice, $finalDetailsJson, $id, $userId, $userStrId]);
             } else {
-                $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND vendor_user_id = ?");
-                $stmt->execute([$adminMargin, $adminPrice, $finalDetailsJson, $id, $userId]);
+                $stmt = $db->prepare("UPDATE quote_requests SET is_mailed = 1, mailed_at = NOW(), admin_margin = ?, admin_price = ?, admin_quote_details = ? WHERE id = ? AND (vendor_user_id = ? OR vendor_user_id = ?)");
+                $stmt->execute([$adminMargin, $adminPrice, $finalDetailsJson, $id, $userId, $userStrId]);
             }
             echo json_encode(['success' => true, 'message' => '메일이 성공적으로 발송되었습니다.']);
         } else {
