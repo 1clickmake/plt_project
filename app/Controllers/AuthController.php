@@ -43,7 +43,7 @@ class AuthController extends BaseController {
             setup_user_variables(); // Update global variables immediately
             
             global $is_admin;
-            $this->redirect($is_admin ? '/admin' : '/vendor');
+            $this->redirect($is_admin ? '/admin' : '/vendor/quotes');
         } else {
             $this->view('auth/login', ['error' => 'Invalid User ID or password']);
         }
@@ -113,7 +113,15 @@ class AuthController extends BaseController {
                 ]);
             }
 
-            $this->redirect('/register?success=1');
+            // 자동 로그인 처리 후 견적관리로 이동
+            $stmt = $db->prepare("SELECT * FROM users WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $userId]);
+            $newUser = $stmt->fetch();
+            
+            $_SESSION['user'] = $newUser;
+            setup_user_variables(); // 전역 변수 업데이트
+            
+            $this->redirect('/vendor/quotes');
         } catch (\PDOException $e) {
             $this->view('auth/register', ['error' => 'User ID or Email already exists']);
         }
