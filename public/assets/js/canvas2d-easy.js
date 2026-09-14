@@ -408,11 +408,11 @@ window.clearEdgeLengths = function () {
     userEnteredEdges = [];
 };
 
-window.updateEdgeLength = function (index, value) {
+window.updateEdgeLength = function(index, value, isAutoSync = false) {
     let valInt = parseInt(value) || 0;
-
+    
     // 30m(30,000mm) 소형 창고 초과 감지 및 안내
-    if (valInt > 30000) {
+    if (!isAutoSync && valInt > 30000) {
         valInt = 30000;
         const inputEl = document.getElementById(`edge-input-${index}`);
         if (inputEl) inputEl.value = 30000;
@@ -424,35 +424,51 @@ window.updateEdgeLength = function (index, value) {
             alert('⚠️ 웹 자동 설계는 최대 30m(30,000mm) 창고까지 지원됩니다.\n30,000mm로 자동 조정되며, 초과 창고는 현장 실측 상담을 이용해주세요.');
         }
     }
-
+    
     // 수동 입력 이력 배열에서 기존 인덱스 제거
-    const idx = userEnteredEdges.indexOf(index);
-    if (idx > -1) {
-        userEnteredEdges.splice(idx, 1);
+    if (!isAutoSync) {
+        const idx = userEnteredEdges.indexOf(index);
+        if (idx > -1) {
+            userEnteredEdges.splice(idx, 1);
+        }
     }
-
+    
     if (value !== '' && valInt > 0) {
-        userEnteredEdges.push(index);
+        if (!isAutoSync) userEnteredEdges.push(index);
         edgeLengths[index] = valInt;
     } else {
         edgeLengths[index] = 0;
     }
-
-    // 만약 모든 변이 수동 입력되었다면, 가장 예전에 입력한 변 1개를 자동 계산 변으로 실시간 양보
+    
     const numEdges = points.length - 1;
-    if (userEnteredEdges.length >= numEdges) {
-        const oldestIndex = userEnteredEdges.shift();
-        edgeLengths[oldestIndex] = 0;
 
-        // 고유 ID 기반으로 폼 입력창 값 실시간 초기화
-        const inputEl = document.getElementById(`edge-input-${oldestIndex}`);
-        if (inputEl) {
-            inputEl.value = '';
+    // 4각형일 때 마주보는 변 자동 입력 (사용자가 직접 입력할 때만)
+    if (!isAutoSync && numEdges === 4) {
+        const oppositeIndex = (index + 2) % 4;
+        const oppInput = document.getElementById(`edge-input-${oppositeIndex}`);
+        if (oppInput) {
+            oppInput.value = valInt > 0 ? valInt : '';
         }
+        // 마주보는 변 데이터 동기화 (isAutoSync = true)
+        updateEdgeLength(oppositeIndex, valInt > 0 ? valInt.toString() : '', true);
     }
-
-    alignAndScalePolygon();
-    draw();
+    
+    if (!isAutoSync) {
+        // 만약 모든 변이 수동 입력되었다면, 가장 예전에 입력한 변 1개를 자동 계산 변으로 실시간 양보
+        if (userEnteredEdges.length >= numEdges) {
+            const oldestIndex = userEnteredEdges.shift();
+            edgeLengths[oldestIndex] = 0;
+            
+            // 고유 ID 기반으로 폼 입력창 값 실시간 초기화
+            const inputEl = document.getElementById(`edge-input-${oldestIndex}`);
+            if (inputEl) {
+                inputEl.value = '';
+            }
+        }
+        
+        alignAndScalePolygon(); 
+        draw();
+    }
 };
 
 // --- 도면 자동 정렬 (Parametric Alignment) ---
@@ -4529,9 +4545,22 @@ window.spawnInitialRacks = function () {
     const totalLenPx = totalLenMm * currentScale;
     const rackDepthPx = rackDepth * currentScale;
 
-    // 생성 위치 (캔버스 중앙)
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    // 생성 위치 (창고 도면 다각형 중심, 없으면 캔버스 중앙)
+    let centerX = canvas.width / 2;
+    let centerY = canvas.height / 2;
+    if (typeof points !== 'undefined' && Array.isArray(points) && points.length >= 3) {
+        let pMinX = Infinity, pMinY = Infinity, pMaxX = -Infinity, pMaxY = -Infinity;
+        points.forEach(p => {
+            if (p.x < pMinX) pMinX = p.x;
+            if (p.y < pMinY) pMinY = p.y;
+            if (p.x > pMaxX) pMaxX = p.x;
+            if (p.y > pMaxY) pMaxY = p.y;
+        });
+        if (pMinX < pMaxX && pMinY < pMaxY) {
+            centerX = (pMinX + pMaxX) / 2;
+            centerY = (pMinY + pMaxY) / 2;
+        }
+    }
 
     // 1. 독립 파랫트 (단식) 1개
     let singleRack = {

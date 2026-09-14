@@ -84,8 +84,8 @@ $pageTitle = "다공급사 단가표 관리 v2";
             </div>
         </div>
 
-        <!-- 공급사 탭 -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none" id="supplierTabs">
+        <!-- 공급사 탭 (다중 공급사 기능 임시 숨김) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none" id="supplierTabs" style="display: none;">
             <?php 
             $statusStyles = [
                 'excel' => ['text' => '엑셀 적용중', 'cls' => 'bg-[#fde047] text-black'],
@@ -106,9 +106,11 @@ $pageTitle = "다공급사 단가표 관리 v2";
                 <span class="text-[10px] px-2 py-0.5 rounded-full font-medium <?= $st['cls'] ?>"><?= $st['text'] ?></span>
             </a>
             <?php endforeach; ?>
+            <!-- [TEMP] 주석 처리: 당분간 사용 안 함
             <button onclick="openAddSupplierModal()" class="bg-transparent shrink-0 h-[44px] px-4 rounded-full border border-dashed border-white/20 text-white/50 hover:text-white/80 hover:border-white/30 flex items-center gap-2 text-[13px] transition">
                 <i class="fa-solid fa-plus"></i> 공급사 추가
             </button>
+            -->
         </div>
 
         <?php 
@@ -143,93 +145,92 @@ $pageTitle = "다공급사 단가표 관리 v2";
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_1.2fr] gap-0">
-                <!-- 엑셀 업로드 영역 -->
+                <!-- 엑셀 업로드 및 양식 다운로드 영역 -->
                 <div class="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-white/10">
-                    <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-[13px] font-semibold tracking-wide flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel text-[#fde047]"></i> 엑셀 단가표 (최우선 순위)
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-[14px] font-bold tracking-wide flex items-center gap-2 text-white">
+                            <i class="fa-solid fa-file-excel text-[#fde047]"></i> 1. 엑셀 대량 일괄 등록
                         </h3>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-white/60 mono">Option B 표준</span>
                     </div>
 
-                    <form id="excelForm" action="/vendor/pricing" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="supplier_id" value="<?= $activeSupplierId ?>">
-                        
-                        <div class="rounded-[16px] border-2 border-dashed p-5 transition-all <?= ($activeSupplier['status']=='excel') ? 'border-[#fde047]/30 bg-[#fde047]/5' : 'border-white/15 bg-white/[0.02]' ?>">
-                            <div class="flex items-start gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center shrink-0">
-                                    <i class="fa-solid fa-file-excel text-black fs-5"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <?php if($activeSupplier['status']=='excel' && !empty($activeSupplier['excel_file'])): ?>
-                                        <div class="text-[13px] font-semibold truncate"><?= htmlspecialchars($activeSupplier['excel_file']) ?></div>
-                                        <div class="text-[11px] text-white/40 mt-1 mono">정상 파싱됨</div>
-                                    <?php else: ?>
-                                        <div class="text-[13px] font-semibold text-white/60">업로드된 엑셀이 없습니다</div>
-                                        <div class="text-[11px] text-white/35 mt-1">.xlsx / .xls · 최대 10MB</div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                    <p class="text-[12px] text-white/50 mb-5 leading-relaxed">
+                        우리가 제공하는 표준 엑셀 양식을 다운로드하여 단가를 입력한 뒤 업로드하세요. 기둥, 로드빔, 타이빔 3개 시트의 총 83개 단가가 즉시 자동 파싱됩니다.
+                    </p>
 
-                            <div class="mt-5 flex flex-wrap gap-2">
-                                <label class="h-9 px-4 rounded-full bg-[#fde047] text-black text-[13px] font-semibold flex items-center gap-2 cursor-pointer hover:bg-[#fde047]/90">
-                                    <i class="fa-solid fa-upload"></i> 엑셀 첨부하기
-                                    <input type="file" name="price_excel" class="hidden" accept=".xlsx,.xls" onchange="submitExcelForm()">
-                                </label>
-                            </div>
-
-                            <?php if($activeSupplier['status'] == 'excel'): ?>
-                            <div class="mt-4 rounded-xl bg-black/40 border border-white/10 p-3 flex items-start gap-2.5">
-                                <i class="fa-solid fa-check-circle text-emerald-400 mt-0.5"></i>
-                                <div class="text-[11px] leading-relaxed text-white/60">
-                                    <span class="text-white font-medium">파싱 완료:</span> 견적 생성 시 이 단가가 1순위로 적용됩니다.
+                    <!-- 다운로드 & 업로드 카드 -->
+                    <div class="rounded-[20px] border border-white/10 bg-white/[0.02] p-5 mb-6">
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300">
+                                    <i class="fa-solid fa-download"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[13px] font-semibold text-white">표준 단가표 양식 다운로드</div>
+                                    <div class="text-[11px] text-white/40">pallet_rack_price_option_b.xlsx</div>
                                 </div>
                             </div>
-                            <?php else: ?>
-                            <div class="mt-4 rounded-xl bg-[#fde047]/10 border border-[#fde047]/20 p-3 flex items-start gap-2.5">
-                                <i class="fa-solid fa-circle-exclamation text-[#fde047] mt-0.5"></i>
-                                <div class="text-[11px] leading-relaxed text-[#fde047]/80">
-                                    엑셀이 없으면 오른쪽 <span class="text-[#fde047] font-semibold">수동 단가</span>가 자동 사용됩니다.
-                                </div>
-                            </div>
-                            <?php endif; ?>
+                            <a href="/vendor/pricing/template/download" class="h-9 px-4 rounded-xl bg-white/10 text-white text-[12px] font-semibold hover:bg-white/20 transition flex items-center justify-center gap-1.5 text-decoration-none">
+                                <i class="fa-solid fa-file-arrow-down text-warning"></i> 양식 받기
+                            </a>
                         </div>
-                    </form>
 
-                    <!-- 단가표 적용 내역 (History) -->
-                    <div class="mt-6">
-                        <h3 class="text-[13px] font-semibold tracking-wide flex items-center gap-2 mb-3 text-white/80">
-                            <i class="fa-solid fa-clock-rotate-left text-white/40"></i> 최근 업로드 내역
-                        </h3>
-                        <div class="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+                        <div class="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[13px] font-semibold text-white">작성한 엑셀 업로드</div>
+                                    <div class="text-[11px] text-white/40">
+                                        <?= !empty($activeSupplier['excel_file']) ? htmlspecialchars($activeSupplier['excel_file']) . ' (등록됨)' : '아직 등록된 엑셀이 없습니다' ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" onclick="openExcelUploadModal()" class="h-9 px-4 rounded-xl bg-[#fde047] text-black text-[12px] font-bold hover:bg-[#fde047]/90 transition shadow flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-upload"></i> 엑셀 업로드
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 단가표 업로드 내역 (History) -->
+                    <div>
+                        <h4 class="text-[12px] font-semibold tracking-wide flex items-center gap-2 mb-3 text-white/70">
+                            <i class="fa-solid fa-clock-rotate-left text-white/40"></i> 최근 업로드 이력
+                        </h4>
+                        <div class="bg-black/30 border border-white/5 rounded-xl overflow-hidden">
                             <table class="w-full text-[12px] text-left">
                                 <thead>
                                     <tr class="border-b border-white/5 bg-white/[0.02]">
-                                        <th class="px-4 py-3 font-semibold text-white/50">업체명</th>
-                                        <th class="px-4 py-3 font-semibold text-white/50">파일명</th>
-                                        <th class="px-4 py-3 font-semibold text-white/50">일시</th>
-                                        <th class="px-4 py-3 font-semibold text-white/50 text-center">관리</th>
+                                        <th class="px-4 py-2.5 font-semibold text-white/50">공급사</th>
+                                        <th class="px-4 py-2.5 font-semibold text-white/50">파일명</th>
+                                        <th class="px-4 py-2.5 font-semibold text-white/50">등록일시</th>
+                                        <th class="px-4 py-2.5 font-semibold text-white/50 text-center">관리</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-white/5">
                                     <?php if(!empty($rules)): foreach($rules as $rule): ?>
                                     <tr class="hover:bg-white/[0.02] transition">
-                                        <td class="px-4 py-2.5 text-white/70 font-medium"><?= htmlspecialchars($rule['supplier_name'] ?? '기본') ?></td>
-                                        <td class="px-4 py-2.5 text-white/70 truncate max-w-[200px]" title="<?= htmlspecialchars($rule['source_file'] ?? '수동') ?>">
-                                            <i class="fa-solid fa-file-excel text-emerald-400/50 mr-1"></i>
-                                            <?= htmlspecialchars($rule['source_file'] ?? '수동') ?>
+                                        <td class="px-4 py-2 text-white/80 font-medium"><?= htmlspecialchars($rule['supplier_name'] ?? '기본') ?></td>
+                                        <td class="px-4 py-2 text-white/70 truncate max-w-[180px]" title="<?= htmlspecialchars($rule['source_file'] ?? '단가표') ?>">
+                                            <i class="fa-solid fa-file-excel text-emerald-400/60 mr-1"></i>
+                                            <?= htmlspecialchars($rule['source_file'] ?? '단가표') ?>
                                         </td>
-                                        <td class="px-4 py-2.5 text-white/50 font-mono">
+                                        <td class="px-4 py-2 text-white/40 font-mono text-[11px]">
                                             <?= date('Y.m.d H:i', strtotime($rule['created_at'])) ?>
                                         </td>
-                                        <td class="px-4 py-2.5 text-center">
-                                            <button type="button" onclick="deleteHistory(<?= $rule['id'] ?>)" class="text-white/30 hover:text-red-400 transition" title="삭제">
-                                                <i class="fa-solid fa-trash-can"></i>
+                                        <td class="px-4 py-2 text-center">
+                                            <button type="button" onclick="deleteHistory(<?= $rule['id'] ?>)" 
+                                                    class="w-7 h-7 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/20 transition flex items-center justify-center mx-auto"
+                                                    style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); cursor: pointer;" 
+                                                    title="단가표 삭제">
+                                                <i class="fa-solid fa-trash-can text-[11px]"></i>
                                             </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; else: ?>
                                     <tr>
-                                        <td colspan="4" class="px-4 py-8 text-center text-white/30 text-[13px]">내역이 없습니다.</td>
+                                        <td colspan="4" class="px-4 py-6 text-center text-white/30 text-[12px]">업로드 이력이 없습니다.</td>
                                     </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -238,102 +239,64 @@ $pageTitle = "다공급사 단가표 관리 v2";
                     </div>
                 </div>
 
-                <!-- 수동 단가 영역 -->
-                <div class="p-6 md:p-8 bg-gradient-to-b from-white/[0.03] to-transparent">
-                    <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-[13px] font-semibold tracking-wide flex items-center gap-2">
-                            <i class="fa-solid fa-hammer text-[#fde047]"></i> 수동 단가 입력 (완제품 기준)
-                            <span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-[#fde047] text-black font-bold">FALLBACK</span>
-                        </h3>
+                <!-- 온라인 단가 워크시트 (2차 보안 금고 & 개별 수정) -->
+                <div class="p-6 md:p-8 bg-gradient-to-b from-white/[0.03] to-transparent flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-[14px] font-bold tracking-wide flex items-center gap-2 text-white">
+                                <i class="fa-solid fa-shield-halved text-amber-400"></i> 2. 온라인 단가 워크시트 & 개별 수정
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20 font-bold">2차 비밀번호 보호</span>
+                        </div>
+
+                        <p class="text-[12px] text-white/50 mb-6 leading-relaxed">
+                            엑셀을 다시 열 필요 없이 웹에서 엑셀 시트처럼 탭을 넘겨가며 단가를 바로 확인하고, 필요한 규격만 <strong>숫자 하나씩 즉시 수정</strong>할 수 있습니다.
+                        </p>
+
+                        <!-- 워크시트 주요 구성 안내 카드 -->
+                        <div class="space-y-3 mb-6">
+                            <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-amber-400/10 text-amber-300 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-table-columns text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-[13px] font-semibold text-white/90">기둥세트단가 워크시트</div>
+                                    <div class="text-[11px] text-white/40">1,500H~7,000H (12종) × 900~1,300D (5종) = 총 60개 규격</div>
+                                </div>
+                            </div>
+
+                            <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-blue-400/10 text-blue-300 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-bars text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-[13px] font-semibold text-white/90">로드빔세트단가 워크시트</div>
+                                    <div class="text-[11px] text-white/40">1,385L~2,985L (6종) × 100/125/150바 = 총 18개 순수 빔 세트</div>
+                                </div>
+                            </div>
+
+                            <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-400/10 text-emerald-300 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-grip-lines text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-[13px] font-semibold text-white/90">타이빔 개당 단가 & 세트 자동합산</div>
+                                    <div class="text-[11px] text-white/40">깊이별 5개 단가 + 순수빔 합산 완제품 단가 실시간 시뮬레이션</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <form id="manualPriceForm" onsubmit="saveManualPrices(event)">
-                        <input type="hidden" id="manual_supplier_id" value="<?= $activeSupplierId ?>">
-                        <div class="rounded-[16px] bg-[#0b0f19] border border-white/10 p-4 md:p-5">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <!-- 기둥 -->
-                                <div>
-                                    <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-[#fde047]"></div> 기둥 (완제품 단가)
-                                    </div>
-                                    <div class="space-y-3">
-                                        <?php 
-                                        $cols = [
-                                            'column2000' => 'H-2000 (3,000kg)',
-                                            'column2500' => 'H-2500 (3,500kg)',
-                                            'column3000' => 'H-3000 (4,000kg)'
-                                        ];
-                                        foreach($cols as $code => $label): ?>
-                                        <label class="block">
-                                            <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
-                                            <div class="mt-1.5 relative">
-                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
-                                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-white/30">원</span>
-                                            </div>
-                                        </label>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                                
-                                <!-- 빔 -->
-                                <div>
-                                    <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div> 로드빔 (완제품 단가)
-                                    </div>
-                                    <div class="space-y-3">
-                                        <?php 
-                                        $beams = [
-                                            'beam1t' => '1단당 1.0T (1,000kg)',
-                                            'beam1_5t' => '1단당 1.5T (1,500kg)',
-                                            'beam2t' => '1단당 2.0T (2,000kg)'
-                                        ];
-                                        foreach($beams as $code => $label): ?>
-                                        <label class="block">
-                                            <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
-                                            <div class="mt-1.5 relative">
-                                                <input type="text" name="prices[<?= $code ?>]" value="<?= number_format($prices[$code] ?? 0) ?>" class="price-input w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 px-3 pr-12 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50 focus:bg-white/[0.08]" onkeyup="formatComma(this)">
-                                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-white/30">원</span>
-                                            </div>
-                                        </label>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- 부자재 -->
-                            <div class="mt-6">
-                                <div class="text-[13px] font-semibold tracking-wide text-white/60 mb-3 flex items-center gap-2">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div> 부자재 & 설치비율
-                                </div>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    <?php 
-                                    $accs = [
-                                        'tiebar' => '타이바(원)',
-                                        'brace' => '브레이스(원)',
-                                        'boltSet' => '볼트세트(원)',
-                                        'liner' => '라이너(원)',
-                                        'install' => '설치비(%)'
-                                    ];
-                                    foreach($accs as $code => $label): ?>
-                                    <label class="block">
-                                        <span class="text-[13px] text-white/70 font-medium"><?= $label ?></span>
-                                        <input type="text" name="prices[<?= $code ?>]" value="<?= $code=='install' ? ($prices[$code] ?? 10) : number_format($prices[$code] ?? 0) ?>" class="<?= $code!='install' ? 'price-input' : '' ?> mt-1.5 w-full h-9 rounded-xl bg-white/[0.06] border border-white/10 px-3 text-[13px] text-white focus:outline-none focus:border-[#fde047]/50" <?= $code!='install' ? 'onkeyup="formatComma(this)"' : '' ?>>
-                                    </label>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
+                    <!-- 단가 워크시트 입장 버튼 -->
+                    <div class="pt-4 border-t border-white/10">
+                        <a href="/vendor/pricing/sheet?sid=<?= $activeSupplierId ?>" 
+                           class="w-full h-12 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-bold text-[13px] flex items-center justify-center gap-2 hover:opacity-95 transition shadow-lg text-decoration-none">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> 단가표 워크시트 열기 (열람 및 개별 수정)
+                        </a>
+                        <div class="text-center text-[11px] text-white/35 mt-2.5">
+                            ※ 영업 비밀 보호를 위해 2차 보안 비밀번호 입력 후 입장됩니다.
                         </div>
-
-                        <div class="mt-5 flex items-center gap-3">
-                            <button type="submit" class="h-11 px-5 rounded-full bg-white text-black text-[13px] font-semibold flex items-center gap-2 hover:bg-white/90 transition">
-                                <i class="fa-solid fa-save"></i> 수동 단가 저장
-                            </button>
-                            <div class="text-[11px] leading-snug text-white/40">
-                                저장 시 해당 공급사의 단가는 수동 모드로 우선 전환됩니다.<br>
-                                영업소(B2B) 등 완제품 단가 관리가 필요할 때 사용하세요!
-                            </div>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -345,6 +308,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
     </main>
 
     <!-- 공급사 추가 모달 -->
+    <!-- [TEMP] 주석 처리: 당분간 사용 안 함
     <div id="addSupModal" class="modal-overlay">
         <div class="w-full max-w-[420px] rounded-[20px] bg-[#151a27] border border-white/10 p-6 shadow-2xl">
             <h4 class="text-[16px] font-semibold mb-1">새 공급사 추가</h4>
@@ -354,6 +318,49 @@ $pageTitle = "다공급사 단가표 관리 v2";
                 <button onclick="closeAddSupplierModal()" class="flex-1 h-11 rounded-full bg-white/10 border border-white/10 text-[13px] hover:bg-white/20">취소</button>
                 <button onclick="saveNewSupplier()" class="flex-1 h-11 rounded-full bg-[#fde047] text-black text-[13px] font-semibold hover:bg-[#fde047]/90">추가하기</button>
             </div>
+        </div>
+    </div>
+    -->
+
+    <!-- 📤 엑셀 일괄 업로드 모달 -->
+    <div id="excelUploadModal" class="modal-overlay">
+        <div class="w-full max-w-[460px] rounded-[24px] bg-[#121826] border border-white/10 p-6 md:p-8 shadow-2xl">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="text-base font-bold text-white mb-0 flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-[#fde047]"></i> 엑셀 단가표 일괄 업로드
+                </h4>
+                <button type="button" onclick="closeExcelUploadModal()" class="text-white/40 hover:text-white transition">
+                    <i class="fa-solid fa-xmark fs-5"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-white/60 mb-5 leading-relaxed">
+                다운로드받은 표준 Option B 양식(<code>pallet_rack_price_option_b.xlsx</code>)에 단가를 입력한 뒤 첨부해주세요. 기둥 60개, 로드빔 18개, 타이빔 5개 단가가 즉시 자동 분석되어 등록됩니다.
+            </p>
+
+            <form action="/vendor/pricing/upload_excel" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="supplier_id" value="<?= $activeSupplierId ?>">
+
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-white/70 mb-2">1. 엑셀 파일 (.xlsx)</label>
+                    <input type="file" name="price_excel" required accept=".xlsx,.xls" 
+                           class="w-full text-xs text-white/70 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#fde047] file:text-black hover:file:bg-[#fde047]/90 file:cursor-pointer cursor-pointer bg-white/[0.04] rounded-xl border border-white/10 p-2">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-white/70 mb-2">2. 단가표 2차 보안 비밀번호</label>
+                    <input type="password" name="pricing_password" required placeholder="비밀번호 입력 (최초 등록 또는 확인)" 
+                           class="w-full h-11 bg-white/[0.06] border border-white/15 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-[#fde047]">
+                    <span class="text-[11px] text-white/40 mt-1 block">이 단가표를 열람/수정할 때 사용할 비밀번호입니다.</span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" onclick="closeExcelUploadModal()" class="flex-1 h-11 rounded-xl bg-white/10 text-white text-xs hover:bg-white/15 transition">취소</button>
+                    <button type="submit" class="flex-1 h-11 rounded-xl bg-[#fde047] text-black font-bold text-xs hover:bg-[#fde047]/90 transition shadow">
+                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> 업로드 및 분석 시작
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -367,6 +374,8 @@ $pageTitle = "다공급사 단가표 관리 v2";
     <script>
         function openAddSupplierModal() { document.getElementById('addSupModal').classList.add('active'); document.getElementById('newSupName').focus(); }
         function closeAddSupplierModal() { document.getElementById('addSupModal').classList.remove('active'); }
+        function openExcelUploadModal() { document.getElementById('excelUploadModal').classList.add('active'); }
+        function closeExcelUploadModal() { document.getElementById('excelUploadModal').classList.remove('active'); }
         
         async function saveNewSupplier() {
             const name = document.getElementById('newSupName').value;
@@ -432,7 +441,7 @@ $pageTitle = "다공급사 단가표 관리 v2";
             }
         }
         async function deleteHistory(id) {
-            if(!confirm('이 단가표 내역을 정말 삭제하시겠습니까?')) return;
+            if(!confirm('이 단가표 이력을 삭제하시면 현재 적용 중인 모든 단가 데이터와 비밀번호 잠금까지 완전히 초기화(삭제)됩니다. 그래도 삭제하시겠습니까?')) return;
             
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {

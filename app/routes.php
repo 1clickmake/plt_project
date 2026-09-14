@@ -149,6 +149,13 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/vendor/saveManualPricing', ['App\Controllers\VendorController', 'saveManualPricing']);
     $r->addRoute('GET', '/vendor/pricing/download', ['App\Controllers\VendorController', 'downloadPricingExcel']);
     $r->addRoute('POST', '/vendor/pricing/delete', ['App\Controllers\VendorController', 'deletePricingRules']);
+    
+    // 📊 Option B 엑셀 단가표 및 시트 관리 라우트
+    $r->addRoute('GET',  '/vendor/pricing/template/download', ['App\Controllers\VendorController', 'downloadPricingTemplate']);
+    $r->addRoute('POST', '/vendor/pricing/upload_excel',       ['App\Controllers\VendorController', 'uploadOptionBExcel']);
+    $r->addRoute('POST', '/vendor/pricing/unlock',             ['App\Controllers\VendorController', 'unlockPricing']);
+    $r->addRoute('GET',  '/vendor/pricing/sheet',              ['App\Controllers\VendorController', 'pricingSheet']);
+    $r->addRoute('POST', '/vendor/pricing/sheet_save',         ['App\Controllers\VendorController', 'savePricingSheet']);
     $r->addRoute('GET',  '/vendor/quotes',        ['App\Controllers\VendorController', 'quotes']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}', ['App\Controllers\VendorController', 'quoteDetail']);
     $r->addRoute('GET',  '/vendor/inquiries/{id:\d+}', ['App\Controllers\VendorController', 'inquiryDetail']);

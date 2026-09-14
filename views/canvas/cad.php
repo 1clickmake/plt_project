@@ -1277,7 +1277,8 @@ function submitQuoteRequest() {
             points: typeof points !== 'undefined' ? points : [],
             obstacles: typeof obstacles !== 'undefined' ? obstacles : [],
             currentScale: typeof currentScale !== 'undefined' ? currentScale : 1,
-            floors: floorsPayload || undefined
+            floors: floorsPayload || undefined,
+            canvasFloors: (typeof window.canvasFloors !== 'undefined' && Array.isArray(window.canvasFloors) && window.canvasFloors.length > 0) ? window.canvasFloors : undefined
         }),
         floors_data: floorsPayload ? JSON.stringify(floorsPayload) : '',
         total_floors: floorsPayload ? floorsPayload.length : 1,

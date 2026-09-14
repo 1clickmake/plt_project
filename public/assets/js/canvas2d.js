@@ -412,11 +412,11 @@ window.clearEdgeLengths = function() {
     userEnteredEdges = [];
 };
 
-window.updateEdgeLength = function(index, value) {
+window.updateEdgeLength = function(index, value, isAutoSync = false) {
     let valInt = parseInt(value) || 0;
     
     // 30m(30,000mm) 소형 창고 초과 감지 및 안내
-    if (valInt > 30000) {
+    if (!isAutoSync && valInt > 30000) {
         valInt = 30000;
         const inputEl = document.getElementById(`edge-input-${index}`);
         if (inputEl) inputEl.value = 30000;
@@ -430,33 +430,49 @@ window.updateEdgeLength = function(index, value) {
     }
     
     // 수동 입력 이력 배열에서 기존 인덱스 제거
-    const idx = userEnteredEdges.indexOf(index);
-    if (idx > -1) {
-        userEnteredEdges.splice(idx, 1);
+    if (!isAutoSync) {
+        const idx = userEnteredEdges.indexOf(index);
+        if (idx > -1) {
+            userEnteredEdges.splice(idx, 1);
+        }
     }
     
     if (value !== '' && valInt > 0) {
-        userEnteredEdges.push(index);
+        if (!isAutoSync) userEnteredEdges.push(index);
         edgeLengths[index] = valInt;
     } else {
         edgeLengths[index] = 0;
     }
     
-    // 만약 모든 변이 수동 입력되었다면, 가장 예전에 입력한 변 1개를 자동 계산 변으로 실시간 양보
     const numEdges = points.length - 1;
-    if (userEnteredEdges.length >= numEdges) {
-        const oldestIndex = userEnteredEdges.shift();
-        edgeLengths[oldestIndex] = 0;
-        
-        // 고유 ID 기반으로 폼 입력창 값 실시간 초기화
-        const inputEl = document.getElementById(`edge-input-${oldestIndex}`);
-        if (inputEl) {
-            inputEl.value = '';
+
+    // 4각형일 때 마주보는 변 자동 입력 (사용자가 직접 입력할 때만)
+    if (!isAutoSync && numEdges === 4) {
+        const oppositeIndex = (index + 2) % 4;
+        const oppInput = document.getElementById(`edge-input-${oppositeIndex}`);
+        if (oppInput) {
+            oppInput.value = valInt > 0 ? valInt : '';
         }
+        // 마주보는 변 데이터 동기화 (isAutoSync = true)
+        updateEdgeLength(oppositeIndex, valInt > 0 ? valInt.toString() : '', true);
     }
     
-    alignAndScalePolygon(); 
-    draw();
+    if (!isAutoSync) {
+        // 만약 모든 변이 수동 입력되었다면, 가장 예전에 입력한 변 1개를 자동 계산 변으로 실시간 양보
+        if (userEnteredEdges.length >= numEdges) {
+            const oldestIndex = userEnteredEdges.shift();
+            edgeLengths[oldestIndex] = 0;
+            
+            // 고유 ID 기반으로 폼 입력창 값 실시간 초기화
+            const inputEl = document.getElementById(`edge-input-${oldestIndex}`);
+            if (inputEl) {
+                inputEl.value = '';
+            }
+        }
+        
+        alignAndScalePolygon(); 
+        draw();
+    }
 };
 
 // --- 도면 자동 정렬 (Parametric Alignment) ---
@@ -4407,9 +4423,22 @@ window.spawnInitialRacks = function() {
     const totalLenPx = totalLenMm * currentScale;
     const rackDepthPx = rackDepth * currentScale;
     
-    // 생성 위치 (캔버스 중앙)
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    // 생성 위치 (창고 도면 다각형 중심, 없으면 캔버스 중앙)
+    let centerX = canvas.width / 2;
+    let centerY = canvas.height / 2;
+    if (typeof points !== 'undefined' && Array.isArray(points) && points.length >= 3) {
+        let pMinX = Infinity, pMinY = Infinity, pMaxX = -Infinity, pMaxY = -Infinity;
+        points.forEach(p => {
+            if (p.x < pMinX) pMinX = p.x;
+            if (p.y < pMinY) pMinY = p.y;
+            if (p.x > pMaxX) pMaxX = p.x;
+            if (p.y > pMaxY) pMaxY = p.y;
+        });
+        if (pMinX < pMaxX && pMinY < pMaxY) {
+            centerX = (pMinX + pMaxX) / 2;
+            centerY = (pMinY + pMaxY) / 2;
+        }
+    }
     
     // 1. 독립 파랫트 (단식) 1개
     let singleRack = {
@@ -5110,14 +5139,65 @@ function loadFloorState(index) {
     window.canvasOriginY = (target.canvasOriginY !== undefined) ? target.canvasOriginY : 0;
     cameraZoom = target.cameraZoom || 1;
 
-    // 폐합되지 않은 상태라면 점 찍기 모드(isDrawingMode = true) 유지
+    // 만약 점이 비어있지만 선분 길이(edgeLengths)가 3개 이상 입력되어 있는 경우, 사각형/다각형 기본점 복원!
+    if ((!points || points.length < 4) && edgeLengths && edgeLengths.length >= 3 && edgeLengths.some(v => v > 0)) {
+        const numEdges = edgeLengths.length;
+        points = [];
+        originalAngles = [];
+        originalVisualLengths = [];
+        
+        if (numEdges === 4) {
+            points = [
+                { x: 100, y: 100 },
+                { x: 500, y: 100 },
+                { x: 500, y: 500 },
+                { x: 100, y: 500 },
+                { x: 100, y: 100 }
+            ];
+            originalAngles = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+            originalVisualLengths = [400, 400, 400, 400];
+        } else {
+            const angleStep = (2 * Math.PI) / numEdges;
+            const r = 250;
+            const cx = 350, cy = 350;
+            for (let i = 0; i < numEdges; i++) {
+                const a = i * angleStep;
+                points.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+            }
+            points.push({ x: points[0].x, y: points[0].y });
+            for (let i = 0; i < numEdges; i++) {
+                originalAngles.push(Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x));
+                originalVisualLengths.push(Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y));
+            }
+        }
+        
+        target.points = JSON.parse(JSON.stringify(points));
+        target.originalAngles = [...originalAngles];
+        target.originalVisualLengths = [...originalVisualLengths];
+        
+        if (typeof alignAndScalePolygon === 'function') {
+            alignAndScalePolygon();
+        }
+        target.currentScale = currentScale;
+    }
+
+    // 폐합 상태 판별
     const isClosed = points.length >= 4 && points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
     if (!isClosed) {
         isDrawingMode = true;
     } else {
-        isDrawingMode = target.isDrawingMode || false;
+        isDrawingMode = false;
+        target.isDrawingMode = false;
     }
     window.rackCustomLevels = target.rackCustomLevels ? JSON.parse(JSON.stringify(target.rackCustomLevels)) : null;
+
+    // 만약 랙이 없고 폐합된 도면이며 이전에 배치가 있었던 층이라면 기본 랙 스폰
+    if (isClosed && (!racks || racks.length === 0) && currentScale > 0) {
+        if (typeof window.spawnInitialRacks === 'function') {
+            window.spawnInitialRacks();
+            target.racks = JSON.parse(JSON.stringify(racks));
+        }
+    }
 
     // Restore pallet form if saved
     if (target.palletSpec) {
@@ -5152,13 +5232,25 @@ function loadFloorState(index) {
                 ChatWizard.body.innerHTML = target.chatHtml;
                 ChatWizard.scrollToBottom();
             }
+        } else if (isClosed) {
+            ChatWizard.currentStep = 7;
+            if (ChatWizard.body) {
+                ChatWizard.body.innerHTML = `
+                    <div class="chat-msg bot">
+                        <img src="/asamiya_profile.png" alt="Asamiya" class="asamiya-profile" style="width: 38px; height: 38px; margin-top: 4px;" onerror="this.src='https://ui-avatars.com/api/?name=Asamiya&background=0ea5e9&color=fff'">
+                        <div class="chat-bubble">
+                            📍 <b>[${target.name}]</b> 도면과 랙 배치를 불러왔어요! 💕<br>
+                            <span class="small text-secondary">치수와 랙을 확인 및 수정하신 후 도면 저장을 클릭해주세요.</span>
+                        </div>
+                    </div>
+                `;
+            }
         } else {
             // 새로 추가된 층이거나 아직 대화가 없는 층
             if (typeof ChatWizard.resetForNewFloor === 'function') {
                 ChatWizard.resetForNewFloor(target.name);
             }
-            // 만약 이미 도면이 폐합되어 점이 찍혀 있다면 즉시 Step 2로 연결!
-            if (isClosed && typeof window.generateCustomInputs === 'function') {
+            if (typeof window.generateCustomInputs === 'function') {
                 setTimeout(() => {
                     window.generateCustomInputs(points.length - 1, true);
                 }, 200);
@@ -5497,6 +5589,14 @@ window.getCombinedFloorsSummary = function() {
             id: f.id,
             index: idx,
             name: f.name,
+            points: f.points ? JSON.parse(JSON.stringify(f.points)) : [],
+            obstacles: f.obstacles ? JSON.parse(JSON.stringify(f.obstacles)) : [],
+            racks: f.racks ? JSON.parse(JSON.stringify(f.racks)) : [],
+            currentScale: f.currentScale || 0,
+            originalAngles: f.originalAngles ? [...f.originalAngles] : [],
+            originalVisualLengths: f.originalVisualLengths ? [...f.originalVisualLengths] : [],
+            isDrawingMode: f.isDrawingMode || false,
+            cameraZoom: f.cameraZoom || 1,
             bays: stats.bays,
             indep: stats.indep,
             conn: stats.conn,
@@ -5751,6 +5851,35 @@ window.restoreCanvasData = function(raw) {
     if (!raw) return false;
     try {
         console.log("🔄 canvas2d 내부 도면 복원 실행 시작...", raw);
+
+        // 0. 멀티 플로어(층/창고) 전체 복원
+        if (raw.canvasFloors && Array.isArray(raw.canvasFloors) && raw.canvasFloors.length > 0) {
+            window.canvasFloors = JSON.parse(JSON.stringify(raw.canvasFloors));
+            if (typeof loadFloorState === 'function') loadFloorState(0);
+            if (typeof renderFloorTabs === 'function') renderFloorTabs();
+        } else if (raw.floors && Array.isArray(raw.floors) && raw.floors.length > 0) {
+            window.canvasFloors = raw.floors.map((f, idx) => {
+                return {
+                    id: f.id || (idx + 1),
+                    name: f.name || `${idx + 1}층 (제${idx + 1}창고)`,
+                    points: (f.points && f.points.length > 0) ? JSON.parse(JSON.stringify(f.points)) : (idx === 0 && raw.points ? JSON.parse(JSON.stringify(raw.points)) : []),
+                    obstacles: (f.obstacles && f.obstacles.length > 0) ? JSON.parse(JSON.stringify(f.obstacles)) : (idx === 0 && raw.obstacles ? JSON.parse(JSON.stringify(raw.obstacles)) : []),
+                    edgeLengths: (f.edgeLengths && f.edgeLengths.length > 0) ? [...f.edgeLengths] : (idx === 0 && raw.edgeLengths ? [...raw.edgeLengths] : []),
+                    originalAngles: f.originalAngles || (idx === 0 && raw.originalAngles ? [...raw.originalAngles] : []),
+                    originalVisualLengths: f.originalVisualLengths || (idx === 0 && raw.originalVisualLengths ? [...raw.originalVisualLengths] : []),
+                    userEnteredEdges: f.userEnteredEdges || (idx === 0 && raw.userEnteredEdges ? [...raw.userEnteredEdges] : []),
+                    racks: (f.racks && f.racks.length > 0) ? JSON.parse(JSON.stringify(f.racks)) : (idx === 0 && raw.racks ? JSON.parse(JSON.stringify(raw.racks)) : []),
+                    currentScale: f.currentScale || (idx === 0 ? (raw.currentScale || 0) : 0),
+                    isDrawingMode: (f.isDrawingMode !== undefined) ? f.isDrawingMode : ((idx === 0 && raw.points && raw.points.length >= 4) ? false : true),
+                    cameraZoom: f.cameraZoom || 1,
+                    rackCustomLevels: f.rackCustomLevels || null,
+                    capturedImage: f.capturedImage || f.image_path || null,
+                    palletSpec: f.palletSpec || null
+                };
+            });
+            if (typeof loadFloorState === 'function') loadFloorState(0);
+            if (typeof renderFloorTabs === 'function') renderFloorTabs();
+        }
 
         // 1. 도면 점 (points)
         if (raw.points && Array.isArray(raw.points) && raw.points.length > 0) {

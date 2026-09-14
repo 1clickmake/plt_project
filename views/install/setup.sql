@@ -546,6 +546,7 @@ CREATE TABLE `suppliers` (
   `status` varchar(20) DEFAULT 'none' COMMENT 'excel, manual, none',
   `color` varchar(20) DEFAULT '#94a3b8',
   `excel_file` varchar(255) DEFAULT NULL,
+  `pricing_password` varchar(255) DEFAULT NULL COMMENT '단가표 보안 2차 비밀번호 (해시)',
   `created_at` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='공급사 관리 테이블';

@@ -109,28 +109,20 @@ $pageTitle = "프로필 선택";
         
         <div class="profiles-list">
             <?php foreach ($employees as $emp): ?>
-                <div class="profile-card" onclick="loginProfile(<?= $emp['id'] ?>)">
-                    <div class="profile-avatar" style="background-color: <?= htmlspecialchars($emp['color_code']) ?>;">
-                        <i class="fa-solid fa-user-tie"></i>
-                    </div>
-                    <div class="profile-name"><?= htmlspecialchars($emp['name']) ?></div>
-                    <div class="profile-title-text"><?= htmlspecialchars($emp['title']) ?></div>
-                </div>
+                <form action="/vendor/profiles/login" method="POST" class="m-0 p-0">
+                    <input type="hidden" name="employee_id" value="<?= $emp['id'] ?>">
+                    <button type="submit" class="profile-card btn p-0 text-start border-0 bg-transparent text-white" style="cursor: pointer;">
+                        <div class="profile-avatar" style="background-color: <?= htmlspecialchars($emp['color_code']) ?>;">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div class="profile-name text-center"><?= htmlspecialchars($emp['name']) ?></div>
+                        <div class="profile-title-text text-center"><?= htmlspecialchars($emp['title']) ?></div>
+                    </button>
+                </form>
             <?php endforeach; ?>
         </div>
 
-        <form id="profileLoginForm" action="/vendor/profiles/login" method="POST" style="display: none;">
-            <input type="hidden" name="employee_id" id="login_employee_id" value="">
-        </form>
-
         <a href="/vendor/employees" class="btn manage-btn">직원 프로필 관리</a>
     </div>
-
-    <script>
-        function loginProfile(id) {
-            document.getElementById('login_employee_id').value = id;
-            document.getElementById('profileLoginForm').submit();
-        }
-    </script>
 </body>
 </html>

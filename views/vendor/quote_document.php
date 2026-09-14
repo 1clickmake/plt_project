@@ -50,9 +50,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a> --> -->
+                </a> -->
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($user['username'] ?? 'User') ?>님</span>
@@ -161,10 +161,26 @@ if ($stages <= 0) {
     $stages = max(1, $levels - 1);
 }
 
-$totalFrames = ($indep * 2) + ($bypass * 2) + $conn + $small;
+// $_raw 사용: View.php의 htmlspecialchars 이스케이프를 우회하여 JSON 원본 파싱
+$adminDetailsRaw = !empty($_raw['quote']['admin_quote_details']) ? json_decode($_raw['quote']['admin_quote_details'], true) : [];
+
+$totalFrames = ($indep * 2) + $conn + $small + $bypass;
 $totalColumns = $totalFrames * 2;
-$linerQty = $totalColumns;
-$linerTotal = $linerQty * 500;
+
+$isBoard = ($quote['source_mode'] ?? '') === 'board';
+if (isset($adminDetailsRaw['liner_qty'])) {
+    $linerQty = intval($adminDetailsRaw['liner_qty']);
+} else {
+    $linerQty = $isBoard ? 0 : $totalColumns;
+}
+
+if (isset($adminDetailsRaw['liner_unit_price'])) {
+    $linerUnitPrice = floatval($adminDetailsRaw['liner_unit_price']);
+} else {
+    $linerUnitPrice = empty($quote['pricing_rule_id']) ? 0 : 500;
+}
+
+$linerTotal = $linerQty * $linerUnitPrice;
 
 $w = intval($quote['pallet_w'] ?? 1100);
 $d = intval($quote['pallet_d'] ?? 1100);
@@ -175,7 +191,7 @@ $entryW = (strpos($quote['fork_direction'] ?? '', 'W') !== false) ? $w : $d;
 $beamL = ($entryW * 2) + 385;
 $palletsPerCell = ($beamL >= 2585) ? 2 : 1;
 $totalPalletsPerLevel = (($indep + $conn + $bypass) * $palletsPerCell) + ($small * 1);
-$totalPallets = $totalPalletsPerLevel * $levels;
+$totalPallets = !empty($quote['rack_pallets']) ? intval($quote['rack_pallets']) : ($totalPalletsPerLevel * $levels);
 
 $sumQty = 0;
 $sumPrice = 0;
@@ -722,7 +738,7 @@ $audit_token = $auditToken ?? \App\Services\AuditService::generateToken($quote['
                         <td style="color:#666; font-size:12px;">
                             <div style="display:flex; align-items:center;">
                                 <?= $linerQty ?>개 × 
-                                <input type="number" id="liner-price-new" class="calc-bottom-input" value="500" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
+                                <input type="number" id="liner-price-new" class="calc-bottom-input" value="<?= is_numeric($linerUnitPrice) ? floor((float)$linerUnitPrice) : $linerUnitPrice ?>" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
                                 <span id="liner-total-new-display" style="display:none;">(-<?= number_format($linerTotal) ?>)</span>
                             </div>
                         </td>
@@ -763,7 +779,7 @@ $audit_token = $auditToken ?? \App\Services\AuditService::generateToken($quote['
                         <td style="color:#666; font-size:12px;">
                             <div style="display:flex; align-items:center;">
                                 <?= $linerQty ?>개 × 
-                                <input type="number" id="liner-price-used" class="calc-bottom-input" value="500" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
+                                <input type="number" id="liner-price-used" class="calc-bottom-input" value="<?= is_numeric($linerUnitPrice) ? floor((float)$linerUnitPrice) : $linerUnitPrice ?>" style="width:50px; margin:0 4px; padding:0 2px; text-align:right;">원 
                                 <span id="liner-total-used-display" style="display:none;">(-<?= number_format($linerTotal) ?>)</span>
                             </div>
                         </td>
@@ -974,14 +990,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let detailsB64 = document.getElementById('saved-quote-data').getAttribute('data-details');
         if (detailsB64) {
             try {
-                // atob()은 Latin-1 바이너리로 디코딩 → 한글 깨짐. TextDecoder로 UTF-8 디코딩
                 const bytes = Uint8Array.from(atob(detailsB64), c => c.charCodeAt(0));
                 let detailsRaw = new TextDecoder('utf-8').decode(bytes);
                 let savedDetails = JSON.parse(detailsRaw);
-                for (let id in savedDetails) {
+                let inputsToRestore = savedDetails.doc_inputs || savedDetails;
+                for (let id in inputsToRestore) {
                     let el = document.getElementById(id);
                     if (el) {
-                        el.value = savedDetails[id];
+                        el.value = inputsToRestore[id];
                     }
                 }
             } catch(e) { console.error('Failed to parse details:', e); }
@@ -991,10 +1007,21 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             if (typeof calculateMargin === 'function') calculateMargin();
             
-            // 재계산 후에 모든 입력 비활성화
+            // 재계산 후에 모든 입력 비활성화 (readonly 처리)
             document.querySelectorAll('input, select, textarea').forEach(inp => {
-                if (inp.id && !['emailTo', 'emailSubject', 'emailBody', 'emailExtraFiles'].includes(inp.id)) {
-                    inp.disabled = true;
+                const excludedIds = ['emailTo', 'emailSubject', 'emailBody', 'emailExtraFiles'];
+                if (!excludedIds.includes(inp.id)) {
+                    if (inp.tagName === 'SELECT' || inp.type === 'checkbox' || inp.type === 'radio') {
+                        inp.disabled = true;
+                    } else {
+                        inp.readOnly = true;
+                        inp.setAttribute('readonly', 'readonly');
+                    }
+                    // CSS로 모든 조작 완벽 차단
+                    inp.style.pointerEvents = 'none';
+                    inp.style.backgroundColor = '#e9ecef';
+                    inp.style.opacity = '0.8';
+                    inp.style.border = '1px solid #ccc';
                 }
             });
         }, 100);
@@ -1014,9 +1041,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function calculateMargin() {
         // Calculate New Racks
-        calcSectionMargin('new', parseFloat(inputNewPercent.value) || 0);
+        if (inputNewPercent) {
+            calcSectionMargin('new', parseFloat(inputNewPercent.value) || 0);
+        }
         // Calculate Used Racks
-        calcSectionMargin('used', parseFloat(inputUsedPercent.value) || 0);
+        if (inputUsedPercent) {
+            calcSectionMargin('used', parseFloat(inputUsedPercent.value) || 0);
+        }
     }
     
     function calcSectionMargin(type, marginPercent) {
@@ -1098,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update margin UI here to include truncate deduction
         let linerPriceInput = document.getElementById('liner-price-' + type);
-        let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : 500;
+        let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : <?= (int)$linerUnitPrice ?>;
         let linerQty = <?= $linerQty ?>;
         let linerTotal = linerQty * linerUnitPrice;
         
@@ -1176,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (truncVal > 0) truncVal = -truncVal;
             
             let linerPriceInput = document.getElementById('liner-price-' + type);
-            let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : 500;
+            let linerUnitPrice = linerPriceInput ? (parseInt(linerPriceInput.value) || 0) : <?= (int)$linerUnitPrice ?>;
             let linerQty = <?= isset($linerQty) ? (int)$linerQty : 0 ?>; 
             let linerTotal = linerQty * linerUnitPrice;
             

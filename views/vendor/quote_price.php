@@ -44,9 +44,9 @@
                     $btnPlan = $stmtBtn->fetchColumn();
                     if ($btnPlan !== 'pro'):
                 ?>
-                <!-- <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
+                <!-- <a href="/vendor/addon_payment" class="btn btn-outline-warning btn-sm fw-bold px-3 py-1 me-3" style="border-radius: 10px;">
                     <i class="fa-solid fa-bolt"></i> 횟수 충전
-                </a> --> -->
+                </a> -->
                 <?php endif; ?>
                     <i class="fa-solid fa-circle-user text-info fs-5"></i>
                     <span class="small font-monospace text-light"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?>님</span>
@@ -383,8 +383,19 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
           }
       }
       $isBoard = ($quote['source_mode'] ?? '') === 'board';
-      $linerQty = $isBoard ? 0 : ($totalFrames * 2);
-      $linerUnitPrice = empty($quote['pricing_rule_id']) ? 0 : 500;
+      // $_raw 사용: View.php의 htmlspecialchars 이스케이프를 우회하여 JSON 원본 파싱
+      $adminDetailsRaw = !empty($_raw['quote']['admin_quote_details']) ? json_decode($_raw['quote']['admin_quote_details'], true) : [];
+      if (isset($adminDetailsRaw['liner_qty'])) {
+          $linerQty = intval($adminDetailsRaw['liner_qty']);
+      } else {
+          $linerQty = $isBoard ? 0 : ($totalFrames * 2);
+      }
+      
+      if (isset($adminDetailsRaw['liner_unit_price'])) {
+          $linerUnitPrice = floatval($adminDetailsRaw['liner_unit_price']);
+      } else {
+          $linerUnitPrice = empty($quote['pricing_rule_id']) ? 0 : 500;
+      }
       $linerTotal = $linerQty * $linerUnitPrice;
 ?>
     </tbody>
@@ -543,11 +554,14 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                     const bomQtyEl = firstBomRow.querySelector('.bom-part-qty');
                     const bomUnitEl = firstBomRow.querySelector('.bom-part-unit');
 
-                    if (bomName && modRow.querySelector('.mod-name')) {
-                        modRow.querySelector('.mod-name').innerText = bomName.value.trim() || '파렛트랙';
-                    }
-                    if (bomSpec && modRow.querySelector('.mod-spec')) {
-                        modRow.querySelector('.mod-spec').innerText = bomSpec.value.trim();
+                    // 단일 부품일 때만 부모 모듈명과 규격을 동기화
+                    if (nonLossRows.length === 1) {
+                        if (bomName && modRow.querySelector('.mod-name')) {
+                            modRow.querySelector('.mod-name').innerText = bomName.value.trim() || '파렛트랙';
+                        }
+                        if (bomSpec && modRow.querySelector('.mod-spec')) {
+                            modRow.querySelector('.mod-spec').innerText = bomSpec.value.trim();
+                        }
                     }
 
                     if (nonLossRows.length === 1) {
@@ -823,11 +837,23 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
             const overallTotal = parseInt(document.getElementById('overallTotalText').innerText.replace(/,/g, '')) || 0;
 
+            const linerUnitInput = document.getElementById('linerUnitInput');
+            const linerQtyText = document.getElementById('linerQtyText');
+            
             const payload = {
                 modules: modules,
                 custom_items: customItems,
+                liner_qty: linerQtyText ? parseInt(linerQtyText.innerText.replace(/,/g, '')) || 0 : 0,
+                liner_unit_price: linerUnitInput ? parseFloat(linerUnitInput.value) || 0 : 0,
                 overallTotal: overallTotal
             };
+
+            console.log('[DEBUG] liner save payload:', {
+                liner_qty: linerQtyText ? parseInt(linerQtyText.innerText.replace(/,/g, '')) || 0 : 0,
+                liner_unit_price: linerUnitInput ? parseFloat(linerUnitInput.value) : 'no input',
+                linerUnitInput_value: linerUnitInput ? linerUnitInput.value : 'element not found',
+                linerRow_display: document.getElementById('linerRow') ? document.getElementById('linerRow').style.display : 'no row'
+            });
 
             Swal.fire({
                 title: '저장 중...',
