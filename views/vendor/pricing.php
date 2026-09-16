@@ -66,9 +66,15 @@ $pageTitle = "다공급사 단가표 관리 v2";
         <div class="relative z-10 max-w-[1280px] mx-auto px-4 md:px-8 py-6 md:py-8">
         <!-- 상단 헤더 -->
         <!-- 상단 헤더 -->
+        <!-- 상단 헤더 -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-file-excel text-success me-2"></i> 단가표 관리 <span class="text-[#fde047] fs-6 ms-2">v2 - 다공급사 지원</span></h3>
-            <span class="small text-white/50">SaaS Dashboard > 공급사 단가표 관리</span>
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn btn-outline-warning btn-sm rounded px-3 fw-bold" style="font-size:0.85rem;" data-bs-toggle="modal" data-bs-target="#pricingUsageModal">
+                    ℹ️ 이용안내
+                </button>
+                <span class="small text-white/50 d-none d-md-inline">SaaS Dashboard > 공급사 단가표 관리</span>
+            </div>
         </div>
 
         <!-- FLOW -->
@@ -463,6 +469,51 @@ $pageTitle = "다공급사 단가표 관리 v2";
             }
         }
     </script>
+    <!-- 단가표 이용안내 모달 -->
+    <div class="modal fade" id="pricingUsageModal" tabindex="-1" aria-labelledby="pricingUsageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #f8fafc; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="pricingUsageModalLabel" style="color: #fde047;">
+                        <i class="fa-solid fa-file-excel me-2"></i> 단가표 관리 이용 안내
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-secondary mb-4" style="font-size: 0.9rem;">
+                        한 번만 세팅해 두시면 평생 편안해지는 단가표 관리! 아래 순서대로 진행해 보세요.
+                    </p>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-success">📥</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">1. 최초 양식 다운로드 및 업로드</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">[단가표 양식 다운로드] 버튼을 눌러 엑셀 파일을 받으신 후, 귀사의 단가를 기입하여 업로드해 주세요.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-info">💻</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">2. PC에서 간편한 단가 수정</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">한 번 업로드가 완료되면, 이후부터는 매번 엑셀을 올릴 필요 없이 이 대시보드 화면(PC)에서 언제든 편하게 단가를 직접 수정하실 수 있습니다.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-warning">🤖</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">3. 전용 단가표 AI 맞춤 연동 지원</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">혹시 귀사에서 이미 사용 중이신 전용 단가표(엑셀 등)가 따로 있으신가요? 저희에게 보내주시면 최신 AI 기술을 활용하여 귀사의 단가 구조를 정밀 분석 후 시스템에 찰떡같이 연동해 드립니다. 고민하지 말고 편하게 문의해 주세요!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-warning btn-sm px-4 fw-bold w-100 rounded-pill" data-bs-dismiss="modal">확인했습니다</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 🛡️ B2B Stealth Security Watermark Overlay -->
     <?php include __DIR__ . '/watermark.php'; ?>
     <!-- Bootstrap 5 JS Bundle -->
