@@ -502,29 +502,29 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-info">🧮</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">1. 자동 산출 물량 및 단가 확인</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">설계된 도면을 바탕으로 AI가 자동 계산한 부품 수량(기둥, 로드빔 등)과 세팅된 매입 단가를 확인합니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">1. 원가 및 물량 점검</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">도면을 바탕으로 산출된 부품 수량(기둥, 로드빔 등)과 매입 단가가 정확하게 들어갔는지 원가를 점검합니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-warning">📈</div>
+                            <div class="fs-4 text-warning">✏️</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">2. 마진율(%) 설정</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">신재 및 중고재 각각 원하시는 마진율을 입력하면, 최종 고객에게 보여질 판매 금액이 즉시 자동 계산됩니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">2. 수량 및 단가 수동 조정</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">현장 상황에 따라 특정 부품의 수량을 더하거나 빼고, 단가를 직접 수정하여 원가를 세밀하게 조정할 수 있습니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-primary">➕</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">3. 기타 품목 추가 (운송비/시공비 등)</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">랙 부품 외에 안전바, 시공비, 화물 운송비 등 추가로 청구해야 할 항목을 [기타 품목 추가] 버튼으로 넣을 수 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">3. 기타 품목 추가</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">안전바, 시공비, 화물 운송비 등 도면에 없는 추가 청구 항목을 [기타 품목 추가] 버튼을 눌러 원가에 포함시킵니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-success">💾</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">4. 수정사항 저장</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">단가와 물량 조정이 모두 끝났다면 반드시 <strong>[수정사항 저장하기]</strong> 버튼을 눌러 견적을 확정해 주세요.</p>
+                                <h6 class="fw-bold mb-1 text-light">4. 원가 수정사항 저장</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">원가 점검이 끝났다면 반드시 <strong>[수정사항 저장하기]</strong> 버튼을 눌러 확정해 주세요. 이후 견적서 페이지에서 마진을 붙이게 됩니다.</p>
                             </div>
                         </div>
                     </div>

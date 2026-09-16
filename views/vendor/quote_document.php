@@ -1291,24 +1291,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     </p>
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-primary">📈</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">1. 판매 마진율(%) 설정</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">단가확인 페이지에서 확정된 원가에 신재/중고재 각각 원하시는 마진율을 입력하면, 고객용 판매 금액이 자동 세팅됩니다.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-info">👀</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">1. 최종 견적서 검토</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객에게 발송될 실제 견적서 양식입니다. 마진이 포함된 최종 금액과, 도면 이미지가 잘 들어갔는지 확인하세요.</p>
+                                <h6 class="fw-bold mb-1 text-light">2. 최종 견적서 검토</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객에게 발송될 실제 견적서 폼입니다. 마진이 포함된 금액과 3D 도면 이미지가 잘 들어갔는지 최종 확인하세요.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-warning">🖨️</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">2. 인쇄 및 PDF 저장</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">상단의 <strong>[견적서 인쇄 / PDF 저장]</strong> 버튼을 누르면 깔끔한 오프라인용 문서 파일로 저장하거나 바로 프린트할 수 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">3. 인쇄 및 PDF 저장</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">상단의 <strong>[견적서 인쇄 / PDF 저장]</strong> 버튼을 누르면 깔끔한 오프라인용 문서 파일로 프린트 및 저장할 수 있습니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
                             <div class="fs-4 text-success">✉️</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">3. 고객에게 이메일 발송</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;"><strong>[고객에게 이메일 견적발송]</strong> 버튼을 누르면 해당 견적서와 도면 링크가 고객의 이메일로 1초 만에 전송되어 계약 확률을 높입니다!</p>
+                                <h6 class="fw-bold mb-1 text-light">4. 고객에게 이메일 발송</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;"><strong>[고객에게 이메일 견적발송]</strong> 버튼으로 완성된 견적서와 도면 링크를 고객에게 1초 만에 전송하여 영업을 마무리하세요!</p>
                             </div>
                         </div>
                     </div>
