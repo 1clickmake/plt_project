@@ -1287,35 +1287,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="modal-body">
                     <p class="text-secondary mb-4" style="font-size: 0.9rem;">
-                        상단 메뉴 버튼들의 기능을 안내해 드립니다. 업무 흐름에 맞춰 순서대로 이용해 보세요!
+                        현재 계신 <strong>[견적서]</strong> 페이지의 주요 기능을 안내해 드립니다. 영업의 마지막 단계입니다!
                     </p>
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-warning">📐</div>
+                            <div class="fs-4 text-info">👀</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">도면 그려주기 (수정하기)</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 남긴 메모나 현장 크기를 바탕으로 파렛트랙 CAD 도면을 직접 그리고 AI로 자동 배치합니다. 이미 그린 도면을 다시 열어 수정할 수도 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">1. 최종 견적서 검토</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객에게 발송될 실제 견적서 양식입니다. 마진이 포함된 최종 금액과, 도면 이미지가 잘 들어갔는지 확인하세요.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-info">🔍</div>
+                            <div class="fs-4 text-warning">🖨️</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">견적상세보기</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 입력한 기본 정보와 요청 사항을 확인하는 기본 화면입니다. 고객이 직접 그린 스케치가 있다면 여기서 확인합니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">2. 인쇄 및 PDF 저장</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">상단의 <strong>[견적서 인쇄 / PDF 저장]</strong> 버튼을 누르면 깔끔한 오프라인용 문서 파일로 저장하거나 바로 프린트할 수 있습니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-primary">💰</div>
+                            <div class="fs-4 text-success">✉️</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">단가확인</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">도면 작업 후 산출된 파렛트랙 총 물량(독립/연결 등)을 기반으로, 단가표를 적용하여 마진과 최종 금액을 설정하는 화면입니다.</p>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-success">📄</div>
-                            <div>
-                                <h6 class="fw-bold mb-1 text-light">견적서</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">최종 결정된 단가와 도면 이미지가 포함된 깔끔한 견적서(PDF)를 확인하고, 고객에게 즉시 이메일로 발송할 수 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">3. 고객에게 이메일 발송</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;"><strong>[고객에게 이메일 견적발송]</strong> 버튼을 누르면 해당 견적서와 도면 링크가 고객의 이메일로 1초 만에 전송되어 계약 확률을 높입니다!</p>
                             </div>
                         </div>
                     </div>

@@ -811,35 +811,28 @@
                 </div>
                 <div class="modal-body">
                     <p class="text-secondary mb-4" style="font-size: 0.9rem;">
-                        상단 메뉴 버튼들의 기능을 안내해 드립니다. 업무 흐름에 맞춰 순서대로 이용해 보세요!
+                        현재 계신 <strong>[견적 상세보기]</strong> 페이지의 주요 기능을 안내해 드립니다.
                     </p>
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-warning">📐</div>
+                            <div class="fs-4 text-info">👤</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">도면 그려주기 (수정하기)</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 남긴 메모나 현장 크기를 바탕으로 파렛트랙 CAD 도면을 직접 그리고 AI로 자동 배치합니다. 이미 그린 도면을 다시 열어 수정할 수도 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">1. 고객 기본 정보 확인</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객의 연락처, 회사명, 현장 주소 및 희망 시공일자 등 견적에 필요한 가장 기초적인 정보를 확인합니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-info">🔍</div>
+                            <div class="fs-4 text-warning">📝</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">견적상세보기</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 입력한 기본 정보와 요청 사항을 확인하는 기본 화면입니다. 고객이 직접 그린 스케치가 있다면 여기서 확인합니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">2. 고객 요청사항 & 첨부파일</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 직접 작성한 메모나 업로드한 현장 사진, 스케치 도면 등이 있다면 이곳에서 꼼꼼히 체크해 주세요.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-primary">💰</div>
+                            <div class="fs-4 text-primary">🚀</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">단가확인</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">도면 작업 후 산출된 파렛트랙 총 물량(독립/연결 등)을 기반으로, 단가표를 적용하여 마진과 최종 금액을 설정하는 화면입니다.</p>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-success">📄</div>
-                            <div>
-                                <h6 class="fw-bold mb-1 text-light">견적서</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">최종 결정된 단가와 도면 이미지가 포함된 깔끔한 견적서(PDF)를 확인하고, 고객에게 즉시 이메일로 발송할 수 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">3. 다음 단계로 이동</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">정보 확인이 끝났다면, 상단의 <strong>[도면 그려주기]</strong> 버튼을 클릭하여 본격적인 AI 랙 배치를 시작하세요!</p>
                             </div>
                         </div>
                     </div>

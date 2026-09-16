@@ -496,35 +496,35 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                 </div>
                 <div class="modal-body">
                     <p class="text-secondary mb-4" style="font-size: 0.9rem;">
-                        상단 메뉴 버튼들의 기능을 안내해 드립니다. 업무 흐름에 맞춰 순서대로 이용해 보세요!
+                        현재 계신 <strong>[단가확인]</strong> 페이지의 주요 기능을 안내해 드립니다.
                     </p>
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-warning">📐</div>
+                            <div class="fs-4 text-info">🧮</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">도면 그려주기 (수정하기)</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 남긴 메모나 현장 크기를 바탕으로 파렛트랙 CAD 도면을 직접 그리고 AI로 자동 배치합니다. 이미 그린 도면을 다시 열어 수정할 수도 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">1. 자동 산출 물량 및 단가 확인</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">설계된 도면을 바탕으로 AI가 자동 계산한 부품 수량(기둥, 로드빔 등)과 세팅된 매입 단가를 확인합니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-info">🔍</div>
+                            <div class="fs-4 text-warning">📈</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">견적상세보기</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 입력한 기본 정보와 요청 사항을 확인하는 기본 화면입니다. 고객이 직접 그린 스케치가 있다면 여기서 확인합니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">2. 마진율(%) 설정</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">신재 및 중고재 각각 원하시는 마진율을 입력하면, 최종 고객에게 보여질 판매 금액이 즉시 자동 계산됩니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-primary">💰</div>
+                            <div class="fs-4 text-primary">➕</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">단가확인</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">도면 작업 후 산출된 파렛트랙 총 물량(독립/연결 등)을 기반으로, 단가표를 적용하여 마진과 최종 금액을 설정하는 화면입니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">3. 기타 품목 추가 (운송비/시공비 등)</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">랙 부품 외에 안전바, 시공비, 화물 운송비 등 추가로 청구해야 할 항목을 [기타 품목 추가] 버튼으로 넣을 수 있습니다.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
-                            <div class="fs-4 text-success">📄</div>
+                            <div class="fs-4 text-success">💾</div>
                             <div>
-                                <h6 class="fw-bold mb-1 text-light">견적서</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">최종 결정된 단가와 도면 이미지가 포함된 깔끔한 견적서(PDF)를 확인하고, 고객에게 즉시 이메일로 발송할 수 있습니다.</p>
+                                <h6 class="fw-bold mb-1 text-light">4. 수정사항 저장</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">단가와 물량 조정이 모두 끝났다면 반드시 <strong>[수정사항 저장하기]</strong> 버튼을 눌러 견적을 확정해 주세요.</p>
                             </div>
                         </div>
                     </div>
