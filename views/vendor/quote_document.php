@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="fs-4 text-info">👀</div>
                             <div>
                                 <h6 class="fw-bold mb-1 text-light">2. 최종 견적서 검토</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객에게 발송될 실제 견적서 폼입니다. 마진이 포함된 금액과 3D 도면 이미지가 잘 들어갔는지 최종 확인하세요.</p>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객에게 발송될 실제 견적서 폼입니다. 마진이 포함된 금액과 도면 이미지가 잘 들어갔는지 최종 확인하세요.</p>
                             </div>
                         </div>
                         <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
@@ -1315,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="fs-4 text-success">✉️</div>
                             <div>
                                 <h6 class="fw-bold mb-1 text-light">4. 고객에게 이메일 발송</h6>
-                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;"><strong>[고객에게 이메일 견적발송]</strong> 버튼으로 완성된 견적서와 도면 링크를 고객에게 1초 만에 전송하여 영업을 마무리하세요!</p>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;"><strong>[고객에게 이메일 견적발송]</strong> 버튼으로 완성된 견적서(PDF)를 고객에게 1초 만에 전송하여 영업을 마무리하세요!</p>
                             </div>
                         </div>
                     </div>
