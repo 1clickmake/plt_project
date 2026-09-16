@@ -95,6 +95,9 @@
                     <a href="/vendor/quotes/<?= $quote['id'] ?>/price" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">단가확인</a>
                     <a href="/vendor/quotes/<?= $quote['id'] ?>/document" class="btn btn-outline-info btn-sm px-3 text-light" style="font-size:0.85rem; border-color: rgba(255,255,255,0.15);">견적서</a>
                 </div>
+                <button type="button" class="btn btn-outline-warning btn-sm rounded px-3 fw-bold" style="font-size:0.8rem;" data-bs-toggle="modal" data-bs-target="#usageGuideModal">
+                    ℹ️ 이용안내
+                </button>
                 <a href="/vendor/quotes" class="btn btn-outline-secondary btn-sm rounded px-3" style="font-size:0.8rem; border-color: rgba(255,255,255,0.15); color:#cbd5e1;">
                     ◀ 목록으로 돌아가기
                 </a>
@@ -796,6 +799,58 @@
         ctx.restore();
     });
     </script>
+    <!-- 이용안내 모달 (Usage Guide Modal) -->
+    <div class="modal fade" id="usageGuideModal" tabindex="-1" aria-labelledby="usageGuideModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #f8fafc; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="usageGuideModalLabel" style="color: #38bdf8;">
+                        <i class="fa-solid fa-circle-info me-2"></i> 대시보드 이용 안내
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-secondary mb-4" style="font-size: 0.9rem;">
+                        상단 메뉴 버튼들의 기능을 안내해 드립니다. 업무 흐름에 맞춰 순서대로 이용해 보세요!
+                    </p>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-warning">📐</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">도면 그려주기 (수정하기)</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 남긴 메모나 현장 크기를 바탕으로 파렛트랙 CAD 도면을 직접 그리고 AI로 자동 배치합니다. 이미 그린 도면을 다시 열어 수정할 수도 있습니다.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-info">🔍</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">견적상세보기</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">고객이 입력한 기본 정보와 요청 사항을 확인하는 기본 화면입니다. 고객이 직접 그린 스케치가 있다면 여기서 확인합니다.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-primary">💰</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">단가확인</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">도면 작업 후 산출된 파렛트랙 총 물량(독립/연결 등)을 기반으로, 단가표를 적용하여 마진과 최종 금액을 설정하는 화면입니다.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 align-items-start p-3 rounded" style="background-color: rgba(255, 255, 255, 0.03);">
+                            <div class="fs-4 text-success">📄</div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">견적서</h6>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">최종 결정된 단가와 도면 이미지가 포함된 깔끔한 견적서(PDF)를 확인하고, 고객에게 즉시 이메일로 발송할 수 있습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold w-100 rounded-pill" data-bs-dismiss="modal">확인했습니다</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
