@@ -913,7 +913,8 @@ class VendorController extends BaseController {
 
         $stmt = $db->prepare("
             SELECT q.*, e.name as employee_name, e.color_code as employee_color,
-                   ae.name as active_employee_name, ae.color_code as active_employee_color
+                   ae.name as active_employee_name, ae.color_code as active_employee_color,
+                   TIMESTAMPDIFF(SECOND, q.active_employee_at, NOW()) as active_seconds_ago
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
             LEFT JOIN vendor_employees ae ON q.active_employee_id = ae.id

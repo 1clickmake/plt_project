@@ -112,11 +112,8 @@
                                                 <td class="py-3">
                                                     <?php
                                                         $isActive = false;
-                                                        if (!empty($q['active_employee_at'])) {
-                                                            $lastActive = strtotime($q['active_employee_at']);
-                                                            $now = time();
-                                                            // 30초 이내면 접속중
-                                                            if (($now - $lastActive) <= 30) {
+                                                        if (isset($q['active_seconds_ago']) && $q['active_seconds_ago'] !== null) {
+                                                            if ($q['active_seconds_ago'] >= 0 && $q['active_seconds_ago'] <= 30) {
                                                                 $isActive = true;
                                                             }
                                                         }
