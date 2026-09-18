@@ -322,6 +322,8 @@ DROP TABLE IF EXISTS `quote_requests`;
 CREATE TABLE `quote_requests` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `vendor_user_id` int(11) NOT NULL COMMENT '공급사 회원 고유 ID',
+  `active_employee_id` int(11) DEFAULT NULL COMMENT '현재 접속 중인 작업자 ID',
+  `active_employee_at` datetime DEFAULT NULL COMMENT '마지막 작업자 생존 신고(접속) 시간',
   `source_mode` varchar(50) DEFAULT 'expert' COMMENT '요청 경로 (expert, easy, board)',
   `title` varchar(255) DEFAULT NULL COMMENT '게시판 문의 제목',
   `pricing_rule_id` int(11) DEFAULT NULL,

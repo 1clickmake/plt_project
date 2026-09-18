@@ -907,10 +907,16 @@ class VendorController extends BaseController {
         $userStrId = $_SESSION['user']['user_id'] ?? '';
         $db = Database::getInstance();
 
+        try {
+            $db->exec("ALTER TABLE quote_requests ADD COLUMN active_employee_id INT NULL, ADD COLUMN active_employee_at DATETIME NULL");
+        } catch (\Exception $e) {}
+
         $stmt = $db->prepare("
-            SELECT q.*, e.name as employee_name, e.color_code as employee_color 
+            SELECT q.*, e.name as employee_name, e.color_code as employee_color,
+                   ae.name as active_employee_name, ae.color_code as active_employee_color
             FROM quote_requests q 
             LEFT JOIN vendor_employees e ON q.processed_by = e.id 
+            LEFT JOIN vendor_employees ae ON q.active_employee_id = ae.id
             WHERE q.vendor_user_id = :vuid1 OR q.vendor_user_id = :vuid2
             ORDER BY q.created_at DESC
         ");
@@ -963,6 +969,27 @@ class VendorController extends BaseController {
             'page' => 1,
             'totalPages' => 1
         ]);
+    }
+
+    public function updateHeartbeat($vars) {
+        $this->requireVendorEmployees();
+        $quoteId = $vars['id'] ?? null;
+        if (!$quoteId || !isset($_SESSION['employee_id'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false]);
+            return;
+        }
+        
+        $employeeId = $_SESSION['employee_id'];
+        $db = Database::getInstance();
+        try {
+            $stmt = $db->prepare("UPDATE quote_requests SET active_employee_id = ?, active_employee_at = NOW() WHERE id = ?");
+            $stmt->execute([$employeeId, $quoteId]);
+            echo json_encode(['success' => true]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
 
     public function quoteDetail($vars) {

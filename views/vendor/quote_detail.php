@@ -798,6 +798,23 @@
 
         ctx.restore();
     });
+    
+    // 실시간 작업자 감지 (Heartbeat) 시스템
+    const quoteId = <?= json_encode($quote['id'] ?? '') ?>;
+    if (quoteId) {
+        // 10초(10000ms)마다 서버로 현재 작업 중임을 알림
+        setInterval(() => {
+            fetch(`/vendor/quotes/${quoteId}/heartbeat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            }).catch(e => console.error('Heartbeat Error:', e));
+        }, 10000);
+        // 즉시 1회 실행
+        fetch(`/vendor/quotes/${quoteId}/heartbeat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        }).catch(e => console.error('Heartbeat Error:', e));
+    }
     </script>
     <!-- 이용안내 모달 (Usage Guide Modal) -->
     <div class="modal fade" id="usageGuideModal" tabindex="-1" aria-labelledby="usageGuideModalLabel" aria-hidden="true">

@@ -164,6 +164,7 @@ return function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/reset_details', ['App\Controllers\VendorController', 'resetQuoteDetails']);
     $r->addRoute('GET',  '/vendor/quotes/{id:\d+}/document', ['App\Controllers\VendorController', 'quoteDocument']);
     $r->addRoute('POST', '/vendor/quotes/{id:\d+}/send_email', ['App\Controllers\VendorController', 'sendEmail']);
+    $r->addRoute('POST', '/vendor/quotes/{id:\d+}/heartbeat', ['App\Controllers\VendorController', 'updateHeartbeat']);
     $r->addRoute('GET',  '/vendor/addon_payment', ['App\Controllers\VendorController', 'addonPayment']);
     $r->addRoute('GET',  '/vendor/embed',         ['App\Controllers\VendorController', 'embed']);
     $r->addRoute('GET',  '/vendor/share',         ['App\Controllers\VendorController', 'embed']);

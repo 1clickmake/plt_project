@@ -96,6 +96,7 @@
                                             <th class="py-3">담당자</th>
                                             <th class="py-3">연락처</th>
                                             <th class="py-3">현장 주소</th>
+                                            <th class="py-3">작업 현황</th>
                                             <th class="py-3">요청 일시</th>
                                             <th class="py-3 pe-3 text-end">상세</th>
                                         </tr>
@@ -108,6 +109,29 @@
                                                 <td class="py-3 text-light"><?= htmlspecialchars($q['name']) ?></td>
                                                 <td class="py-3 text-info font-monospace fw-semibold"><?= htmlspecialchars($q['phone']) ?></td>
                                                 <td class="py-3 text-light opacity-75 small"><?= htmlspecialchars($q['address']) ?></td>
+                                                <td class="py-3">
+                                                    <?php
+                                                        $isActive = false;
+                                                        if (!empty($q['active_employee_at'])) {
+                                                            $lastActive = strtotime($q['active_employee_at']);
+                                                            $now = time();
+                                                            // 30초 이내면 접속중
+                                                            if (($now - $lastActive) <= 30) {
+                                                                $isActive = true;
+                                                            }
+                                                        }
+                                                    ?>
+                                                    <?php if ($isActive && !empty($q['active_employee_name'])): ?>
+                                                        <span class="badge" style="background-color: <?= htmlspecialchars($q['active_employee_color'] ?? '#10b981') ?>; color: #fff;">
+                                                            <span class="spinner-grow spinner-grow-sm me-1" role="status" style="width: 0.7rem; height: 0.7rem;"></span>
+                                                            <?= htmlspecialchars($q['active_employee_name']) ?> 접속중
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary text-light opacity-50">
+                                                            <i class="fa-solid fa-circle me-1" style="font-size: 0.6rem;"></i>대기중
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['created_at'])) ?></td>
                                                 <td class="py-3 pe-3 text-end">
                                                     <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-warning btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
