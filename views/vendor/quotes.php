@@ -113,7 +113,7 @@
                                                     <?php
                                                         $isActive = false;
                                                         if (isset($q['active_seconds_ago']) && $q['active_seconds_ago'] !== null) {
-                                                            if ($q['active_seconds_ago'] >= 0 && $q['active_seconds_ago'] <= 30) {
+                                                            if ($q['active_seconds_ago'] >= 0 && $q['active_seconds_ago'] <= 12) {
                                                                 $isActive = true;
                                                             }
                                                         }
