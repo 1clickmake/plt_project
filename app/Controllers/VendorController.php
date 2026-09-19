@@ -1735,23 +1735,27 @@ class VendorController extends BaseController {
                     ['name' => '복렬 홀더 세트', 'spec' => '200L (복식/상하체결)', 'qty' => 1, 'unit_amount' => 0, 'total' => 0]
                 ];
             } else {
-                $hBom = [];
                 $hWeight = 0;
                 
                 $h = \App\Services\SehwaPriceCalculator::calcHolder(['length' => 200, 'thickness' => 2.0, 'qty' => 1]);
-                $hBom[] = $h;
                 $hWeight += $h['weight'];
 
-                $hBom[] = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', 4);
+                $bolt = \App\Services\SehwaPriceCalculator::getFixedPart('FIX-004', 4);
                 
                 $lossTotal = \App\Services\SehwaPriceCalculator::calcLoss($hWeight);
-                if ($lossTotal > 0) {
-                    $hBom[] = ['name' => 'Loss', 'spec' => '철강 Loss 3%', 'qty' => '-', 'unit_amount' => '-', 'total' => $lossTotal];
-                }
                 
-                $sumRaw = 0;
-                foreach ($hBom as $item) { $sumRaw += is_numeric($item['total'] ?? null) ? $item['total'] : 0; }
+                $sumRaw = $h['total'] + $bolt['total'] + $lossTotal;
                 $hFinal = \App\Services\SehwaPriceCalculator::finalAmount($sumRaw);
+
+                $hBom = [
+                    [
+                        'name' => '홀더',
+                        'spec' => '200(기본)',
+                        'qty' => 1,
+                        'unit_amount' => $sumRaw,
+                        'total' => $sumRaw
+                    ]
+                ];
             }
 
             $modules[] = [
