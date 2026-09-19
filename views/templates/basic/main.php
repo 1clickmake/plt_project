@@ -167,8 +167,8 @@ include_header($title, $siteConfig ?? []);
                     </div>
                     
                     <div class="mt-5 d-flex flex-wrap gap-3 align-items-center">
-                        <a href="#pricing" class="btn-pill btn-orange shadow-lg fs-6 px-4 py-3 text-center" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                            단가표 안전하게 보관하는 방법 보기 <i class="fa-solid fa-arrow-right ms-1"></i>
+                        <a href="https://cmake.work/quote/2/cad" target="_blank" class="btn-pill btn-orange shadow-lg fs-6 px-4 py-3 text-center" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                            데모 미리 보기 <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
                     </div>
                     
