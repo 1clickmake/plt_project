@@ -546,6 +546,7 @@ class CanvasController extends BaseController {
                 $summary = $contentStr;
               } else {
                   $title = null;
+              }
               $vendorUserId = intval($body['vendor_user_id'] ?? 0);
   
               // 현재 벤더가 가진 최신 단가표 ID 조회 (심플 BOM 유지를 위해 임시로 비활성화)
