@@ -219,6 +219,7 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             </div>
 
             <!-- 발송 한도 위젯 -->
+            <!--
             <?php
                 $plan      = $balanceInfo['plan'] ?? 'free';
                 $isPro     = ($plan === 'pro');
@@ -259,6 +260,7 @@ $currentUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
                     </div>
                 </div>
             </div>
+            -->
         </div>
         
         <!-- 접속 통계 차트 영역 -->
