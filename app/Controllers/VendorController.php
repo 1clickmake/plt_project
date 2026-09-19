@@ -2128,7 +2128,8 @@ class VendorController extends BaseController {
         ]);
     }
 
-    public function deleteQuote($id) {
+    public function deleteQuote($vars) {
+        $id = $vars['id'] ?? null;
         if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
