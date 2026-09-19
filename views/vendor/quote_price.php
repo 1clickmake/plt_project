@@ -478,10 +478,11 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center fw-bold" id="totalRackQtyUnit"><?= $totalRackQty > 0 ? '대' : '' ?></td>
       <td class="center"></td>
       <td class="right fw-bold" id="overallTotalText" style="color: #ef4444; font-size: 1.1rem;"><?= number_format($overallTotal ?? 0) ?></td>
-      <td class="center fw-bold d-flex align-items-center justify-content-center gap-1" style="min-width: 150px;">
-        원
-        <input type="text" id="discountTextInput" class="form-control form-control-sm text-center bom-input" style="width:130px; font-size:0.85rem; padding: 2px;" 
-               value="<?= htmlspecialchars($adminDetailsRaw['discount_text'] ?? (empty($quote['pricing_rule_id']) ? '' : '(네고 10% 포함)')) ?>" placeholder="예: (네고 10% 포함)">
+      <td class="center fw-bold d-flex align-items-center justify-content-center gap-1" style="min-width: 170px;">
+        원 (
+        <input type="number" id="marginRateInput" class="form-control form-control-sm text-center bom-input" style="width:50px; font-size:0.85rem; padding: 2px;" 
+               value="<?= htmlspecialchars($adminDetailsRaw['margin_rate'] ?? (empty($quote['pricing_rule_id']) ? '0' : '10')) ?>" min="0" max="100">
+        % 마진 포함)
       </td>
     </tr>
     <!-- 관리자 메모 -->
@@ -556,12 +557,14 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
         const hasPricingRule = <?= empty($quote['pricing_rule_id']) ? 'false' : 'true' ?>;
 
-        // Sehwa Price Calculator final amount formula: round((raw * 1.1) / 100) * 100
+        // Sehwa Price Calculator final amount formula: round((raw * (1 + marginRate/100)) / 100) * 100
         function calcFinalAmount(rawAmount) {
             if (!hasPricingRule) {
                 return rawAmount;
             }
-            return Math.round((rawAmount * 1.1) / 100) * 100;
+            const marginInput = document.getElementById('marginRateInput');
+            const rate = marginInput ? (parseFloat(marginInput.value) || 0) : 10;
+            return Math.round((rawAmount * (1 + rate / 100)) / 100) * 100;
         }
 
         // 🌟 실시간 계산 함수
@@ -740,7 +743,7 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
         // 🌟 실시간 이벤트 리스너 등록 (BOM 수량/단가/품명/규격 입력 시 자동 재계산 및 리스트 동기화)
         document.addEventListener('input', function(e) {
-            if (e.target.matches('.bom-part-qty, .bom-part-unit, .bom-part-name, .bom-part-spec, .custom-item-qty, .custom-item-price, .mod-remark, .mod-unit-text, .mod-qty-input, .liner-unit-price')) {
+            if (e.target.matches('.bom-part-qty, .bom-part-unit, .bom-part-name, .bom-part-spec, .custom-item-qty, .custom-item-price, .mod-remark, .mod-unit-text, .mod-qty-input, .liner-unit-price, #marginRateInput')) {
                 recalculateAll();
             }
         });
@@ -921,12 +924,18 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
             const linerUnitInput = document.getElementById('linerUnitInput');
             const linerQtyText = document.getElementById('linerQtyText');
             
+            const marginInput = document.getElementById('marginRateInput');
+            const marginRate = marginInput ? (parseFloat(marginInput.value) || 0) : 10;
+            const adminNotesInput = document.getElementById('adminNotesInput');
+            
             const payload = {
                 modules: modules,
                 custom_items: customItems,
                 liner_qty: linerQtyText ? parseInt(linerQtyText.innerText.replace(/,/g, '')) || 0 : 0,
                 liner_unit_price: linerUnitInput ? parseFloat(linerUnitInput.value) || 0 : 0,
-                overallTotal: overallTotal
+                overallTotal: overallTotal,
+                margin_rate: marginRate,
+                admin_notes: adminNotesInput ? adminNotesInput.value : ''
             };
 
             console.log('[DEBUG] liner save payload:', {

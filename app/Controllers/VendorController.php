@@ -1131,13 +1131,14 @@ class VendorController extends BaseController {
         $modules = $input['modules'] ?? [];
         $customItems = $input['custom_items'] ?? [];
         $hasPricingRule = !empty($row['pricing_rule_id']);
+        $marginRate = floatval($input['margin_rate'] ?? 10);
 
         // 🛡️ [보안 강화] 서버 측 가격/마진/BOM 무결성 재계산 및 위변조 방어
-        $calcFinalAmount = function($rawAmount) use ($hasPricingRule) {
+        $calcFinalAmount = function($rawAmount) use ($hasPricingRule, $marginRate) {
             if (!$hasPricingRule) {
                 return max(0, intval($rawAmount));
             }
-            return max(0, intval(round(($rawAmount * 1.1) / 100) * 100));
+            return max(0, intval(round(($rawAmount * (1 + $marginRate / 100)) / 100) * 100));
         };
 
         $verifiedOverallTotal = 0;
@@ -1218,6 +1219,7 @@ class VendorController extends BaseController {
             'liner_unit_price' => $linerUnitPrice,
             'overallTotal' => $verifiedOverallTotal, // 클라이언트가 변조한 값 대신 서버 검증 합계로 안전 저장
             'discount_text' => $input['discount_text'] ?? '',
+            'margin_rate' => $marginRate,
             'admin_notes' => $input['admin_notes'] ?? '',
             'updated_at' => date('Y-m-d H:i:s'),
             'updated_by' => $_SESSION['employee_name'] ?? $_SESSION['user']['username'] ?? 'User'
