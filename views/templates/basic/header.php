@@ -81,7 +81,7 @@ include CM_LAYOUT_PATH . '/header.php';
             <!-- PC Nav Links -->
             <div class="nav-links">
                 <a href="/about"><i class="fa-regular fa-lightbulb"></i> 서비스 소개</a>
-                <a href="/#pricing">Price</a>
+                <a href="/#pricing">도입문의</a>
                 <a href="/faq">FAQ</a>
                 <?php if ($is_member): ?>
                     <?php if ($is_admin): ?>
@@ -119,7 +119,7 @@ include CM_LAYOUT_PATH . '/header.php';
                 </a>
 
                 <a href="/#pricing" class="text-dark text-decoration-none fw-medium fs-5 px-3 py-2 rounded" style="background-color: #ffffff; border: 1px solid #e2e8f0;">
-                    <i class="fa-solid fa-won-sign text-muted me-2"></i> Price
+                    <i class="fa-solid fa-won-sign text-muted me-2"></i> 도입문의
                 </a>
                 
                 <a href="/faq" class="text-dark text-decoration-none fw-medium fs-5 px-3 py-2 rounded" style="background-color: #ffffff; border: 1px solid #e2e8f0;">
