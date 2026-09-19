@@ -480,10 +480,10 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="right fw-bold" id="overallTotalText" style="color: #ef4444; font-size: 1.1rem;"><?= number_format($overallTotal ?? 0) ?></td>
       <td class="center fw-bold" style="white-space: nowrap; min-width: 180px;">
         <div class="d-flex align-items-center justify-content-center gap-1">
-          원 (
+          원 (네고 
           <input type="number" id="marginRateInput" class="form-control form-control-sm text-center bom-input" style="width:45px; font-size:0.85rem; padding: 2px;" 
                  value="<?= htmlspecialchars($adminDetailsRaw['margin_rate'] ?? (empty($quote['pricing_rule_id']) ? '0' : '10')) ?>" min="0" max="100">
-          % 마진 포함)
+          % 포함)
         </div>
       </td>
     </tr>
