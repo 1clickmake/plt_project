@@ -132,6 +132,7 @@
                                                 <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($q['created_at'])) ?></td>
                                                 <td class="py-3 pe-3 text-end">
                                                     <a href="/vendor/quotes/<?= $q['id'] ?>" class="btn btn-outline-warning btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-1" style="font-size: 0.72rem; font-weight:700;" onclick="deleteQuote(<?= $q['id'] ?>, event)">삭제 🗑️</button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -227,6 +228,7 @@
                                                 <td class="py-3 text-light opacity-75 small font-monospace"><?= date('Y-m-d H:i', strtotime($inq['created_at'])) ?></td>
                                                 <td class="py-3 pe-3 text-end">
                                                     <a href="/vendor/quotes/<?= $inq['id'] ?>" class="btn btn-outline-info btn-sm rounded-pill px-3" style="font-size: 0.72rem; font-weight:700;">보기 🔍</a>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-1" style="font-size: 0.72rem; font-weight:700;" onclick="deleteQuote(<?= $inq['id'] ?>, event)">삭제 🗑️</button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -288,6 +290,32 @@
                         row.style.display = 'none';
                     }
                 });
+            });
+        }
+
+        // 견적/문의 삭제 함수
+        function deleteQuote(id, event) {
+            event.stopPropagation(); // 행 클릭 이벤트(보기 페이지 이동) 방지
+            if (!confirm('정말 이 항목을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.')) {
+                return;
+            }
+            
+            fetch(`/vendor/quotes/${id}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert('성공적으로 삭제되었습니다.');
+                    location.reload();
+                } else {
+                    alert('삭제 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('서버 통신 중 오류가 발생했습니다.');
             });
         }
     </script>

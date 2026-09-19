@@ -8,7 +8,9 @@ password = '01055403957w'
 remote_base = '/www/wwwroot/cmake.work'
 
 files_to_upload = [
-    'app/Controllers/CanvasController.php'
+    'app/routes.php',
+    'app/Controllers/VendorController.php',
+    'views/vendor/quotes.php'
 ]
 
 ssh = paramiko.SSHClient()
