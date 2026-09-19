@@ -101,9 +101,11 @@ include_header($title, $siteConfig ?? []);
                         <span class="badge bg-light text-dark border px-2 py-1">#반응형웹</span>
                     </div>
                 </div>
-                <div class="col-lg-4 text-lg-end">
-                    <a href="/about" class="btn rounded-pill px-4 py-3 text-white fw-bold shadow-sm fs-7 w-100 w-lg-auto" style="background-color: #f16819; border: none;">
-                        제작 상담 신청하기 <i class="fa-solid fa-arrow-right ms-1"></i>
+                <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+                    <div class="fs-7 text-dark opacity-75 mb-1">고객센터 / 제작상담</div>
+                    <div class="fw-bold mb-3" style="font-size: 1.6rem; letter-spacing: -0.5px; color: #f16819;"><i class="fa-solid fa-phone me-2"></i>0507-1346-3957</div>
+                    <a href="mailto:info@cmake.work" class="btn rounded-pill px-4 py-3 text-white fw-bold shadow-sm fs-7 w-100 w-lg-auto" style="background-color: #f16819; border: none;">
+                        제작상담 신청하기 <i class="fa-solid fa-envelope ms-1"></i>
                     </a>
                 </div>
             </div>
