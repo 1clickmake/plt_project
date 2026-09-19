@@ -439,7 +439,7 @@ include_header($title, $siteConfig ?? []);
                 <div class="position-relative z-1 flex-shrink-0 text-center text-lg-end">
                     <div class="fs-7 text-light opacity-75 mb-1">고객센터 / 도입상담</div>
                     <div class="fw-bold text-brand-orange mb-3" style="font-size: 1.8rem; letter-spacing: -0.5px;"><i class="fa-solid fa-phone me-2"></i>0507-1346-3957</div>
-                    <a href="/website" class="btn-pill btn-light text-brand-orange fw-bold px-4 py-3 fs-7 shadow">
+                    <a href="mailto:info@cmake.work" class="btn-pill btn-light text-brand-orange fw-bold px-4 py-3 fs-7 shadow">
                         온라인 문의하기 <i class="fa-solid fa-arrow-right text-brand-orange ms-1"></i>
                     </a>
                 </div>
