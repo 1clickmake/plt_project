@@ -309,6 +309,8 @@ include_header($title, $siteConfig ?? []);
     </section>
 
     <!-- Pricing Section (Strictly 2 Plans: FREE & PRO -> Trial & Vault) -->
+    <!-- Pricing Section (Strictly 2 Plans: FREE & PRO -> Trial & Vault) -->
+    <!--
     <section id="pricing" class="section-padding bg-white border-bottom">
         <div class="max-w-1200">
             <div class="text-center max-w-720 mb-5">
@@ -326,7 +328,6 @@ include_header($title, $siteConfig ?? []);
 
             <div class="row g-4 justify-content-center mt-2 align-items-stretch">
                 
-                <!-- Plan 1: 체험 플랜 - 1달 전면 무료 -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box h-100 bg-light p-4 p-xl-5 border d-flex flex-column justify-content-between shadow-sm">
                         <div>
@@ -362,7 +363,6 @@ include_header($title, $siteConfig ?? []);
                     </div>
                 </div>
 
-                <!-- Plan 2: 금고 플랜 - 실제 운영용 (Featured) -->
                 <div class="col-lg-5 col-md-6">
                     <div class="reveal pricing-card-box pricing-card-pro h-100 bg-white p-4 p-xl-5 border d-flex flex-column justify-content-between position-relative shadow-lg" style="transition-delay: 100ms;">
                         <div class="position-absolute top-0 start-50 translate-middle badge bg-brand-orange rounded-pill px-4 py-2 fs-8 fw-bold shadow text-nowrap" style="max-width: 90%;">
@@ -410,7 +410,6 @@ include_header($title, $siteConfig ?? []);
 
             </div>
 
-            <!-- Value Comparison Note -->
             <div class="reveal mt-5 p-4 rounded-4 bg-light text-center max-w-720 mx-auto border">
                 <div class="fs-7 text-deep-navy fw-semibold">
                     <i class="fa-solid fa-lock text-brand-orange me-2"></i>
@@ -418,6 +417,31 @@ include_header($title, $siteConfig ?? []);
                 </div>
                 <div class="fs-8 text-muted mt-1">
                     월 22만원으로 대표님의 20년 노하우와 핵심 영업 마진율을 완벽하게 지키세요.
+                </div>
+            </div>
+        </div>
+    </section>
+    -->
+    
+    <!-- Contact Us Banner (Replaces Pricing) -->
+    <section id="pricing" class="py-5 bg-white border-bottom">
+        <div class="max-w-1200 px-3">
+            <div class="reveal rounded-4 p-4 p-md-5 bg-deep-navy text-light d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 shadow-lg position-relative overflow-hidden" style="border: 2px solid #f16819;">
+                <div class="position-absolute end-0 top-0 w-50 h-100 grid-pattern-dark opacity-30 pointer-events-none"></div>
+                <div class="position-relative z-1">
+                    <span class="badge bg-brand-orange text-white mb-2 px-3 py-1 fs-8">서비스 도입 및 제휴 문의</span>
+                    <h3 class="fw-bold fs-4 mb-2 text-light">솔루션 도입 상담을 원하시나요?</h3>
+                    <p class="text-light fs-7 mb-0 lh-base" style="color: rgba(255, 255, 255, 0.9) !important;">
+                        단가표 암호화 및 2D 자동설계 솔루션 도입에 대해 궁금하신 점이 있다면 언제든 문의해 주세요.<br>
+                        전문 담당자가 귀사의 환경에 맞춰 친절하고 상세하게 상담해 드립니다.
+                    </p>
+                </div>
+                <div class="position-relative z-1 flex-shrink-0 text-center text-lg-end">
+                    <div class="fs-7 text-light opacity-75 mb-1">고객센터 / 도입상담</div>
+                    <div class="fw-bold text-brand-orange mb-3" style="font-size: 1.8rem; letter-spacing: -0.5px;"><i class="fa-solid fa-phone me-2"></i>010-5540-3957</div>
+                    <a href="/website" class="btn-pill btn-light text-brand-orange fw-bold px-4 py-3 fs-7 shadow">
+                        온라인 문의하기 <i class="fa-solid fa-arrow-right text-brand-orange ms-1"></i>
+                    </a>
                 </div>
             </div>
         </div>
