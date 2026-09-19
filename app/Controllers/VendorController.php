@@ -1937,60 +1937,16 @@ class VendorController extends BaseController {
      */
     public function getQuoteBalance($vendorUserId) {
         $db = \App\Core\Database::getInstance();
-        
-        // 1. users 테이블에서 플랜 및 가입일 직접 조회
-        $userStmt = $db->prepare("SELECT id, user_id, plan, created_at, addon_quotes_balance FROM users WHERE user_id = ? OR id = ? LIMIT 1");
+        $userStmt = $db->prepare("SELECT plan FROM users WHERE user_id = ? OR id = ? LIMIT 1");
         $userStmt->execute([$vendorUserId, $vendorUserId]);
         $userData = $userStmt->fetch();
-
-        if (!$userData) {
-            return ['total_limit' => 10, 'addon_balance' => 0, 'used' => 0, 'remaining' => 10, 'plan' => 'free'];
-        }
-
         $plan = $userData['plan'] ?? 'free';
-        $addonBalance = intval($userData['addon_quotes_balance'] ?? 0);
-
-        // 2. 플랜별 기본 제공 건수
-        if ($plan === 'pro') {
-            // PRO: 무제한 → addon 충전 불필요
-            return [
-                'total_limit'   => 99999999,
-                'addon_balance' => $addonBalance,
-                'used'          => 0,
-                'remaining'     => 99999999,
-                'plan'          => 'pro'
-            ];
-        } elseif ($plan === 'starter') {
-            $limit = 30;
-        } else {
-            $limit = 10; // free
-        }
-
-        // 3. 현재 주기 기준일 계산 (가입일 기준 매월 동일 일자)
-        $created_at = strtotime($userData['created_at']);
-        $day = date('d', $created_at);
-        $currentMonthDay = strtotime(date("Y-m-{$day} 00:00:00"));
-        if ($currentMonthDay > time()) {
-            $baseDate = date("Y-m-{$day} 00:00:00", strtotime("-1 month", $currentMonthDay));
-        } else {
-            $baseDate = date("Y-m-{$day} 00:00:00", $currentMonthDay);
-        }
-
-        // 4. 현재 주기 발송 메일 수 카운트
-        $userStrId = $userData['user_id'] ?? $userData['id'];
-        $countStmt = $db->prepare("SELECT COUNT(*) FROM quote_requests WHERE (vendor_user_id = :v1 OR vendor_user_id = :v2) AND is_mailed = 1 AND mailed_at >= :bdate");
-        $countStmt->execute(['v1' => $userData['id'], 'v2' => $userStrId, 'bdate' => $baseDate]);
-        $usedCount = intval($countStmt->fetchColumn());
-
-        // 5. 남은 횟수 계산 (기본 남은 건수 + addon 누적)
-        $remainingBase = max(0, $limit - $usedCount);
-        $totalRemaining = $remainingBase + $addonBalance;
 
         return [
-            'total_limit'   => $limit,
-            'addon_balance' => $addonBalance,
-            'used'          => $usedCount,
-            'remaining'     => $totalRemaining,
+            'total_limit'   => 99999999,
+            'addon_balance' => 0,
+            'used'          => 0,
+            'remaining'     => 99999999,
             'plan'          => $plan
         ];
     }
