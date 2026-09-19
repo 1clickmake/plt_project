@@ -546,13 +546,13 @@ class CanvasController extends BaseController {
                 $summary = $contentStr;
               } else {
                   $title = null;
-              }
               $vendorUserId = intval($body['vendor_user_id'] ?? 0);
   
-              // 현재 벤더가 가진 최신 단가표 ID 조회
-              $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
-            $ruleStmt->execute(['vid' => $vendorUserId]);
-            $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
+              // 현재 벤더가 가진 최신 단가표 ID 조회 (심플 BOM 유지를 위해 임시로 비활성화)
+              // $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
+              // $ruleStmt->execute(['vid' => $vendorUserId]);
+              // $pricingRuleId = $ruleStmt->fetchColumn() ?: null;
+              $pricingRuleId = null; // 9월 13일 이전의 정상적인 '심플 BOM' 포맷(기둥세트, 순수 로드빔, 타이빔)을 강제 적용
 
             $adminDrawId = intval($body['admin_draw_id'] ?? 0);
 
