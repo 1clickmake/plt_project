@@ -104,7 +104,7 @@
                                     <tbody>
                                         <?php foreach ($pending_quotes as $i => $q): ?>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $q['id'] ?>'">
-                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $q['id'] ?></td>
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= count($pending_quotes) - $i ?></td>
                                                 <td class="py-3 fw-bold text-light"><?= htmlspecialchars($q['company']) ?></td>
                                                 <td class="py-3 text-light"><?= htmlspecialchars($q['name']) ?></td>
                                                 <td class="py-3 text-info font-monospace fw-semibold"><?= htmlspecialchars($q['phone']) ?></td>
@@ -166,7 +166,7 @@
                                     <tbody>
                                         <?php foreach ($completed_quotes as $i => $q): ?>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $q['id'] ?>'">
-                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $q['id'] ?></td>
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= count($completed_quotes) - $i ?></td>
                                                 <td class="py-3 fw-bold text-light"><?= htmlspecialchars($q['company']) ?></td>
                                                 <td class="py-3 text-light">
                                                     <span class="badge" style="background-color: <?= htmlspecialchars($q['employee_color'] ?? '#333') ?>;">
@@ -210,7 +210,7 @@
                                     <tbody>
                                         <?php foreach ($inquiries as $i => $inq): ?>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;" onclick="window.location.href='/vendor/quotes/<?= $inq['id'] ?>'">
-                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= $inq['id'] ?></td>
+                                                <td class="py-3 ps-3 font-monospace text-light opacity-50"><?= count($inquiries) - $i ?></td>
                                                 <td class="py-3">
                                                     <?php if($inq['status'] === 'pending'): ?>
                                                         <span class="badge bg-danger">미답변</span>
