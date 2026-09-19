@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /vendor/
+Disallow: /admin/
+Allow: /
+
+Sitemap: https://cmake.work/sitemap.xml
