@@ -1148,28 +1148,43 @@ class VendorController extends BaseController {
                 $modQty = max(0, intval($mod['rack_count'] ?? $mod['qty'] ?? 1));
                 $bomItems = $mod['bom'] ?? [];
                 $bomRawSum = 0;
+                $bomMarkupSum = 0;
+                $bomNoMarkupSum = 0;
 
                 if (is_array($bomItems)) {
                     foreach ($bomItems as &$bItem) {
                         $isLoss = !empty($bItem['is_loss']);
                         $bQty = max(0, floatval($bItem['quantity'] ?? $bItem['qty'] ?? 0));
                         $bUnit = max(0, intval($bItem['unit_amount'] ?? 0));
-
+                        $bName = trim($bItem['name'] ?? '');
 
                         if ($isLoss) {
                             $itemTotal = max(0, intval($bItem['total'] ?? 0));
                             $bomRawSum += $itemTotal;
+                            $bomMarkupSum += $itemTotal;
                         } else {
                             $itemTotal = intval(round($bQty * $bUnit));
                             $bItem['total'] = $itemTotal;
                             $bomRawSum += $itemTotal;
+                            
+                            if (strpos($bName, '홀더') !== false || strpos($bName, '바닥수평라이너') !== false) {
+                                $bomNoMarkupSum += $itemTotal;
+                            } else {
+                                $bomMarkupSum += $itemTotal;
+                            }
                         }
                     }
                     unset($bItem);
                 }
 
-                // 마진 규칙 적용 여부에 따른 모듈 단가 산출
-                $verifiedModUnitPrice = $calcFinalAmount($bomRawSum);
+                // 마진 규칙 적용 여부에 따른 모듈 단가 산출 (홀더 등 특정 품목 제외)
+                $isDirectInput = (($row['source_mode'] ?? '') === 'board' || ($mod['type'] ?? '') === '직접입력');
+                if ($isDirectInput) {
+                    $verifiedModUnitPrice = $bomRawSum;
+                } else {
+                    $verifiedModUnitPrice = $calcFinalAmount($bomMarkupSum) + $bomNoMarkupSum;
+                }
+                
                 $mod['unit_price'] = $verifiedModUnitPrice;
                 $modSubtotal = $modQty * $verifiedModUnitPrice;
                 $mod['subtotal'] = $modSubtotal;
@@ -1202,6 +1217,8 @@ class VendorController extends BaseController {
             'liner_qty' => $linerQty,
             'liner_unit_price' => $linerUnitPrice,
             'overallTotal' => $verifiedOverallTotal, // 클라이언트가 변조한 값 대신 서버 검증 합계로 안전 저장
+            'discount_text' => $input['discount_text'] ?? '',
+            'admin_notes' => $input['admin_notes'] ?? '',
             'updated_at' => date('Y-m-d H:i:s'),
             'updated_by' => $_SESSION['employee_name'] ?? $_SESSION['user']['username'] ?? 'User'
         ];

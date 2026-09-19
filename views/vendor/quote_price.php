@@ -478,7 +478,18 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
       <td class="center fw-bold" id="totalRackQtyUnit"><?= $totalRackQty > 0 ? '대' : '' ?></td>
       <td class="center"></td>
       <td class="right fw-bold" id="overallTotalText" style="color: #ef4444; font-size: 1.1rem;"><?= number_format($overallTotal ?? 0) ?></td>
-      <td class="center fw-bold">원<?= empty($quote['pricing_rule_id']) ? '' : ' (네고 10% 포함)' ?></td>
+      <td class="center fw-bold d-flex align-items-center justify-content-center gap-1" style="min-width: 150px;">
+        원
+        <input type="text" id="discountTextInput" class="form-control form-control-sm text-center bom-input" style="width:130px; font-size:0.85rem; padding: 2px;" 
+               value="<?= htmlspecialchars($adminDetailsRaw['discount_text'] ?? (empty($quote['pricing_rule_id']) ? '' : '(네고 10% 포함)')) ?>" placeholder="예: (네고 10% 포함)">
+      </td>
+    </tr>
+    <!-- 관리자 메모 -->
+    <tr style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+      <td colspan="8" class="p-3 text-start">
+        <div class="fw-bold text-secondary mb-2" style="font-size:0.9rem;"><i class="fa-solid fa-pen-to-square me-1"></i> 관리자 메모 (고객에게는 노출되지 않습니다)</div>
+        <textarea id="adminNotesInput" class="form-control bom-input w-100" rows="3" placeholder="추가 비용이나 기타 참고 사항을 자유롭게 메모하세요..."><?= htmlspecialchars($adminDetailsRaw['admin_notes'] ?? '') ?></textarea>
+      </td>
     </tr>
   </table>
 
@@ -571,15 +582,19 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
                 const bomTable = document.querySelector(`.bom-table[data-mod-index="${modIndex}"]`);
                 let bomRawSum = 0;
+                let bomMarkupSum = 0;
+                let bomNoMarkupSum = 0;
                 const bomItemRows = bomTable ? bomTable.querySelectorAll('.bom-item-row') : [];
                 const nonLossRows = Array.from(bomItemRows).filter(r => r.getAttribute('data-is-loss') !== '1');
 
                 bomItemRows.forEach(bRow => {
                     const isLoss = bRow.getAttribute('data-is-loss') === '1';
+                    const bName = (bRow.querySelector('.bom-part-name')?.value || '').trim();
+                    let rowTotal = 0;
                     if (isLoss) {
                         const totalEl = bRow.querySelector('.bom-part-total');
-                        const val = parseFloat(totalEl ? totalEl.getAttribute('data-val') : 0) || 0;
-                        bomRawSum += val;
+                        rowTotal = parseFloat(totalEl ? totalEl.getAttribute('data-val') : 0) || 0;
+                        bomMarkupSum += rowTotal;
                     } else {
                         const qtyEl = bRow.querySelector('.bom-part-qty');
                         const unitEl = bRow.querySelector('.bom-part-unit');
@@ -587,14 +602,20 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
                         const qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
                         const unit = parseFloat(unitEl ? unitEl.value : 0) || 0;
-                        const rowTotal = Math.floor(qty * unit);
+                        rowTotal = Math.floor(qty * unit);
 
                         if (totalEl) {
                             totalEl.innerText = rowTotal.toLocaleString();
                             totalEl.setAttribute('data-val', rowTotal);
                         }
-                        bomRawSum += rowTotal;
+                        
+                        if (bName.includes('홀더') || bName.includes('바닥수평라이너')) {
+                            bomNoMarkupSum += rowTotal;
+                        } else {
+                            bomMarkupSum += rowTotal;
+                        }
                     }
+                    bomRawSum += rowTotal;
                 });
 
                 const qtyInput = modRow.querySelector('.mod-qty-input');
@@ -623,16 +644,21 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
                         // 단일 품목 BOM
                         const bQty = parseInt(bomQtyEl ? bomQtyEl.value : 1) || 1;
                         const bUnit = parseFloat(bomUnitEl ? bomUnitEl.value : 0) || 0;
-
+                        
                         if (isDirectInput) {
                             modUnitPrice = bUnit; // 직접 입력은 부품 단가 그대로 사용
                         } else {
-                            // 캔버스 연동 견적인 경우 1대당 부품 합계에 마진 적용
-                            modUnitPrice = calcFinalAmount(bQty * bUnit);
+                            const bNameVal = bomName ? bomName.value.trim() : '';
+                            if (bNameVal.includes('홀더') || bNameVal.includes('바닥수평라이너')) {
+                                modUnitPrice = bQty * bUnit;
+                            } else {
+                                // 캔버스 연동 견적인 경우 1대당 부품 합계에 마진 적용
+                                modUnitPrice = calcFinalAmount(bQty * bUnit);
+                            }
                         }
                     } else {
                         // 다중 부품 BOM
-                        modUnitPrice = isDirectInput ? bomRawSum : calcFinalAmount(bomRawSum);
+                        modUnitPrice = isDirectInput ? bomRawSum : calcFinalAmount(bomMarkupSum) + bomNoMarkupSum;
                     }
                 } else {
                     const unitPriceEl = modRow.querySelector('.mod-unit-price');
