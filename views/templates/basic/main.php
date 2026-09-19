@@ -534,8 +534,8 @@ include_header($title, $siteConfig ?? []);
                 1개월 무료 체험으로 실전 견적을 직접 검증하세요.
             </p>
             <div class="reveal mt-5 d-flex flex-wrap justify-content-center gap-3">
-                <a href="<?php echo isset($_SESSION['user']) ? '/subscribe' : '/register?plan=free'; ?>" class="btn-pill btn-orange shadow-lg fs-6 py-3 px-4">
-                    1개월 무료 체험 시작하기 <i class="fa-solid fa-arrow-right"></i>
+                <a href="mailto:info@cmake.work" class="btn-pill btn-orange shadow-lg fs-6 py-3 px-4">
+                    도입 문의하기 <i class="fa-solid fa-envelope ms-1"></i>
                 </a>
                 <a href="https://cmake.work/quote/2" target="_blank" class="btn-pill btn-outline-light text-light border-white border-opacity-50 fs-6 py-3 px-4">
                     <i class="fa-solid fa-play text-brand-orange"></i> 실시간 데모 보기
