@@ -559,14 +559,14 @@ tr[style*="#FFFFCC"], th[style*="#FFFFCC"] {
 
         const hasPricingRule = <?= empty($quote['pricing_rule_id']) ? 'false' : 'true' ?>;
 
-        // Sehwa Price Calculator final amount formula: round((raw * (1 + marginRate/100)) / 100) * 100
+        // Sehwa Price Calculator final amount formula: round((raw * (1 - marginRate/100)) / 100) * 100
         function calcFinalAmount(rawAmount) {
             if (!hasPricingRule) {
                 return rawAmount;
             }
             const marginInput = document.getElementById('marginRateInput');
             const rate = marginInput ? (parseFloat(marginInput.value) || 0) : 10;
-            return Math.round((rawAmount * (1 + rate / 100)) / 100) * 100;
+            return Math.round((rawAmount * (1 - rate / 100)) / 100) * 100;
         }
 
         // 🌟 실시간 계산 함수

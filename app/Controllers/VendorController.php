@@ -1138,7 +1138,7 @@ class VendorController extends BaseController {
             if (!$hasPricingRule) {
                 return max(0, intval($rawAmount));
             }
-            return max(0, intval(round(($rawAmount * (1 + $marginRate / 100)) / 100) * 100));
+            return max(0, intval(round(($rawAmount * (1 - $marginRate / 100)) / 100) * 100));
         };
 
         $verifiedOverallTotal = 0;
