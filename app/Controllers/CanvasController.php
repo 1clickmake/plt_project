@@ -547,6 +547,7 @@ class CanvasController extends BaseController {
               } else {
                   $title = null;
               }
+              $vendorUserId = intval($body['vendor_user_id'] ?? 0);
   
               // 현재 벤더가 가진 최신 단가표 ID 조회
               $ruleStmt = $db->prepare("SELECT id FROM vendor_pricing_rules WHERE vendor_id = :vid ORDER BY created_at DESC LIMIT 1");
