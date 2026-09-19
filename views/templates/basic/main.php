@@ -467,6 +467,7 @@ include_header($title, $siteConfig ?? []);
     </section>
 
     <!-- 3-Step Simple Integration -->
+    <!--
     <section class="section-padding bg-light-gray border-bottom">
         <div class="max-w-1200">
             <div class="text-center max-w-720 mb-5">
@@ -520,6 +521,7 @@ include_header($title, $siteConfig ?? []);
             </div>
         </div>
     </section>
+    -->
 
     <!-- Final CTA -->
     <section class="section-padding bg-deep-navy text-light text-center position-relative overflow-hidden">

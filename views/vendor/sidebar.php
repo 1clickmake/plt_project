@@ -41,10 +41,12 @@ $displayBrand = $companyNameSidebar ?: 'SETTING';
             <i class="fa-solid fa-envelope-open-text"></i>
             <span>견적요청 수신함</span>
         </a>
+        <!--
         <a href="/vendor/embed" class="menu-item <?= (strpos($currentUri, '/vendor/embed') === 0 || strpos($currentUri, '/vendor/share') === 0) ? 'active' : '' ?>">
             <i class="fa-solid fa-code"></i>
             <span>캔버스 퍼가기 / 공유</span>
         </a>
+        -->
         <hr style="border-color: rgba(255,255,255,0.08); margin: 15px 0;">
         <a href="/" class="menu-item">
             <i class="fa-solid fa-house"></i>
